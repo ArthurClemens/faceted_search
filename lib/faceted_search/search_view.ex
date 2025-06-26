@@ -7,12 +7,12 @@ defmodule FacetedSearch.SearchView do
   require Logger
 
   alias Ecto.Adapters.SQL
-  alias FacetedSearch.Collection
   alias FacetedSearch.Config
   alias FacetedSearch.Errors.SearchViewError
   alias FacetedSearch.Field
   alias FacetedSearch.Join
   alias FacetedSearch.SearchViewDescription
+  alias FacetedSearch.Source
 
   @scope_func :scope_by
 
@@ -220,18 +220,14 @@ defmodule FacetedSearch.SearchView do
 
   defp build_search_view_columns(search_view_description, config) do
     Enum.map_join(
-      search_view_description.collections,
-      """
-
-      UNION
-
-      """,
-      &columns_from_collection(&1, config)
+      search_view_description.sources,
+      "\n\nUNION\n\n",
+      &columns_from_source(&1, config)
     )
   end
 
-  defp columns_from_collection(collection, config) do
-    %{table_name: table_name, prefix: prefix} = collection
+  defp columns_from_source(source, config) do
+    %{table_name: table_name, prefix: prefix} = source
     table_name_with_prefix = table_name_with_prefix(table_name, prefix)
 
     columns =
@@ -242,11 +238,11 @@ defmodule FacetedSearch.SearchView do
         &create_tsv_column/1
       ]
       |> Enum.filter(&(!!&1))
-      |> Enum.map(&apply(&1, [collection]))
+      |> Enum.map(&apply(&1, [source]))
       |> Enum.map_join(",\n", &String.trim/1)
 
-    joins = create_joins(collection)
-    where_filters = create_where_filters(collection, config)
+    joins = create_joins(source)
+    where_filters = create_where_filters(source, config)
 
     [
       "SELECT",
@@ -260,8 +256,8 @@ defmodule FacetedSearch.SearchView do
     |> Enum.map_join("\n", &String.trim/1)
   end
 
-  defp create_joins(%{joins: joins} = collection) when is_list(joins) and joins != [] do
-    collection.joins
+  defp create_joins(%{joins: joins} = source) when is_list(joins) and joins != [] do
+    source.joins
     |> Enum.map_join("\n", fn join ->
       %{table: table_name, on: on, as: as, prefix: prefix} = join
       table_name_with_prefix = table_name_with_prefix(table_name, prefix)
@@ -279,10 +275,10 @@ defmodule FacetedSearch.SearchView do
     end)
   end
 
-  defp create_joins(_collection), do: nil
+  defp create_joins(_source), do: nil
 
   defp create_where_filters(
-         %{scopes: scopes, table_name: table_name} = _collection,
+         %{scopes: scopes, table_name: table_name} = _source,
          %{current_scope: current_scope} = _config
        )
        when is_list(scopes) and scopes != [] and not is_nil(current_scope) do
@@ -295,7 +291,7 @@ defmodule FacetedSearch.SearchView do
     """
   end
 
-  defp create_where_filters(_collection, _config), do: nil
+  defp create_where_filters(_source, _config), do: nil
 
   defp create_where_filter(scope, table_name, current_scope) do
     %{key: key, module: module} = scope
@@ -322,18 +318,18 @@ defmodule FacetedSearch.SearchView do
     """
   end
 
-  @spec create_id_columns(Collection.t()) :: String.t()
-  defp create_id_columns(collection) do
-    %{table_name: table_name} = collection
+  @spec create_id_columns(Source.t()) :: String.t()
+  defp create_id_columns(source) do
+    %{table_name: table_name} = source
 
     """
     CAST(#{table_name}.id AS text) AS id,
-    '#{table_name}' AS table_name
+    '#{table_name}' AS source
     """
   end
 
-  @spec create_data_column(Collection.t()) :: String.t()
-  defp create_data_column(%{fields: fields, data_fields: data_fields, joins: joins} = _collection)
+  @spec create_data_column(Source.t()) :: String.t()
+  defp create_data_column(%{fields: fields, data_fields: data_fields, joins: joins} = _source)
        when is_list(fields) and fields != [] do
     object_string =
       fields
@@ -355,8 +351,8 @@ defmodule FacetedSearch.SearchView do
 
   defp create_data_column(_), do: "NULL::jsonb as data"
 
-  @spec create_text_column(Collection.t()) :: String.t()
-  defp create_text_column(%{fields: fields, text_fields: text_fields, joins: joins} = _collection)
+  @spec create_text_column(Source.t()) :: String.t()
+  defp create_text_column(%{fields: fields, text_fields: text_fields, joins: joins} = _source)
        when is_list(text_fields) and text_fields != [] do
     fields_array =
       fields
@@ -380,10 +376,8 @@ defmodule FacetedSearch.SearchView do
 
   defp create_text_column(_), do: "NULL::text as text"
 
-  @spec create_tsv_column(Collection.t()) :: String.t()
-  defp create_tsv_column(
-         %{fields: fields, facet_fields: facet_fields, joins: joins} = _collection
-       )
+  @spec create_tsv_column(Source.t()) :: String.t()
+  defp create_tsv_column(%{fields: fields, facet_fields: facet_fields, joins: joins} = _source)
        when is_list(facet_fields) and facet_fields != [] do
     fields
     |> Enum.filter(&(&1.name in facet_fields))

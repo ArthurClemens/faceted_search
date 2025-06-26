@@ -9,9 +9,9 @@ defmodule FacetedSearch.FlopSchema do
   def create_custom_fields_option(options) do
     table_options =
       options
-      |> Keyword.get_values(:collections)
+      |> Keyword.get_values(:sources)
       |> List.flatten()
-      |> Enum.reduce([], fn {_table_name, table_options}, acc ->
+      |> Enum.reduce([], fn {_source, table_options}, acc ->
         fields = Keyword.get_values(table_options, :fields)
         Enum.concat(acc, fields)
       end)
@@ -66,7 +66,7 @@ defmodule FacetedSearch.FlopSchema do
     end)
   end
 
-  @default_filterable_fields [:table_name, :text]
+  @default_filterable_fields [:source, :text]
 
   @spec create_filterable_fields_option(Keyword.t()) :: Keyword.t()
   def create_filterable_fields_option(custom_fields_option) do

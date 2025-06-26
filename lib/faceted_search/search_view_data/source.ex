@@ -1,6 +1,6 @@
-defmodule FacetedSearch.Collection do
+defmodule FacetedSearch.Source do
   @moduledoc """
-  Data extracted from the schema.
+  Part of the `FacetedSearch.SearchViewDescription`.
   """
 
   alias FacetedSearch.Field
@@ -24,13 +24,13 @@ defmodule FacetedSearch.Collection do
           # required
           table_name: atom(),
           # optional
-          facet_fields: list(atom()) | nil,
-          fields: list(Field.t()) | nil,
-          data_fields: list(atom()) | nil,
-          joins: list(Join.t()) | nil,
           prefix: String.t() | nil,
           scopes: list(Scope.t()) | nil,
-          text_fields: list(atom()) | nil
+          joins: list(Join.t()) | nil,
+          fields: list(Field.t()) | nil,
+          data_fields: list(atom()) | nil,
+          text_fields: list(atom()) | nil,
+          facet_fields: list(atom()) | nil
         }
 
   @spec new({atom(), Keyword.t()}, atom()) :: t()
@@ -38,10 +38,10 @@ defmodule FacetedSearch.Collection do
   def new({table_name, options}, module) do
     %__MODULE__{
       table_name: table_name,
-      scopes: Keyword.get(options, :scopes) |> collect_scopes(module),
       prefix: Keyword.get(options, :prefix),
-      fields: Keyword.get(options, :fields) |> collect_fields(table_name),
+      scopes: Keyword.get(options, :scopes) |> collect_scopes(module),
       joins: Keyword.get(options, :joins) |> collect_joins(),
+      fields: Keyword.get(options, :fields) |> collect_fields(table_name),
       data_fields: Keyword.get(options, :data_fields),
       text_fields: Keyword.get(options, :text_fields),
       facet_fields: Keyword.get(options, :facet_fields)

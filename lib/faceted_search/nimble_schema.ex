@@ -9,7 +9,7 @@ defmodule FacetedSearch.NimbleSchema do
       type: :atom,
       doc: "The schema module that calls `use FacetedSearch`. Automatically inserted."
     ],
-    collections: [
+    sources: [
       type: :keyword_list,
       required: true,
       keys: [
@@ -116,7 +116,7 @@ defmodule FacetedSearch.NimbleSchema do
         ]
       ],
       doc: """
-      Settings per collection. The collection key is the name of a table in your repo.
+      Settings per source. The source key is the name of a source table in your repo.
       """
     ]
   ]
@@ -145,7 +145,7 @@ defmodule FacetedSearch.NimbleSchema do
 
   defp validate_scope_callback(opts, module) do
     has_scopes_option =
-      Keyword.get_values(opts, :collections)
+      Keyword.get_values(opts, :sources)
       |> List.flatten()
       |> Enum.map(fn {_, sublist} ->
         Keyword.has_key?(sublist, :scopes) and Keyword.get(sublist, :scopes) != []

@@ -1,6 +1,6 @@
 defmodule FacetedSearch.FacetConfig do
   @moduledoc """
-  Data struct used for a single facet configuration.
+  Contains type information for a facet.
   """
 
   alias FacetedSearch.FacetConfig
@@ -22,17 +22,17 @@ defmodule FacetedSearch.FacetConfig do
   """
   @spec facet_configs(SearchViewDescription.t()) :: %{atom() => FacetConfig.t()}
   def facet_configs(search_view_description) do
-    collections = search_view_description.collections
+    sources = search_view_description.sources
 
     ecto_types_by_field =
-      get_in(collections, [Access.all(), Access.key(:fields)])
+      get_in(sources, [Access.all(), Access.key(:fields)])
       |> List.flatten()
       |> Enum.filter(& &1)
       |> Enum.reduce(%{}, fn data_field, acc ->
         Map.put(acc, data_field.name, data_field.ecto_type)
       end)
 
-    get_in(collections, [Access.all(), Access.key(:facet_fields)])
+    get_in(sources, [Access.all(), Access.key(:facet_fields)])
     |> List.flatten()
     |> Enum.filter(& &1)
     |> Enum.reduce(%{}, fn facet_field, acc ->

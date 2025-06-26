@@ -16,11 +16,35 @@ defmodule FacetedSearch do
   alias FacetedSearch.SearchViewDescription
 
   @doc """
-  Configures FacetedSearch to create a search view from one or more existing database tables and columns.
+  Defines the search view database schema. Pass the schema configuration in the options.
 
-  ## Example
+  ## Examples
 
       use FacetedSearch, [options]
+
+      use FacetedSearch,
+        sources: [
+          books: [
+            data_fields: [
+              title: [
+                ecto_type: :string
+              ],
+              author: [
+                ecto_type: :string
+              ],
+              publication_year: [
+                ecto_type: :integer
+              ]
+            ],
+            text_fields: [
+              :title,
+              :author
+            ],
+            facet_fields: [
+              :publication_year
+            ]
+          ]
+        ]
 
   ## Supported options
 
@@ -63,7 +87,7 @@ defmodule FacetedSearch do
 
       schema "faceted_search_document" do
         field(:id, :string)
-        field(:table_name, :string)
+        field(:source, :string)
         field(:data, :map)
         field(:text, :string)
       end
@@ -71,7 +95,7 @@ defmodule FacetedSearch do
       @type t() :: %__MODULE__{
               # required
               id: String.t(),
-              table_name: String.t(),
+              source: String.t(),
               text: String.t(),
               data: map()
             }
@@ -126,8 +150,8 @@ defmodule FacetedSearch do
 
   @doc """
   Configures one or more scopes when creating the search view.
-  Use together with `collection`: option `scopes` lists one or more scope keys.
-  These are used to selectivelt call the `scope_by/2` callback functions.
+  Use together with option `scopes` under `source`. The list of scope keys are used
+  to selectively call the `scope_by/2` callback functions.
   Each returned map is used to render a `WHERE` clause in the search view creation.
 
   See also: `create_search_view/3`.
@@ -139,7 +163,7 @@ defmodule FacetedSearch do
       defmodule KitchenJournalSchemas.FacetSchema do
 
           use FacetedSearch,
-            collections: [
+            sources: [
               media: [
                 scopes: [:current_user, :publication_year],
                 ...
@@ -181,7 +205,7 @@ defmodule FacetedSearch do
   Creates a search view that collects data for searching.
 
   Options:
-  - `scope` (optional) - The scope to be passed to the module function provided with option `scope_by` - see: [Supported options](#__using__/1-supported-options) under "collections".
+  - `scope` (optional) - The scope to be passed to the module function provided with option `scope_by` - see: [Supported options](#__using__/1-supported-options) under "sources".
   - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
 
   ## Examples
@@ -250,7 +274,7 @@ defmodule FacetedSearch do
     do: module.options()
 
   @doc """
-  Returns the generated view struct used to build the search view. Useful for debugging issues.
+  Returns the `FacetedSearch.SearchViewDescription` used to build the search view. Useful for debugging issues.
 
   ## Examples
 
@@ -263,7 +287,7 @@ defmodule FacetedSearch do
     do: module.search_view_description()
 
   @doc """
-  The normalized Postgres view name generated from `view_id`.
+  The normalized Postgres materialized view name generated from `view_id`.
   The view name is prefixed with `"fv_"`.
 
   ## Examples
@@ -301,7 +325,8 @@ defmodule FacetedSearch do
       ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
 
       with {:ok, results} <-
-             from(ecto_schema) |> Flop.validate_and_run(params, for: MyApp.FacetSchema),
+             from(ecto_schema)
+             |> Flop.validate_and_run(params, for: MyApp.FacetSchema),
            {:ok, facets} <- FacetedSearch.search(ecto_schema, params) do
         {:ok, results, facets}
       else

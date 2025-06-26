@@ -1,21 +1,21 @@
 defmodule FacetedSearch.SearchViewDescription do
   @moduledoc """
-  Data struct used for building the search view.
+  The search view configuration of the processed schema.
   """
 
   use FacetedSearch.Types, include: [:schema_options]
 
-  alias FacetedSearch.Collection
+  alias FacetedSearch.Source
 
   @enforce_keys [
-    :collections
+    :sources
   ]
 
-  defstruct collections: nil
+  defstruct sources: nil
 
   @type t() :: %__MODULE__{
           # required
-          collections: list(Collection.t())
+          sources: list(Source.t())
         }
 
   @spec new(schema_options()) :: t()
@@ -23,10 +23,10 @@ defmodule FacetedSearch.SearchViewDescription do
     module = Keyword.get(options, :module)
 
     struct(__MODULE__, %{
-      collections:
+      sources:
         options
-        |> Keyword.get(:collections)
-        |> Enum.map(&Collection.new(&1, module))
+        |> Keyword.get(:sources)
+        |> Enum.map(&Source.new(&1, module))
     })
   end
 end
