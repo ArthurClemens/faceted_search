@@ -1,6 +1,6 @@
 defmodule FacetedSearch.Join do
   @moduledoc """
-  Table join data extracted from the schema.
+  Properties of a joined field that is included in the search view generation.
   """
 
   @enforce_keys [

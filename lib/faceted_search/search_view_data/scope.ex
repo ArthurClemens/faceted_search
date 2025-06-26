@@ -1,6 +1,6 @@
 defmodule FacetedSearch.Scope do
   @moduledoc """
-  Scope data.
+  Definition for the `scope_by` callback function.
   """
 
   @enforce_keys [

@@ -1,6 +1,6 @@
 defmodule FacetedSearch.FacetValue do
   @moduledoc """
-  Facet value struct.
+  A discrete, filterable option associated with a specific facet, representing one possible value that occurs in the dataset.
   """
 
   @enforce_keys [:value, :count, :selected]

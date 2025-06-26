@@ -24,6 +24,7 @@ defmodule FacetedSearch.Facets do
     {_view_name, module} = ecto_schema
     search_view_description = FacetedSearch.search_view_description(module)
     facet_configs = FacetConfig.facet_configs(search_view_description)
+
     opts = Keyword.put(flop_adapter_options, :for, module)
 
     search_params_for_all_facets =

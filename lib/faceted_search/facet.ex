@@ -1,6 +1,6 @@
 defmodule FacetedSearch.Facet do
   @moduledoc """
-  Facet struct containing field, type and a list of `FacetedSearch.FacetValue` structs.
+  A structured, filterable field exposed in the search interface, used to group and refine search results by distinct values.
   """
 
   @enforce_keys [:type, :field, :facet_values]

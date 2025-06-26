@@ -1,6 +1,6 @@
 defmodule FacetedSearch.Field do
   @moduledoc """
-  Field data extracted from the schema.
+  Properties of a database field from the source table or from a joined table that is included in search view generation.
   """
 
   @type ecto_type ::
