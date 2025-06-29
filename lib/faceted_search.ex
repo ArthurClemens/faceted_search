@@ -65,6 +65,11 @@ defmodule FacetedSearch do
       filterable_fields_option =
         FlopSchema.create_filterable_fields_option(custom_fields_option)
 
+      sortable_fields = FlopSchema.create_sortable_fields(options, custom_fields_option)
+
+      sortable_option =
+        Enum.concat(sortable_fields |> Enum.map(& &1.name), [:updated_at, :inserted_at])
+
       use Ecto.Schema
 
       use FacetedSearch.Types,
@@ -78,11 +83,7 @@ defmodule FacetedSearch do
         adapter_opts: [
           custom_fields: custom_fields_option
         ],
-        sortable: [],
-        default_order: %{
-          order_by: [],
-          order_directions: []
-        }
+        sortable: sortable_option
       }
 
       schema "faceted_search_document" do
@@ -90,6 +91,12 @@ defmodule FacetedSearch do
         field(:source, :string)
         field(:data, :map)
         field(:text, :string)
+        field(:inserted_at, :utc_datetime)
+        field(:updated_at, :utc_datetime)
+
+        Enum.each(sortable_fields, fn %{name: name, ecto_type: ecto_type} ->
+          field(name, ecto_type)
+        end)
       end
 
       @type t() :: %__MODULE__{
@@ -203,6 +210,7 @@ defmodule FacetedSearch do
 
   @doc """
   Creates a search view that collects data for searching.
+  If the seach view already exists, it will be dropped first.
 
   Options:
   - `scope` (optional) - The scope to be passed to the module function provided with option `scope_by` - see: [Supported options](#__using__/1-supported-options) under "sources".

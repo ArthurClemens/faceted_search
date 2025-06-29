@@ -91,19 +91,26 @@ defmodule FacetedSearch.NimbleSchema do
             data_fields: [
               type: {:list, :atom},
               doc: """
-              A list of database columns used for filtering. These should be a subset of the fields listed in `fields`.
+              A list of database columns used for filtering. Entries should be listed in `fields`.
               """
             ],
             text_fields: [
               type: {:list, :atom},
               doc: """
-              A list of database columns used for text search. These should be a subset of the fields listed in `fields`.
+              A list of database columns used for text search. Entries should be listed in `fields`.
               """
             ],
             facet_fields: [
               type: {:list, :atom},
               doc: """
-              A list of database columns used to create facets. These should be a subset of the fields listed in `fields`.
+              A list of database columns used to create facets. Entries should be listed in `fields`.
+              """
+            ],
+            sort_fields: [
+              type: {:list, :atom},
+              doc: """
+              A list of database columns that should be used for sorting.
+              Each entry will be used to create a new database column in the search view, prefixed with "sort_". Entries should be listed in `fields`.
               """
             ],
             scopes: [

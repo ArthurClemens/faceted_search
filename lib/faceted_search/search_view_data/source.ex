@@ -18,7 +18,8 @@ defmodule FacetedSearch.Source do
             joins: nil,
             data_fields: nil,
             text_fields: nil,
-            facet_fields: nil
+            facet_fields: nil,
+            sort_fields: nil
 
   @type t() :: %__MODULE__{
           # required
@@ -30,7 +31,8 @@ defmodule FacetedSearch.Source do
           fields: list(Field.t()) | nil,
           data_fields: list(atom()) | nil,
           text_fields: list(atom()) | nil,
-          facet_fields: list(atom()) | nil
+          facet_fields: list(atom()) | nil,
+          sort_fields: list(atom()) | nil
         }
 
   @spec new({atom(), Keyword.t()}, atom()) :: t()
@@ -44,7 +46,8 @@ defmodule FacetedSearch.Source do
       fields: Keyword.get(options, :fields) |> collect_fields(table_name),
       data_fields: Keyword.get(options, :data_fields),
       text_fields: Keyword.get(options, :text_fields),
-      facet_fields: Keyword.get(options, :facet_fields)
+      facet_fields: Keyword.get(options, :facet_fields),
+      sort_fields: Keyword.get(options, :sort_fields)
     }
   end
 

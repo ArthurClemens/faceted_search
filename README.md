@@ -1,37 +1,19 @@
 # FacetedSearch
 
-> [!WARNING]
+> **WARNING**
 > This library is in its early stages: tests are not yet in place, and breaking changes are expected.
 
-Faceted search allows users to gradually refine search results by selecting filters (facet values) based on structured fields
-such as category, author, price range, and so on. Filters that would lead to zero results are hidden from the interface to prevent dead ends.
+FacetedSearch integrates faceting into your application with [Flop](https://hexdocs.pm/flop) as the underlying search library.
 
-The FacetedSearch library integrates faceting into your application with [Flop](https://hexdocs.pm/flop) as the underlying search library.
+Faceted search allows users to gradually refine search results by selecting filters based on structured fields
+such as category, author, price range, and so on. Filters that would lead to zero results are hidden from the interface to prevent dead ends.
 
 Key benefits include:
 
-- Keep all your data private, stored in your own database — no need to set up an external server or pay for a faceted search provider.
+- Keeps all your data private, stored in your own database — no need to set up an external server or pay for a faceted search provider.
 - Integrates seamlessly with an existing Flop setup, using the same concepts and functions.
 - Combines faceted search with regular Flop-based filters and text search.
 - Allows scoping per table, user, or any other scope you define.
-
-## On this page <!-- omit in toc -->
-
-- [Installation](#installation)
-- [How it works](#how-it-works)
-  - [The search view](#the-search-view)
-  - [Searching and filtering](#searching-and-filtering)
-  - [Facets](#facets)
-- [Creating the search view](#creating-the-search-view)
-  - [The search view schema](#the-search-view-schema)
-  - [Updating the search view](#updating-the-search-view)
-  - [Basic searching and filtering](#basic-searching-and-filtering)
-  - [Faceted search](#faceted-search)
-- [Additional search view functionality](#additional-search-view-functionality)
-  - [Multiple collections](#multiple-collections)
-  - [Scoping data](#scoping-data)
-  - [Joining other tables](#joining-other-tables)
-- [Multi-tenancy and prefix](#multi-tenancy-and-prefix)
 
 ## Installation
 
@@ -40,66 +22,46 @@ Add `faceted_search` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:faceted_search, git: "https://github.com/ArthurClemens/faceted_search.git", branch: "development"}
+    {:faceted_search,
+      git: "https://github.com/ArthurClemens/faceted_search.git",
+      branch: "development"
+    }
   ]
 end
 ```
 
-## How it works
+## Overview
 
-1. After performing a Flop search, you run the same search with `FacetedSearch.search/3`, using the same params, to get facet results. You pass the results to facet controls (commonly checkbox groups).
-1. The facet search is performed on a "search view", a materialized view that has searchable data cached in a database table.
-1. The search view is created based on a schema configuration, much like a Flop schema - with the key difference that the search view schema will be created from the configuration.
+- Searching, filtering and faceting is performed on a "search view", a materialized database view that has searchable data cached in a database table.
+- The search view is created using a configuration that defines which current database tables the data is fetched from.
+- Searching and filtering is done using Flop search on the search view table.
+- Faceting is done with `FacetedSearch.search/3`, using the same Flop params. Facet results can be used to create facet controls, such as checkbox groups.
 
-### The search view
+## The search view
 
-Data from one or more database tables and columns is aggregated into a "search view" - a materialized view that is set up for `refresh`.
+### Properties
 
-Multiple search views can be created from the same schema (each identified by a unique view ID) in order to create scoped views, for example, one per user.
+Data from one or more database tables and columns is aggregated into a "search view" - a materialized database view.
 
-The main search view columns are:
+The search view contains these base columns:
 
-- `id` - References the data source record - useful for navigation or performing additional database lookups.
-- `table_name` - References the data source table.
-- `data` - A `jsonb` column that contains structured data that can be filtered.
-- `text` - A `text` column that contains a "bag of words" per row, used for textual searches.
-- `tsv` - (internal use) A `tsvector` column used for generating facets.
+- `id` - A `string` column that contains the data source record ID - useful for navigation or performing additional database lookups.
+- `source` - A `string` column that contains the data source table name.
+- `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering a title and item details.
+- `text` - A `text` column that contains a "bag of words" per row, used for text searches.
+- `tsv` - A `tsvector` column used for generating facets (internal use).
+- `inserted_at` - Source timestamp
+- `updated_at` - Source timestamp
 
-The schema module defines which data belongs in which column, using the options passed to `use FacetedSearch`.
-In addition to specifying column names and value types, these options also support:
+Additional sort columns are added when option `sort_fields` is used - see [Sorting](#sorting).
 
-- Fetching data from joined tables
-- Scoping data using one or more rules
+A single schema can generate different search views, each with its own scope - for example, a view per user or per media type.
 
-Creating a view with view ID "media":
+Data from other tables can be included using join statements.
 
-```elixir
-FacetedSearch.create_search_view(MyApp.FacetSchema, "media")
-```
+### Creating the search view
 
-### Searching and filtering
-
-After the search view is created, the view can be queried using regular Flop functions and filter params.
-
-For example, for a search view with id "media":
-
-```elixir
-ecto_schema = FacetedSearch.ecto_schema(FacetSchema, "media")
-Flop.validate_and_run(ecto_schema, params, for: FacetSchema)
-```
-
-### Facets
-
-Facets are retrieved using a second search with `FacetedSearch.search/3`, which takes the same search parameters as the Flop search.
-
-```elixir
-ecto_schema = FacetedSearch.ecto_schema(FacetSchema, "media")
-FacetedSearch.search(ecto_schema, params)
-```
-
-## Creating the search view
-
-Assuming we have a collection of books with attributes author, year of publication and genre.
+Assuming we have a source of books with attributes author, year of publication and genre.
 We can use Flop filtering and search to:
 
 - Find books by title
@@ -114,11 +76,11 @@ In the sections below we'll be setting up a basic search view schema, creating t
 
 After that, we will add:
 
-- Multiple collections
+- Multiple sources
 - Scoping data
 - Joining other tables
 
-### The search view schema
+### Example schema
 
 The corresponding options would be:
 
@@ -126,15 +88,23 @@ The corresponding options would be:
 module MyApp.FacetSchema do
 
   use FacetedSearch,
-    collections: [
+    sources: [
       books: [
-        data_fields: [
+        fields: [
+          title: [
+            ecto_type: :string
+          ],
           author: [
             ecto_type: :string
           ],
           publication_year: [
             ecto_type: :integer
           ]
+        ],
+        data_fields: [
+          :title,
+          :author,
+          :publication_year
         ],
         text_fields: [
           :title,
@@ -149,7 +119,7 @@ module MyApp.FacetSchema do
 end
 ```
 
-Create the view:
+Create the view with `FacetedSearch.create_search_view/3`.
 
 ```elixir
 FacetedSearch.create_search_view(MyApp.FacetSchema, "books")
@@ -163,13 +133,18 @@ A materialized view is essentially a cache: it provides faster search performanc
 
 Updates could be performed periodically, or after after changes to the source tables - this should be decided at the application level.
 
-Refreshing the view is done using `FacetedSearch.refresh_search_view/2`.
+Refreshing the view is done using `FacetedSearch.refresh_search_view/3`:
 
 ```elixir
 FacetedSearch.refresh_search_view(MyApp.FacetSchema, "media")
 ```
 
-### Basic searching and filtering
+See also:
+
+- `FacetedSearch.create_search_view_if_not_exists/3`.
+- `FacetedSearch.drop_search_view/3`.
+
+## Searching and filtering
 
 We can query the search view using Flop filters. For example, to perform a text search on author name and filter by publication year:
 
@@ -179,26 +154,26 @@ params = %{filters: [
   %{field: :publication_year, op: :<=, value: 2000}
 ]}
 
-ecto_schema = FacetedSearch.ecto_schema(FacetSchema, "books")
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "books")
 Flop.validate_and_run(ecto_schema, params, for: MyApp.FacetSchema)
 ```
 
-Example results:
+Example result:
 
 ```elixir
 {:ok,
   {[
     %MyApp.FacetSchema{
       id: "019784c7-369a-7753-9f8c-2258add27f46", # referenced book id in table "books"
-      table_name: "books",
+      source: "books",
       data: %{
         "author" => "Ursula K. Le Guin",
         "publication_year" => 1968,
         "title" => "A Wizard of Earthsea"
       },
       text: "A Wizard of Earthsea Ursula K. Le Guin",
-      inserted_at: ~U[2019-04-13 18:15:51Z],
-      updated_at: ~U[2019-04-13 18:18:54Z]
+      inserted_at: # source timestamp
+      updated_at: # source timestamp
     },
     ...
   ],
@@ -206,7 +181,59 @@ Example results:
 }
 ```
 
-### Faceted search
+### Limiting results data
+
+You may need only a subset of the view columns. For example, to only return the data column, add a `select` statement:
+
+```elixir
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "books")
+
+from(ecto_schema, as: :schema)
+|> select([schema], %{data: schema.data})
+|> Flop.validate_and_run(params, for: MyApp.FacetSchema)
+```
+
+## Sorting
+
+Sorting is enabled with schema source option `sort_fields` and referencing fields that are listed under `fields`.
+
+```elixir
+use FacetedSearch,
+  sources: [
+    books: [
+      fields: [
+        title: [
+          ecto_type: :string
+        ],
+        author: [
+          ecto_type: :string
+        ],
+        publication_year: [
+          ecto_type: :integer
+        ]
+      ],
+      ...
+      sort_fields: [
+        :title,
+        :publication_year
+      ]
+    ]
+  ]
+```
+
+This will create additional columns in the search view. To prevent conflicts with Flop,
+the column names are prefixed with `sort_`. For example, field `title` will have a corresponding sort column `sort_title`.
+
+Example Flop params with `order_by`:
+
+```elixir
+params = %{
+  filters: [%{field: :text, op: :ilike, value: "Le Guin"}],
+  order_by: [:sort_publication_year]
+}
+```
+
+## Faceted search
 
 Facet filters are a specialized form of search filters:
 
@@ -234,14 +261,14 @@ Examples combining regular Flop filters with facet filters:
 
 The same Flop params are passed to both `Flop.validate_and_run` and `FacetedSearch.search`.
 
-#### Example search function
+### Example search function
 
 ```elixir
 def search_media(params \\ %{}) do
-  ecto_schema = FacetedSearch.ecto_schema(FacetSchema, "media")
+  ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 
   with {:ok, results} <-
-         from(ecto_schema) |> Flop.validate_and_run(params, for: FacetSchema),
+         from(ecto_schema) |> Flop.validate_and_run(params, for: MyApp.FacetSchema),
        {:ok, facets} <- FacetedSearch.search(ecto_schema, params) do
     {:ok, results, facets}
   else
@@ -250,15 +277,15 @@ def search_media(params \\ %{}) do
 end
 ```
 
-#### Example search
+### Example search
 
 ```elixir
 params = %{filters: [%{field: :facet_publication_year, op: :==, value: [2018]}]}
-ecto_schema = FacetedSearch.ecto_schema(FacetSchema, "media")
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 {:ok, facets} <- FacetedSearch.search(ecto_schema, params)
 ```
 
-#### Example result
+### Example result
 
 ```elixir
 {:ok,
@@ -266,10 +293,10 @@ ecto_schema = FacetedSearch.ecto_schema(FacetSchema, "media")
    %FacetedSearch.FacetData.Facet{
      type: "value",
      field: :publication_year,
-     facet_values: [
-       %FacetedSearch.FacetData.FacetValue{value: "2010", count: 1, selected: false},
-       %FacetedSearch.FacetData.FacetValue{value: "2016", count: 2, selected: false},
-       %FacetedSearch.FacetData.FacetValue{value: "2018", count: 1, selected: true}
+     facet_options: [
+       %FacetedSearch.FacetData.FacetOption{value: "2010", count: 1, selected: false},
+       %FacetedSearch.FacetData.FacetOption{value: "2016", count: 2, selected: false},
+       %FacetedSearch.FacetData.FacetOption{value: "2018", count: 1, selected: true}
      ]
    }
  ]}
@@ -279,7 +306,7 @@ Facets that don't have any hits will be omitted from the results.
 
 ## Additional search view functionality
 
-### Multiple collections
+### Multiple sources
 
 TODO
 
@@ -296,7 +323,7 @@ A scope is defined using three components:
 
 #### Example: scoping to the current user
 
-1. Pass `scopes` to the `collection` option:
+1. Pass `scopes` to the `source` option:
 
 ```elixir
 scopes: [:current_user],
@@ -319,7 +346,7 @@ def scope(:other_scope_key, scope) do
 end
 ```
 
-Note that map key "field" references the table from "collections".
+Note that map key "field" references the table from "sources".
 
 3. Pass the scope to `FacetedSearch.create_search_view/3`:
 
@@ -331,7 +358,7 @@ FacetedSearch.create_search_view(MyApp.FacetSchema, "books", scope: %{current_us
 
 Using a list of scope keys, scope evaluation is AND-ed
 
-Scopes can be created using any column in the collection table — that is, the default view columns combined
+Scopes can be created using any column in the source table — that is, the default view columns combined
 with the columns defined in the `data_fields` option.
 
 For example, to scope by publication year, limiting the table to the current user and to books published after 2018, add both scope keys:
@@ -383,7 +410,7 @@ Let's add these with the options `joins` and `field`.
 
 ```elixir
 use FacetedSearch,
-  collections: [
+  sources: [
     books: [
       joins: [
         [
@@ -395,13 +422,17 @@ use FacetedSearch,
           on: "genres.id = book_genres.genre_id"
         ]
       ],
-      data_fields: [
+      fields: [
         ...
         genres: [
           binding: :genres,
           field: :name,
           ecto_type: {:array, :string}
         ]
+      ],
+      data_fields: [
+        :author,
+        :genres
       ],
       text_fields: [
         :author
@@ -439,13 +470,13 @@ params = %{filters: [
 
 Pass the `prefix` option to the schema and to create, refresh, and search functions.
 
-### Examples <!-- omit in toc -->
+### Examples
 
 #### Creating the search view schema
 
 ```elixir
 use FacetedSearch,
-  collections: [
+  sources: [
     books: [
       prefix: "catalog",
       joins: [
@@ -491,10 +522,10 @@ Example search function with prefix options:
 ```elixir
 def search_media(params \\ %{}, opts \\ []) do
   prefix = Keyword.get(opts, :prefix)
-  ecto_schema = FacetedSearch.ecto_schema(FacetSchema, "media")
+  ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 
   with {:ok, results} <-
-         from(ecto_schema) |> Flop.validate_and_run(params, for: FacetSchema, query_opts: [prefix: prefix]),
+         from(ecto_schema) |> Flop.validate_and_run(params, for: MyApp.FacetSchema, query_opts: [prefix: prefix]),
        {:ok, facets} <- FacetedSearch.search(ecto_schema, params, query_opts: [prefix: prefix]) do
     {:ok, results, facets}
   else

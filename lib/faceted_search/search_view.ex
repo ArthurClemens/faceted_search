@@ -27,6 +27,7 @@ defmodule FacetedSearch.SearchView do
 
   @doc """
   Creates a Postgres view that collects data for searching.
+  If the seach view already exists, it will be dropped first.
   """
   @spec create_search_view(schema_options(), String.t(), [create_search_view_option()]) ::
           {:ok, String.t()} | {:error, term()}
@@ -34,6 +35,10 @@ defmodule FacetedSearch.SearchView do
     %{view_name_with_prefix: view_name_with_prefix} = config = Config.new(view_id, opts)
 
     search_view_description = create_search_view_description(options)
+
+    if search_view_exists?(view_id, opts) do
+      delete_search_view(view_id, opts)
+    end
 
     case build_search_view(search_view_description, config) do
       :ok ->
@@ -222,23 +227,26 @@ defmodule FacetedSearch.SearchView do
     Enum.map_join(
       search_view_description.sources,
       "\n\nUNION\n\n",
-      &columns_from_source(&1, config)
+      &columns_from_source(&1, config, search_view_description)
     )
   end
 
-  defp columns_from_source(source, config) do
+  defp columns_from_source(source, config, search_view_description) do
     %{table_name: table_name, prefix: prefix} = source
     table_name_with_prefix = table_name_with_prefix(table_name, prefix)
 
     columns =
       [
-        &create_id_columns/1,
-        &create_data_column/1,
-        &create_text_column/1,
-        &create_tsv_column/1
+        &create_id_columns/2,
+        &create_data_column/2,
+        &create_text_column/2,
+        &create_tsv_column/2,
+        &create_date_columns/2,
+        &create_sort_columns/2
       ]
-      |> Enum.filter(&(!!&1))
-      |> Enum.map(&apply(&1, [source]))
+      |> Enum.filter(&(not is_nil(&1) and &1 != ""))
+      |> Enum.map(&apply(&1, [source, search_view_description]))
+      |> Enum.filter(&(not is_nil(&1) and &1 != ""))
       |> Enum.map_join(",\n", &String.trim/1)
 
     joins = create_joins(source)
@@ -318,8 +326,8 @@ defmodule FacetedSearch.SearchView do
     """
   end
 
-  @spec create_id_columns(Source.t()) :: String.t()
-  defp create_id_columns(source) do
+  @spec create_id_columns(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_id_columns(source, _search_view_description) do
     %{table_name: table_name} = source
 
     """
@@ -328,8 +336,11 @@ defmodule FacetedSearch.SearchView do
     """
   end
 
-  @spec create_data_column(Source.t()) :: String.t()
-  defp create_data_column(%{fields: fields, data_fields: data_fields, joins: joins} = _source)
+  @spec create_data_column(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_data_column(
+         %{fields: fields, data_fields: data_fields, joins: joins} = _source,
+         _search_view_description
+       )
        when is_list(fields) and fields != [] do
     object_string =
       fields
@@ -349,10 +360,13 @@ defmodule FacetedSearch.SearchView do
     "jsonb_build_object(#{object_string}) AS data"
   end
 
-  defp create_data_column(_), do: "NULL::jsonb as data"
+  defp create_data_column(_, _), do: "NULL::jsonb AS data"
 
-  @spec create_text_column(Source.t()) :: String.t()
-  defp create_text_column(%{fields: fields, text_fields: text_fields, joins: joins} = _source)
+  @spec create_text_column(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_text_column(
+         %{fields: fields, text_fields: text_fields, joins: joins} = _source,
+         _search_view_description
+       )
        when is_list(text_fields) and text_fields != [] do
     fields_array =
       fields
@@ -363,21 +377,24 @@ defmodule FacetedSearch.SearchView do
 
         case field.ecto_type do
           :string -> "  COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
-          _ -> "  COALESCE(cast(#{table_and_column} as text), '')"
+          _ -> "  COALESCE(cast(#{table_and_column} AS text), '')"
         end
       end)
 
     """
     REPLACE(array_to_string(array[
     #{fields_array}
-    ], ' '), '  ', ' ') as text
+    ], ' '), '  ', ' ') AS text
     """
   end
 
-  defp create_text_column(_), do: "NULL::text as text"
+  defp create_text_column(_, _), do: "NULL::text AS text"
 
-  @spec create_tsv_column(Source.t()) :: String.t()
-  defp create_tsv_column(%{fields: fields, facet_fields: facet_fields, joins: joins} = _source)
+  @spec create_tsv_column(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_tsv_column(
+         %{fields: fields, facet_fields: facet_fields, joins: joins} = _source,
+         _search_view_description
+       )
        when is_list(facet_fields) and facet_fields != [] do
     fields
     |> Enum.filter(&(&1.name in facet_fields))
@@ -392,14 +409,115 @@ defmodule FacetedSearch.SearchView do
     |> tsv_column_wrap()
   end
 
-  defp create_tsv_column(_), do: "NULL::tsvector as tsv"
+  defp create_tsv_column(_, _), do: "NULL::tsvector AS tsv"
 
   defp tsv_column_wrap(key_values) do
     """
     array_to_tsvector(
       array_agg(array_remove(ARRAY[#{key_values}], NULL)) FILTER (WHERE array_remove(ARRAY[#{key_values}], NULL) <> '{}')
-    ) as tsv
+    ) AS tsv
     """
+  end
+
+  @spec create_date_columns(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_date_columns(%{table_name: table_name} = _source, _search_view_description) do
+    """
+    #{table_name}.inserted_at AS inserted_at,
+    #{table_name}.updated_at AS updated_at
+    """
+  end
+
+  @spec create_sort_columns(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_sort_columns(
+         %{
+           table_name: current_source_table_name,
+           fields: fields,
+           joins: joins,
+           sort_fields: sort_fields
+         },
+         search_view_description
+       )
+       when is_list(fields) and fields != [] do
+    all_fields = get_all_fields(search_view_description)
+    all_sort_fields = get_all_sort_fields(search_view_description)
+
+    current_source_sort_fields = sort_fields || []
+
+    all_fields
+    |> Enum.filter(&(&1.name in all_sort_fields))
+    |> Enum.sort_by(fn
+      %{table_name: table_name} = _field when table_name == current_source_table_name -> 0
+      _field -> 1
+    end)
+    |> Enum.reduce(%{visited: %{}, instructions: []}, fn field, acc ->
+      %{name: name, ecto_type: ecto_type} = field
+      visited_id = "#{current_source_table_name}-#{name}"
+
+      if acc.visited[visited_id] do
+        acc
+      else
+        instruction =
+          get_sort_instruction(%{
+            current_source_sort_fields: current_source_sort_fields,
+            current_source_table_name: current_source_table_name,
+            ecto_type: ecto_type,
+            field: field,
+            joins: joins,
+            name: name
+          })
+
+        %{
+          visited: Map.put(acc.visited, visited_id, true),
+          instructions: [instruction | acc.instructions]
+        }
+      end
+    end)
+    |> Map.get(:instructions)
+    |> Enum.join(",\n")
+  end
+
+  defp create_sort_columns(_, _), do: nil
+
+  def get_sort_instruction(attrs) do
+    %{
+      current_source_sort_fields: current_source_sort_fields,
+      current_source_table_name: current_source_table_name,
+      ecto_type: ecto_type,
+      field: field,
+      joins: joins,
+      name: name
+    } = attrs
+
+    sort_column_name = "sort_#{name}"
+
+    if field.name in current_source_sort_fields do
+      {table_name, column_name} = get_table_and_column(field, joins)
+      table_and_column = table_and_column_string(table_name, column_name)
+
+      needs_aggregate = current_source_table_name != table_name
+
+      ref =
+        cond do
+          is_tuple(ecto_type) and elem(ecto_type, 0) == :array ->
+            "array_agg(DISTINCT #{table_and_column})"
+
+          ecto_type == :string and needs_aggregate ->
+            "COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
+
+          ecto_type == :boolean and needs_aggregate ->
+            "every(#{table_and_column}.inactive)"
+
+          needs_aggregate ->
+            "any_value(#{table_and_column}.inactive)"
+
+          true ->
+            "#{table_and_column}"
+        end
+
+      "#{ref} AS #{sort_column_name}"
+    else
+      "NULL AS #{sort_column_name}"
+    end
   end
 
   @spec get_table_and_column(Field.t(), list(Join.t() | nil)) :: {atom(), atom()}
@@ -424,4 +542,26 @@ defmodule FacetedSearch.SearchView do
   defp table_name_with_prefix(table_name, _prefix), do: table_name
 
   defp table_and_column_string(table_name, column_name), do: "#{table_name}.#{column_name}"
+
+  defp get_all_fields(search_view_description) do
+    get_in(search_view_description, [
+      Access.key(:sources),
+      Access.all(),
+      Access.key(:fields)
+    ])
+    |> List.flatten()
+    |> Enum.filter(&(!!&1))
+    |> Enum.uniq()
+  end
+
+  defp get_all_sort_fields(search_view_description) do
+    get_in(search_view_description, [
+      Access.key(:sources),
+      Access.all(),
+      Access.key(:sort_fields)
+    ])
+    |> List.flatten()
+    |> Enum.filter(&(!!&1))
+    |> Enum.uniq()
+  end
 end
