@@ -6,6 +6,7 @@ defmodule FacetedSearch.Source do
   alias FacetedSearch.Field
   alias FacetedSearch.Join
   alias FacetedSearch.Scope
+  alias FacetedSearch.SortField
 
   @enforce_keys [
     :table_name
@@ -32,7 +33,7 @@ defmodule FacetedSearch.Source do
           data_fields: list(atom()) | nil,
           text_fields: list(atom()) | nil,
           facet_fields: list(atom()) | nil,
-          sort_fields: list(atom()) | nil
+          sort_fields: list(SortField.t()) | nil
         }
 
   @spec new({atom(), Keyword.t()}, atom()) :: t()
@@ -47,7 +48,7 @@ defmodule FacetedSearch.Source do
       data_fields: Keyword.get(options, :data_fields),
       text_fields: Keyword.get(options, :text_fields),
       facet_fields: Keyword.get(options, :facet_fields),
-      sort_fields: Keyword.get(options, :sort_fields)
+      sort_fields: Keyword.get(options, :sort_fields) |> collect_sort_fields()
     }
   end
 
@@ -84,5 +85,27 @@ defmodule FacetedSearch.Source do
 
   defp create_scope_entry(module, scope_key) do
     struct(Scope, %{key: scope_key, module: module})
+  end
+
+  defp collect_sort_fields(sort_fields) when is_list(sort_fields) and sort_fields != [] do
+    Enum.map(sort_fields, &create_sort_field_entry(&1))
+  end
+
+  defp collect_sort_fields(_sort_fields), do: nil
+
+  defp create_sort_field_entry(field_options) do
+    {name, cast} =
+      case field_options do
+        {name, [cast: cast]} -> {name, cast}
+        name -> {name, nil}
+      end
+
+    struct(
+      SortField,
+      %{
+        name: name,
+        cast: cast
+      }
+    )
   end
 end

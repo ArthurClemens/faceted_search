@@ -221,15 +221,39 @@ use FacetedSearch,
   ]
 ```
 
-This will create additional columns in the search view. To prevent conflicts with Flop,
-the column names are prefixed with `sort_`. For example, field `title` will have a corresponding sort column `sort_title`.
+This will create additional columns in the search view. To prevent conflicts with Flop (custom fields - which are used internally - cannot be used for sorting),
+the created column names are prefixed with `sort_`. For example, field `title` will have a corresponding sort column `sort_title`.
 
-Example Flop params with `order_by`:
+### Casting sort column values
+
+Casting sort column values is useful when the original values aren’t suitable for sorting, for example, strings that represent numbers:
+
+```elixir
+iex> ["1.1", "1.2", "1.10"] |> Enum.sort()
+["1.1", "1.10", "1.2"]
+```
+
+To define a cast operation, add `cast` to the sort field entry:
+
+```elixir
+sort_fields: [
+  category: [
+    cast: :float
+  ]
+]
+```
+
+The cast value can be any valid [Postgres data type](https://www.postgresql.org/docs/current/datatype.html). With non-standard types, results may vary.
+
+### Search example
+
+Adding `order_by` and `order_directions` to Flop params:
 
 ```elixir
 params = %{
   filters: [%{field: :text, op: :ilike, value: "Le Guin"}],
-  order_by: [:sort_publication_year]
+  order_by: [:sort_category],
+  order_directions: [:asc]}
 }
 ```
 
@@ -242,26 +266,50 @@ Facet filters are a specialized form of search filters:
 
 To achieve this behavior using Flop, you need to adjust the filter settings slightly:
 
-- Field names must be prefixed with `facet_`, so `field: :publication_year` becomes `field: :facet_publication_year`.
+- Field names must be prefixed with `facet_`, so field `publication_year` becomes `facet_publication_year`.
 - The operator `op` must be `:==`.
 - The `value` must be an array.
 
-Examples:
+Adding facet filters to Flop params:
 
 ```elixir
 %{filters: [%{field: :facet_publication_year, op: :==, value: [2012,2014,2016]}]}
 %{filters: [%{field: :facet_author, op: :==, value: ["Yotam Ottolenghi"]}]}
 ```
 
-Examples combining regular Flop filters with facet filters:
+Combining a regular Flop filter (in this case, a text search) with a facet filter:
 
 ```elixir
-%{filters: [%{field: :text, op: :ilike, value: "simple"}, %{field: :facet_publication_year, op: :==, value: [2012,2014,2016]}]}
+%{filters: [
+  %{field: :text, op: :ilike, value: "simple"},
+  %{field: :facet_publication_year, op: :==, value: [2012,2014,2016]}
+]}
 ```
 
 The same Flop params are passed to both `Flop.validate_and_run` and `FacetedSearch.search`.
 
+### Example facet search
+
+`FacetedSearch.search` takes a reference to the schema, and search params:
+
+```elixir
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+
+params = %{filters: [%{field: :facet_publication_year, op: :==, value: [2018]}]}
+{:ok, facets} = FacetedSearch.search(ecto_schema, params)
+```
+
+Utility function `FacetedSearch.ecto_schema/2` creates the reference using the schema and the view ID:
+
+```elixir
+iex> ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+{"fv_media", MyApp.FacetSchema}
+```
+
 ### Example search function
+
+Facet search is typically combined with filters and text search.
+The following example demonstrates how to combine a Flop search with facet search:
 
 ```elixir
 def search_media(params \\ %{}) do
@@ -277,15 +325,7 @@ def search_media(params \\ %{}) do
 end
 ```
 
-### Example search
-
-```elixir
-params = %{filters: [%{field: :facet_publication_year, op: :==, value: [2018]}]}
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
-{:ok, facets} <- FacetedSearch.search(ecto_schema, params)
-```
-
-### Example result
+Example result:
 
 ```elixir
 {:ok,

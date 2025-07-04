@@ -79,19 +79,27 @@ defmodule FacetedSearch.FlopSchema do
     |> Keyword.get_values(:sources)
     |> List.flatten()
     |> Enum.reduce([], fn {_source, table_options}, acc ->
-      sort_fields =
-        Keyword.get_values(table_options, :sort_fields)
-        |> List.flatten()
-        |> Enum.map(fn sort_field ->
-          %{
-            name: :"sort_#{sort_field}",
-            ecto_type: Keyword.get(custom_fields, sort_field) |> Keyword.get(:ecto_type)
-          }
-        end)
-
-      Enum.concat(acc, sort_fields)
+      Enum.concat(acc, create_sortable_field_data(table_options, custom_fields))
     end)
     |> Enum.uniq()
+  end
+
+  defp create_sortable_field_data(table_options, custom_fields) do
+    Keyword.get_values(table_options, :sort_fields)
+    |> List.flatten()
+    |> Enum.map(fn sort_field ->
+      {name, cast} =
+        case sort_field do
+          {name, [cast: cast]} -> {name, cast}
+          name -> {name, nil}
+        end
+
+      %{
+        name: :"sort_#{name}",
+        ecto_type: Keyword.get(custom_fields, name) |> Keyword.get(:ecto_type),
+        cast: cast
+      }
+    end)
   end
 
   defp normalize_facet_field_ecto_type({:array, type} = _ecto_type), do: {{:array, type}, true}

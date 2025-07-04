@@ -439,88 +439,96 @@ defmodule FacetedSearch.SearchView do
        )
        when is_list(fields) and fields != [] do
     all_fields = get_all_fields(search_view_description)
-    all_sort_fields = get_all_sort_fields(search_view_description)
 
-    current_source_sort_fields = sort_fields || []
+    # We need to generate the same sort columns for every source:
+    # listed in the same order and containing the same data types.
 
-    all_fields
-    |> Enum.filter(&(&1.name in all_sort_fields))
-    |> Enum.sort_by(fn
-      %{table_name: table_name} = _field when table_name == current_source_table_name -> 0
-      _field -> 1
-    end)
-    |> Enum.reduce(%{visited: %{}, instructions: []}, fn field, acc ->
+    combined_sort_fields =
+      Enum.concat(sort_fields, get_all_sort_fields(search_view_description))
+      |> Enum.uniq()
+
+    current_source_sort_field_names = (sort_fields || []) |> Enum.map(& &1.name)
+
+    combined_sort_fields
+    |> Enum.map(
+      &%{
+        sort_field: &1,
+        field:
+          Enum.find(all_fields, fn field -> field.name == &1.name end)
+          |> Map.put(:table_name, current_source_table_name)
+      }
+    )
+    |> Enum.map_join(",\n", fn %{sort_field: sort_field, field: field} ->
       %{name: name, ecto_type: ecto_type} = field
-      visited_id = "#{current_source_table_name}-#{name}"
 
-      if acc.visited[visited_id] do
-        acc
-      else
-        instruction =
-          get_sort_instruction(%{
-            current_source_sort_fields: current_source_sort_fields,
-            current_source_table_name: current_source_table_name,
-            ecto_type: ecto_type,
-            field: field,
-            joins: joins,
-            name: name
-          })
+      sort_column_name = "sort_#{name}"
 
+      create_sort_instruction(
         %{
-          visited: Map.put(acc.visited, visited_id, true),
-          instructions: [instruction | acc.instructions]
-        }
-      end
+          cast: sort_field.cast,
+          current_source_table_name: current_source_table_name,
+          ecto_type: ecto_type,
+          field: field,
+          joins: joins,
+          sort_column_name: sort_column_name
+        },
+        field.name in current_source_sort_field_names
+      )
     end)
-    |> Map.get(:instructions)
-    |> Enum.join(",\n")
   end
 
   defp create_sort_columns(_, _), do: nil
 
-  def get_sort_instruction(attrs) do
+  defp create_sort_instruction(attrs, field_in_current_source_sort_fields)
+       when field_in_current_source_sort_fields do
     %{
-      current_source_sort_fields: current_source_sort_fields,
+      cast: cast,
       current_source_table_name: current_source_table_name,
       ecto_type: ecto_type,
       field: field,
       joins: joins,
-      name: name
+      sort_column_name: sort_column_name
     } = attrs
 
-    sort_column_name = "sort_#{name}"
+    {table_name, column_name} = get_table_and_column(field, joins)
+    table_and_column = table_and_column_string(table_name, column_name)
 
-    if field.name in current_source_sort_fields do
-      {table_name, column_name} = get_table_and_column(field, joins)
-      table_and_column = table_and_column_string(table_name, column_name)
+    needs_aggregate = current_source_table_name != table_name
 
-      needs_aggregate = current_source_table_name != table_name
+    ref =
+      cond do
+        is_tuple(ecto_type) and elem(ecto_type, 0) == :array ->
+          "array_agg(DISTINCT #{table_and_column})"
 
-      ref =
-        cond do
-          is_tuple(ecto_type) and elem(ecto_type, 0) == :array ->
-            "array_agg(DISTINCT #{table_and_column})"
+        ecto_type == :string and needs_aggregate ->
+          "COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
 
-          ecto_type == :string and needs_aggregate ->
-            "COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
+        ecto_type == :boolean and needs_aggregate ->
+          "every(#{table_and_column}.inactive)"
 
-          ecto_type == :boolean and needs_aggregate ->
-            "every(#{table_and_column}.inactive)"
+        needs_aggregate ->
+          "any_value(#{table_and_column}.inactive)"
 
-          needs_aggregate ->
-            "any_value(#{table_and_column}.inactive)"
+        true ->
+          "#{table_and_column}"
+      end
 
-          true ->
-            "#{table_and_column}"
-        end
-
-      "#{ref} AS #{sort_column_name}"
-    else
-      "NULL AS #{sort_column_name}"
-    end
+    "#{ref |> maybe_cast(cast)} AS #{sort_column_name}"
   end
 
-  @spec get_table_and_column(Field.t(), list(Join.t() | nil)) :: {atom(), atom()}
+  defp create_sort_instruction(
+         %{
+           sort_column_name: sort_column_name
+         },
+         _
+       ) do
+    "NULL AS #{sort_column_name}"
+  end
+
+  defp maybe_cast(value, cast) when not is_nil(cast), do: "CAST(#{value} AS #{cast})"
+  defp maybe_cast(value, _cast), do: value
+
+  @spec get_table_and_column(Field.t(), list(Join.t()) | nil) :: {atom(), atom()}
   defp get_table_and_column(%Field{binding: binding} = field, joins)
        when is_list(joins) and joins != [] and not is_nil(binding) do
     %{binding: binding, field: join_field, table_name: table_name} = field

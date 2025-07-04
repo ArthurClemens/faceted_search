@@ -85,32 +85,43 @@ defmodule FacetedSearch.NimbleSchema do
                 ]
               ],
               doc: """
-              A list of database columns used to provide structured data.
+              A list of field names used to provide structured data.
               """
             ],
             data_fields: [
               type: {:list, :atom},
               doc: """
-              A list of database columns used for filtering. Entries should be listed in `fields`.
+              A list of field names used for filtering. Entries should be listed in `fields`.
               """
             ],
             text_fields: [
               type: {:list, :atom},
               doc: """
-              A list of database columns used for text search. Entries should be listed in `fields`.
+              A list of field names used for text search. Entries should be listed in `fields`.
               """
             ],
             facet_fields: [
               type: {:list, :atom},
               doc: """
-              A list of database columns used to create facets. Entries should be listed in `fields`.
+              A list of field names used to create facets. Entries should be listed in `fields`.
               """
             ],
             sort_fields: [
-              type: {:list, :atom},
+              type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}},
               doc: """
-              A list of database columns that should be used for sorting.
-              Each entry will be used to create a new database column in the search view, prefixed with "sort_". Entries should be listed in `fields`.
+              A list of field names used to for sorting. Entries should be listed in `fields`.
+              Pass a keyword list with key `cast` to cast the orginal value to a sort value.
+
+              Example:
+
+              ```
+              sort_fields: [
+                :title,
+                publication_year: [
+                  cast: :float
+                ]
+              ]
+              ```
               """
             ],
             scopes: [
