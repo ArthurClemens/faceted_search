@@ -44,6 +44,8 @@ defmodule FacetedSearch.FlopSchema do
     end)
   end
 
+  # Skip warning: Atoms are generated at compile time.
+  # sobelow_skip ["DOS.BinToAtom"]
   defp create_facet_search_field_options(table_options) do
     table_options
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
@@ -73,6 +75,8 @@ defmodule FacetedSearch.FlopSchema do
     Enum.uniq(@default_filterable_fields ++ Keyword.keys(custom_fields_option))
   end
 
+  # Skip warning: Atoms are generated at compile time.
+  # sobelow_skip ["DOS.BinToAtom"]
   @spec create_sortable_fields(Keyword.t(), Keyword.t()) :: Keyword.t()
   def create_sortable_fields(options, custom_fields) do
     options
@@ -84,6 +88,8 @@ defmodule FacetedSearch.FlopSchema do
     |> Enum.uniq()
   end
 
+  # Skip warning: Atoms are generated at compile time.
+  # sobelow_skip ["DOS.BinToAtom"]
   defp create_sortable_field_data(table_options, custom_fields) do
     Keyword.get_values(table_options, :sort_fields)
     |> List.flatten()

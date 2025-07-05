@@ -3,6 +3,7 @@ defmodule FacetedSearch.Source do
   Part of the `FacetedSearch.SearchViewDescription`.
   """
 
+  alias FacetedSearch.DataField
   alias FacetedSearch.Field
   alias FacetedSearch.Join
   alias FacetedSearch.Scope
@@ -45,7 +46,7 @@ defmodule FacetedSearch.Source do
       scopes: Keyword.get(options, :scopes) |> collect_scopes(module),
       joins: Keyword.get(options, :joins) |> collect_joins(),
       fields: Keyword.get(options, :fields) |> collect_fields(table_name),
-      data_fields: Keyword.get(options, :data_fields),
+      data_fields: Keyword.get(options, :data_fields) |> collect_data_fields(),
       text_fields: Keyword.get(options, :text_fields),
       facet_fields: Keyword.get(options, :facet_fields),
       sort_fields: Keyword.get(options, :sort_fields) |> collect_sort_fields()
@@ -76,6 +77,15 @@ defmodule FacetedSearch.Source do
       |> Keyword.put(:table_name, table_name)
     )
   end
+
+  defp collect_data_fields(fields) when is_list(fields) and fields != [] do
+    Enum.map(fields, fn
+      {name, field_options} -> DataField.new(name, field_options)
+      name -> DataField.new(name)
+    end)
+  end
+
+  defp collect_data_fields(_fields), do: nil
 
   defp collect_scopes(scopes, module) when is_list(scopes) and scopes != [] do
     Enum.map(scopes, &create_scope_entry(module, &1))

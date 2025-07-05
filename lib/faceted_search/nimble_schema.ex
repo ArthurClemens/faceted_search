@@ -161,9 +161,12 @@ defmodule FacetedSearch.NimbleSchema do
               """
             ],
             data_fields: [
-              type: {:list, :atom},
+              type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}},
               doc: """
-              A list of field names used for filtering. Entries should be listed in `fields`.
+              A list of field names used for filtering.
+              Either pass the field name atom (which must be listed under `fields`), or a keyword list to
+              generate a list of JSON objects.
+
 
               ### data_fields examples
 
@@ -173,12 +176,33 @@ defmodule FacetedSearch.NimbleSchema do
                 :author
               ]
               ```
+
+              JSON object definitions are listed under the `entries` key, followed by a list of keys-value items, similar to `fields`.
+
+              ```
+              data_fields: [
+                :title,
+                :author,
+                genres: [
+                  entries: [
+                    id: [
+                      binding: :genres,
+                      field: :id
+                    ],
+                    definition: [
+                      binding: :genres,
+                      field: :definition
+                    ]
+                  ]
+                ]
+              ]
+              ```
               """
             ],
             text_fields: [
               type: {:list, :atom},
               doc: """
-              A list of field names used for text search. Entries should be listed in `fields`.
+              A list of field names used for text search. Entries must be listed under `fields`.
 
               ### text_fields examples
 
@@ -192,7 +216,7 @@ defmodule FacetedSearch.NimbleSchema do
             facet_fields: [
               type: {:list, :atom},
               doc: """
-              A list of field names used to create facets. Entries should be listed in `fields`.
+              A list of field names used to create facets. Entries must be listed under `fields`.
 
               ### facet_fields examples
 
@@ -207,7 +231,7 @@ defmodule FacetedSearch.NimbleSchema do
             sort_fields: [
               type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}},
               doc: """
-              A list of fields used to for sorting. Entries should be listed in `fields`.
+              A list of fields used to for sorting. Entries must be listed under `fields`.
               Either pass the field name atom, or a keyword list with key `cast` to cast the orginal value to a sort value.
 
               ### sort_fields examples
