@@ -4,10 +4,31 @@ defmodule FacetedSearch.NimbleSchema do
   alias FacetedSearch.Errors.InvalidOptionsError
   alias FacetedSearch.Errors.MissingCallbackError
 
+  @join_option_entries_schema [
+    table: [
+      type: :atom,
+      required: true,
+      doc: "Table name."
+    ],
+    as: [
+      type: :atom,
+      doc: "Table alias."
+    ],
+    on: [
+      type: :string,
+      required: true,
+      doc: "Joins the table using an ON clause."
+    ],
+    prefix: [
+      type: :string,
+      doc: "Database schema other than 'public'."
+    ]
+  ]
+
   @raw_faceted_search_option_schema [
     module: [
       type: :atom,
-      doc: "The schema module that calls `use FacetedSearch`. Automatically inserted."
+      doc: "The schema module that calls `use FacetedSearch`. This is inserted automatically."
     ],
     sources: [
       type: :keyword_list,
@@ -20,30 +41,48 @@ defmodule FacetedSearch.NimbleSchema do
               type: :string,
               doc: """
               Use when the source table is located in a different database schema.
+
+              ### prefix example
+
+              ```
+              sources: [
+                books: [
+                  prefix: "catalog"
+                  ...
+                ]
+              ]
+              ```
               """
             ],
             joins: [
-              type:
-                {:list,
-                 {:keyword_list,
-                  table: [
-                    type: :atom,
-                    required: true,
-                    doc: "Table name."
-                  ],
-                  as: [
-                    type: :atom,
-                    doc: "Table alias."
-                  ],
-                  on: [
-                    type: :string,
-                    required: true,
-                    doc: "Joins the table using an ON clause."
-                  ],
-                  prefix: [
-                    type: :string,
-                    doc: "Database schema other than 'public'."
-                  ]}}
+              type: {:list, {:keyword_list, @join_option_entries_schema}},
+              doc:
+                """
+                Creates JOIN statements to collect data from other tables. The `table` name (or the `as` alias)
+                can be used in option `fields` using `binding` to extract values.
+                """ <>
+                  NimbleOptions.docs(@join_option_entries_schema, nest_level: 1) <>
+                  """
+                  ### joins examples
+
+                  ```
+                  sources: [
+                    books: [
+                      joins: [
+                        [
+                          table: :book_genres,
+                          on: "book_genres.book_id = books.id"
+                        ],
+                        [
+                          table: :genres,
+                          on: "genres.id = book_genres.genre_id"
+                        ]
+                      ],
+                      ...
+                    ]
+                  ]
+                  ```
+                  """
             ],
             fields: [
               type: :keyword_list,
@@ -51,8 +90,8 @@ defmodule FacetedSearch.NimbleSchema do
                 *: [
                   type: :keyword_list,
                   keys: [
-                    binding: [type: :atom],
-                    field: [type: :atom],
+                    binding: [type: :atom, doc: "Name or alias of a joined table."],
+                    field: [type: :atom, doc: "Referenced field of the joined table."],
                     ecto_type: [
                       type: :any,
                       required: true,
@@ -86,33 +125,101 @@ defmodule FacetedSearch.NimbleSchema do
               ],
               doc: """
               A list of field names used to provide structured data.
+
+              ### fields examples
+
+              ```
+              sources: [
+                books: [
+                  fields: [
+                    title: [
+                      ecto_type: :string
+                    ]
+                  ],
+                  ...
+                ]
+              ]
+              ```
+
+              With `binding` to get data from joined tables:
+
+              ```
+              sources: [
+                books: [
+                  ... # joins
+                  fields: [
+                    genre: [
+                      binding: :genres,
+                      field: :title,
+                      ecto_type: :string
+                    ]
+                  ],
+                  ...
+                ]
+              ]
+              ```
               """
             ],
             data_fields: [
               type: {:list, :atom},
               doc: """
               A list of field names used for filtering. Entries should be listed in `fields`.
+
+              ### data_fields examples
+
+              ```
+              data_fields: [
+                :title,
+                :author
+              ]
+              ```
               """
             ],
             text_fields: [
               type: {:list, :atom},
               doc: """
               A list of field names used for text search. Entries should be listed in `fields`.
+
+              ### text_fields examples
+
+              ```
+              text_fields: [
+                :author
+              ]
+              ```
               """
             ],
             facet_fields: [
               type: {:list, :atom},
               doc: """
               A list of field names used to create facets. Entries should be listed in `fields`.
+
+              ### facet_fields examples
+
+              ```
+              facet_fields: [
+                :publication_year,
+                :genres
+              ]
+              ```
               """
             ],
             sort_fields: [
               type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}},
               doc: """
-              A list of field names used to for sorting. Entries should be listed in `fields`.
-              Pass a keyword list with key `cast` to cast the orginal value to a sort value.
+              A list of fields used to for sorting. Entries should be listed in `fields`.
+              Either pass the field name atom, or a keyword list with key `cast` to cast the orginal value to a sort value.
 
-              Example:
+              ### sort_fields examples
+
+              ```
+              sort_fields: [
+                :title,
+                :publication_year
+              ]
+              ```
+
+              Casting a string value to a float:
 
               ```
               sort_fields: [
@@ -127,7 +234,7 @@ defmodule FacetedSearch.NimbleSchema do
             scopes: [
               type: {:list, :atom},
               doc: """
-              Activates scoping the table contents. See: [Scoping data](#module-scoping-data).
+              Activates scoping the table contents. See: [Scoping data](README.md#scoping-data).
               """
             ]
           ]

@@ -25,7 +25,7 @@ defmodule FacetedSearch do
       use FacetedSearch,
         sources: [
           books: [
-            data_fields: [
+            fields: [
               title: [
                 ecto_type: :string
               ],
@@ -35,6 +35,11 @@ defmodule FacetedSearch do
               publication_year: [
                 ecto_type: :integer
               ]
+            ],
+            data_fields: [
+              :title,
+              :author,
+              :publication_year
             ],
             text_fields: [
               :title,

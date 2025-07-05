@@ -78,7 +78,7 @@ After that, we will add:
 
 - Multiple sources
 - Scoping data
-- Joining other tables
+- Joining tables
 
 ### Example schema
 
@@ -145,6 +145,8 @@ See also:
 - `FacetedSearch.drop_search_view/3`.
 
 ## Searching and filtering
+
+### Searching with Flop
 
 We can query the search view using Flop filters. For example, to perform a text search on author name and filter by publication year:
 
@@ -256,6 +258,8 @@ params = %{
   order_directions: [:asc]}
 }
 ```
+
+As with Flop, multiple fields can be passed to `order_by` and `order_directions`.
 
 ## Faceted search
 
@@ -438,7 +442,7 @@ FacetedSearch.create_search_view(
 )
 ```
 
-### Joining other tables
+### Joining tables
 
 To continue with the books example, we would like to add genres to the search table.
 
