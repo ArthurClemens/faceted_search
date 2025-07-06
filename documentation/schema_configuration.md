@@ -212,7 +212,7 @@ sources: [
 ## data_fields
 
 Fields to be used for filtering and data extraction in search results.
-The referenced fields populate the data column in the search view.
+The referenced fields populate the `data` column in the search view.
 
 Additionally, custom fields can be defined to generate data from other sources.
 
@@ -363,7 +363,9 @@ sources: [
 
 ## text_fields
 
-A list of field names used for text search. Entries must be listed under `fields`.
+A list of field names used for text search.
+
+The referenced fields populate the `text` column in the search view.
 
 - Type: `list(atom())`
 - Path: `sources > [source table] > text_fields`
@@ -385,6 +387,8 @@ text_fields: [
 
 A list of field names used to create facets.
 
+The referenced fields populate the `tsv` column in the search view.
+
 - Type: `list(atom())`
 - Path: `sources > [source table] > facet_fields`
 
@@ -405,6 +409,8 @@ facet_fields: [
 ## sort_fields
 
 A list of fields used to for sorting.
+
+The referenced fields create new columns in the search view.
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > sort_fields`
