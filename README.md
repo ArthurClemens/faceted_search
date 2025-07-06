@@ -14,6 +14,7 @@ Key benefits include:
 - Integrates seamlessly with an existing Flop setup, using the same concepts and functions.
 - Combines faceted search with regular Flop-based filters and text search.
 - Allows scoping per table, user, or any other scope you define.
+- Because search data is cached in a database view, searching may be a lot faster.
 
 ## Installation
 
@@ -47,7 +48,7 @@ The search view contains these base columns:
 
 - `id` - A `string` column that contains the data source record ID - useful for navigation or performing additional database lookups.
 - `source` - A `string` column that contains the data source table name.
-- `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering a title and item details.
+- `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
 - `text` - A `text` column that contains a "bag of words" per row, used for text searches.
 - `tsv` - A `tsvector` column used for generating facets (internal use).
 - `inserted_at` - Source timestamp
@@ -61,69 +62,20 @@ Data from other tables can be included using join statements.
 
 ### Creating the search view
 
-Assuming we have a source of books with attributes author, year of publication and genre.
-We can use Flop filtering and search to:
+Set up the search view by passing a schema to `use FacetedSearch`.
 
-- Find books by title
-- Find book authors by name
-- Filter books by publication year
+The schema defines:
 
-We now want to enhance the search options with faceted search that allows to:
+- From which tables to get data
+- Which other tables to join
+- Which columns to use for filtering and data extraction
+- Which columns to use for text search
+- Which columns to use for sorting
+- Which columns to use for facets
 
-- Filter books by one or more publication years
+See `FacetedSearch.__using__/1` for the schema documentation and examples.
 
-In the sections below we'll be setting up a basic search view schema, creating the search view and running queries.
-
-After that, we will add:
-
-- Multiple sources
-- Scoping data
-- Joining tables
-
-### Example schema
-
-The corresponding options would be:
-
-```elixir
-module MyApp.FacetSchema do
-
-  use FacetedSearch,
-    sources: [
-      books: [
-        fields: [
-          title: [
-            ecto_type: :string
-          ],
-          author: [
-            ecto_type: :string
-          ],
-          publication_year: [
-            ecto_type: :integer
-          ]
-        ],
-        data_fields: [
-          :title,
-          :author,
-          :publication_year
-        ],
-        text_fields: [
-          :title,
-          :author
-        ],
-        facet_fields: [
-          :publication_year
-        ]
-      ]
-    ]
-
-end
-```
-
-Create the view with `FacetedSearch.create_search_view/3`.
-
-```elixir
-FacetedSearch.create_search_view(MyApp.FacetSchema, "books")
-```
+When the schema is defined, create the view with `FacetedSearch.create_search_view/3`.
 
 The database will now contain a materialized view named "fv_books".
 
@@ -134,10 +86,6 @@ A materialized view is essentially a cache: it provides faster search performanc
 Updates could be performed periodically, or after after changes to the source tables - this should be decided at the application level.
 
 Refreshing the view is done using `FacetedSearch.refresh_search_view/3`:
-
-```elixir
-FacetedSearch.refresh_search_view(MyApp.FacetSchema, "media")
-```
 
 See also:
 
@@ -224,7 +172,14 @@ use FacetedSearch,
 ```
 
 This will create additional columns in the search view. To prevent conflicts with Flop (custom fields - which are used internally - cannot be used for sorting),
-the created column names are prefixed with `sort_`. For example, field `title` will have a corresponding sort column `sort_title`.
+the created column names are prefixed with `sort_`. For example, field `title` will have a corresponding sort column `sort_title` which should be used in the Flop params:
+
+```elixir
+params = %{
+  filters: [...],
+  order_by: [:sort_title]
+}
+```
 
 ### Casting sort column values
 

@@ -18,38 +18,48 @@ defmodule FacetedSearch do
   @doc """
   Defines the database schema for the search view. Pass the schema configuration via the options.
 
+  Create a module to contain the schema, for example `MyApp.FacetSchema`:
+
+  ```
+  defmodule MyApp.FacetSchema do
+
+    use FacetedSearch, [
+      # options
+    ]
+
+  end
+  ```
+
   ## Example
 
-      use FacetedSearch, [options]
+  Minimal schema example:
 
-      use FacetedSearch,
-        sources: [
-          books: [
-            fields: [
-              title: [
-                ecto_type: :string
-              ],
-              author: [
-                ecto_type: :string
-              ],
-              publication_year: [
-                ecto_type: :integer
-              ]
-            ],
-            data_fields: [
-              :title,
-              :author,
-              :publication_year
-            ],
-            text_fields: [
-              :title,
-              :author
-            ],
-            facet_fields: [
-              :publication_year
-            ]
+  ```
+  use FacetedSearch,
+    sources: [
+      books: [
+        fields: [
+          title: [
+            ecto_type: :string
+          ],
+          publication_year: [
+            ecto_type: :integer
           ]
+        ],
+        data_fields: [
+          :title,
+          :publication_year
+        ],
+        text_fields: [
+          :title,
+        ],
+        facet_fields: [
+          :publication_year
         ]
+      ]
+    ]
+  ```
+
 
   ## Schema options
 
@@ -236,7 +246,7 @@ defmodule FacetedSearch do
 
   - A field name of a field listed under option `fields`.
     - Type: `atom()`
-  - A keyword list of `entries` to generate JSON data from joined tables (see examples below).
+  - A keyword list of field name/entry options to generate JSON data from joined tables (see examples below).
     - Type: `{atom(), Keyword.t()}`
 
   #### Examples
@@ -263,21 +273,19 @@ defmodule FacetedSearch do
   ]
   ```
 
-  To generate custom data, create definitions under the `entries` key, followed by a list of keys-value items, similar to `fields`:
+  To generate custom data, create definitions under the name key, similar to `fields`:
 
   ```
   data_fields: [
     ...
     genres: [
-      entries: [
-        id: [
-          binding: :genres,
-          field: :id
-        ],
-        definition: [
-          binding: :genres,
-          field: :definition
-        ]
+      id: [
+        binding: :genres,
+        field: :id
+      ],
+      definition: [
+        binding: :genres,
+        field: :definition
       ]
     ]
   ]
@@ -313,15 +321,13 @@ defmodule FacetedSearch do
         :title,
         :author,
         genres: [
-          entries: [
-            id: [
-              binding: :genres,
-              field: :id
-            ],
-            definition: [
-              binding: :genres,
-              field: :definition
-            ]
+          id: [
+            binding: :genres,
+            field: :id
+          ],
+          definition: [
+            binding: :genres,
+            field: :definition
           ]
         ]
       ]
