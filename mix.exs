@@ -43,6 +43,7 @@ defmodule FacetedSearch.MixProject do
       main: "readme",
       extras: [
         "README.md",
+        "documentation/schema_configuration.md",
         "CHANGELOG.md"
       ],
       assets: %{"documentation/assets" => "assets"},

@@ -73,7 +73,7 @@ The schema defines:
 - Which columns to use for sorting
 - Which columns to use for facets
 
-See `FacetedSearch.__using__/1` for the schema documentation and examples.
+See [Schema configuration](documentation/schema_configuration.md) for documentation and examples.
 
 When the schema is defined, create the view with `FacetedSearch.create_search_view/3`.
 

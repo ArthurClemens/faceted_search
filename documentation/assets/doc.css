@@ -1,9 +1,3 @@
-h3.section-heading.underline {
-    font-size: 1.1rem;
-    padding-bottom: .5rem;
-    border-bottom: 1px solid var(--gray300);
-}
-
 .content-inner ul li blockquote {
     margin-top: .5rem;
     margin-bottom: .5rem;
