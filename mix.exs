@@ -31,10 +31,10 @@ defmodule FacetedSearch.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:ecto_sql, "~> 3.12"},
       {:ex_doc, "~> 0.38.0", only: :dev, runtime: false},
-      {:flop, "~> 0.22"},
+      {:flop, "~> 0.26"},
       {:nimble_options, "~> 1.1"},
       {:postgrex, "~> 0.20"},
-      {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false}
+      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false}
     ]
   end
 
