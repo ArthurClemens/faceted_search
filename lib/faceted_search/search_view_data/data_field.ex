@@ -28,12 +28,22 @@ defmodule FacetedSearch.DataField do
 
   defp collect_entries(entry_options) when entry_options != [] do
     entry_options
-    |> Enum.map(fn {name, options} ->
-      struct(
-        DataFieldEntry,
-        options
-        |> Keyword.put(:name, name)
-      )
+    |> Enum.map(fn
+      {name, options} when is_list(options) ->
+        field_ref = if Keyword.get(options, :binding), do: nil, else: name
+
+        struct(
+          DataFieldEntry,
+          options
+          |> Keyword.put(:name, name)
+          |> Keyword.put(:field_ref, field_ref)
+        )
+
+      name ->
+        struct(
+          DataFieldEntry,
+          %{name: name, field_ref: name}
+        )
     end)
   end
 
@@ -46,17 +56,18 @@ defmodule FacetedSearch.DataFieldEntry do
   """
 
   @enforce_keys [
-    :name,
-    :binding,
-    :field
+    :name
   ]
 
-  defstruct name: nil, binding: nil, field: nil
+  defstruct name: nil, binding: nil, field: nil, field_ref: nil, cast: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
-          binding: atom(),
-          field: atom()
+          # optional
+          binding: atom() | nil,
+          field: atom() | nil,
+          field_ref: atom() | nil,
+          cast: atom() | nil
         }
 end

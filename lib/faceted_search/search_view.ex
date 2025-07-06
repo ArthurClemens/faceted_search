@@ -390,13 +390,49 @@ defmodule FacetedSearch.SearchView do
   defp create_generated_data_column_entries(source) do
     source.data_fields
     |> Enum.filter(&(not is_nil(&1.entries)))
-    |> Enum.map(&create_generated_data_column_entry(&1))
+    |> Enum.map(&create_generated_data_column_entry(&1, source))
   end
 
-  @spec create_generated_data_column_entry(DataField.t()) :: String.t()
-  defp create_generated_data_column_entry(%{name: name, entries: entries}) do
+  @spec create_generated_data_column_entry(DataField.t(), Source.t()) :: String.t()
+  defp create_generated_data_column_entry(
+         %{name: name, entries: entries},
+         %{fields: fields, joins: joins} = _source
+       ) do
+    table_and_columns =
+      entries
+      |> Enum.map(fn
+        %{name: name, cast: cast, field_ref: field_ref} when not is_nil(field_ref) ->
+          field = fields |> Enum.find(&(&1.name == field_ref))
+
+          case get_table_and_column(field, joins) do
+            {table_name, column_name} ->
+              %{name: name, table_name: table_name, column_name: column_name, cast: cast}
+
+            _ ->
+              nil
+          end
+
+        %{name: name, cast: cast, binding: binding, field: field} ->
+          %{name: name, table_name: binding, column_name: field, cast: cast}
+
+        _ ->
+          nil
+      end)
+      |> Enum.filter(&(!!&1))
+      |> Enum.map(
+        &Map.put(
+          &1,
+          :table_and_column,
+          table_and_column_string(&1.table_name, &1.column_name) |> maybe_cast(&1.cast)
+        )
+      )
+
     key_values =
-      entries |> Enum.map_join(",\n#{line_indent(2)}", &"'#{&1.name}', #{&1.binding}.#{&1.field}")
+      table_and_columns
+      |> Enum.map_join(
+        ",\n#{line_indent(2)}",
+        &"'#{&1.name}', #{&1.table_and_column}"
+      )
 
     """
     '#{name}', json_agg(DISTINCT jsonb_build_object(
@@ -569,7 +605,7 @@ defmodule FacetedSearch.SearchView do
   defp maybe_cast(value, cast) when not is_nil(cast), do: "CAST(#{value} AS #{cast})"
   defp maybe_cast(value, _cast), do: value
 
-  @spec get_table_and_column(Field.t(), list(Join.t()) | nil) :: {atom(), atom()}
+  @spec get_table_and_column(Field.t(), list(Join.t()) | nil) :: {atom(), atom()} | nil
   defp get_table_and_column(%Field{binding: binding} = field, joins)
        when is_list(joins) and joins != [] and not is_nil(binding) do
     %{binding: binding, field: join_field, table_name: table_name} = field
@@ -584,6 +620,8 @@ defmodule FacetedSearch.SearchView do
 
   defp get_table_and_column(%Field{table_name: table_name, name: column_name}, _joins),
     do: {table_name, column_name}
+
+  defp get_table_and_column(_, _), do: nil
 
   defp table_name_with_prefix(table_name, prefix) when is_binary(prefix),
     do: "#{prefix}.#{table_name}"
