@@ -59,8 +59,8 @@ defmodule FacetedSearch.Source do
 
   defp collect_joins(_joins), do: nil
 
-  defp create_join_entry(join_options) do
-    struct(Join, join_options)
+  defp create_join_entry({name, options}) do
+    Join.new(name, options)
   end
 
   defp collect_fields(fields, table_name) when is_list(fields) and fields != [] do
