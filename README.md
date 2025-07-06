@@ -457,12 +457,10 @@ use FacetedSearch,
   sources: [
     books: [
       joins: [
-        [
-          table: :book_genres,
+        book_genres: [
           on: "book_genres.book_id = books.id"
         ],
-        [
-          table: :genres,
+        genres: [
           on: "genres.id = book_genres.genre_id"
         ]
       ],
@@ -493,9 +491,8 @@ Note that you can use aliases for joined fields. This is mostly useful when refe
 
 ```elixir
 joins: [
-  [
+  bg: [
     table: :book_genres,
-    as: :bg,
     on: "bg.book_id = books.id"
   ]
 ]
@@ -524,13 +521,11 @@ use FacetedSearch,
     books: [
       prefix: "catalog",
       joins: [
-        [
-          table: :book_genres,
+        book_genres: [
           prefix: "catalog",
           on: "book_genres.book_id = books.id"
         ],
-        [
-          table: :genres,
+        genres: [
           prefix: "catalog",
           on: "genres.id = book_genres.genre_id"
         ]

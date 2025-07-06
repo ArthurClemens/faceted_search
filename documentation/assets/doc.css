@@ -1,0 +1,17 @@
+h3.section-heading.underline {
+    font-size: 1.1rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--gray300);
+}
+
+.content-inner ul li blockquote {
+    margin-top: .5rem;
+    margin-bottom: .5rem;
+    font-size: .87rem;
+    line-height: 1.6;
+}
+
+.content-inner ul li>p {
+    margin-block-start: 0;
+    margin-block-end: 0;
+}

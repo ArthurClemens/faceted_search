@@ -44,9 +44,17 @@ defmodule FacetedSearch.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md"
-      ]
+      ],
+      assets: %{"documentation/assets" => "assets"},
+      before_closing_head_tag: &docs_before_closing_head_tag/1
     ]
   end
+
+  defp docs_before_closing_head_tag(:html) do
+    ~s{<link rel="stylesheet" href="assets/doc.css">}
+  end
+
+  defp docs_before_closing_head_tag(_), do: ""
 
   defp aliases do
     [
