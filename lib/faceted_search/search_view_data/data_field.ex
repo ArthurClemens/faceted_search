@@ -19,14 +19,14 @@ defmodule FacetedSearch.DataField do
         }
 
   @spec new(atom(), Keyword.t() | nil) :: t()
-  def new(name, field_options \\ []) do
+  def new(name, entry_options \\ []) do
     struct(__MODULE__, %{
       name: name,
-      entries: Keyword.get(field_options, :entries) |> collect_entries()
+      entries: collect_entries(entry_options)
     })
   end
 
-  defp collect_entries(entry_options) when is_list(entry_options) do
+  defp collect_entries(entry_options) when entry_options != [] do
     entry_options
     |> Enum.map(fn {name, options} ->
       struct(
