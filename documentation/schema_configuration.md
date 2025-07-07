@@ -408,9 +408,9 @@ facet_fields: [
 
 ## sort_fields
 
-A list of fields used to for sorting.
+A list of fields used for sorting results.
 
-The referenced fields create new columns in the search view.
+The fields referenced from the `fields` option are used to create extra columns in the search view. Field values can optionally be cast to another data type.
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > sort_fields`

@@ -138,30 +138,29 @@ You may need only a subset of the view columns. For example, to only return the 
 ```elixir
 ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "books")
 
-from(ecto_schema, as: :schema)
+from(ecto_schema)
 |> select([schema], %{data: schema.data})
 |> Flop.validate_and_run(params, for: MyApp.FacetSchema)
 ```
 
 ## Sorting
 
-Sorting is enabled with schema source option `sort_fields` and referencing fields that are listed under `fields`.
+Sorting search results can be done in 2 ways:
+1. Using Flop params
+2. Using Ecto queries
+
+### Sorting with Flop
+
+Using Flop sort params is the simplest way to implement sorting, as the configuration can easily be defined in the application code and passed around as part of a Flop params map.
+
+However, Flop requires that the specified fields refer to existing database columns. By using the [`sort_fields`](documentation/schema_configuration.md#sort_fields) schema option, additional columns are generated in the search view to facilitate this.
+
+Schema example:
 
 ```elixir
 use FacetedSearch,
   sources: [
     books: [
-      fields: [
-        title: [
-          ecto_type: :string
-        ],
-        author: [
-          ecto_type: :string
-        ],
-        publication_year: [
-          ecto_type: :integer
-        ]
-      ],
       ...
       sort_fields: [
         :title,
@@ -171,17 +170,18 @@ use FacetedSearch,
   ]
 ```
 
-This will create additional columns in the search view. To prevent conflicts with Flop (custom fields - which are used internally - cannot be used for sorting),
-the created column names are prefixed with `sort_`. For example, field `title` will have a corresponding sort column `sort_title` which should be used in the Flop params:
+To prevent conflicts with Flop (since custom fields, which are used internally, cannot be used for sorting),
+the generated column names are prefixed with `sort_`. For example, a field `title` will have a corresponding sort column `sort_title` which should be used in the Flop params:
 
 ```elixir
 params = %{
   filters: [...],
-  order_by: [:sort_title]
+  order_by: [:sort_title],
+  order_directions: [:asc]
 }
 ```
 
-### Casting sort column values
+#### Casting sort column values
 
 Casting sort column values is useful when the original values aren’t suitable for sorting, for example, strings that represent numbers:
 
@@ -202,19 +202,35 @@ sort_fields: [
 
 The cast value can be any valid [Postgres data type](https://www.postgresql.org/docs/current/datatype.html). With non-standard types, results may vary.
 
-### Search example
+As with Flop, multiple fields can be passed to `order_by` and `order_directions`.
 
-Adding `order_by` and `order_directions` to Flop params:
+### Sorting with Ecto
+
+Sometimes more advanced sorting techniques are required. For example:
+- Placing favorite items at the top
+- Sorting by values extracted from the `data` column
+- Prioritizing search matches in the result title
+
+This can be implemented in the Ecto query that is passed to `Flop.validate_and_run`. Make sure to not pass Flop sort params at the same time.
+
+Example to sort on a value stored in the `data` JSON:
 
 ```elixir
-params = %{
-  filters: [%{field: :text, op: :ilike, value: "Le Guin"}],
-  order_by: [:sort_category],
-  order_directions: [:asc]}
-}
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "books")
+
+from(ecto_schema)
+|> order_by([schema],
+  asc: fragment("?::jsonb->>'genre_title'", schema.data)
+)
+|> Flop.validate_and_run(params, for: MyApp.FacetSchema)
 ```
 
-As with Flop, multiple fields can be passed to `order_by` and `order_directions`.
+Similarly, to sort on matches in titles:
+
+```elixir
+desc: fragment("similarity(?::jsonb->>'book_title', ?)", schema.data, ^query),
+```
+
 
 ## Faceted search
 
@@ -358,7 +374,7 @@ FacetedSearch.create_search_view(MyApp.FacetSchema, "books", scope: %{current_us
 Using a list of scope keys, scope evaluation is AND-ed
 
 Scopes can be created using any column in the source table — that is, the default view columns combined
-with the columns defined in the `data_fields` option.
+with the columns defined in the [`data_fields`](documentation/schema_configuration.md#data_fields) option.
 
 For example, to scope by publication year, limiting the table to the current user and to books published after 2018, add both scope keys:
 
