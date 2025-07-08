@@ -16,4 +16,8 @@ defmodule FacetedSearch.Scope do
           key: atom(),
           module: module()
         }
+
+  def new(module, scope_key) do
+    struct(__MODULE__, %{key: scope_key, module: module})
+  end
 end

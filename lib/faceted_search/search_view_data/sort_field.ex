@@ -15,4 +15,20 @@ defmodule FacetedSearch.SortField do
           # optional
           cast: :integer | :float | :text | nil
         }
+
+  def new(field_options) do
+    {name, cast} =
+      case field_options do
+        {name, [cast: cast]} -> {name, cast}
+        name -> {name, nil}
+      end
+
+    struct(
+      __MODULE__,
+      %{
+        name: name,
+        cast: cast
+      }
+    )
+  end
 end

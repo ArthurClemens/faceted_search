@@ -54,29 +54,16 @@ defmodule FacetedSearch.Source do
   end
 
   defp collect_joins(joins) when is_list(joins) do
-    Enum.map(joins, &create_join_entry/1)
+    Enum.map(joins, fn {name, options} -> Join.new(name, options) end)
   end
 
   defp collect_joins(_joins), do: nil
 
-  defp create_join_entry({name, options}) do
-    Join.new(name, options)
-  end
-
   defp collect_fields(fields, table_name) when is_list(fields) and fields != [] do
-    Enum.map(fields, &create_field_entry(table_name, &1))
+    Enum.map(fields, fn {name, field_options} -> Field.new(name, field_options, table_name) end)
   end
 
   defp collect_fields(_fields, _table_name), do: nil
-
-  defp create_field_entry(table_name, {name, field_options}) do
-    struct(
-      Field,
-      field_options
-      |> Keyword.put(:name, name)
-      |> Keyword.put(:table_name, table_name)
-    )
-  end
 
   defp collect_data_fields(fields) when is_list(fields) and fields != [] do
     Enum.map(fields, fn
@@ -88,34 +75,14 @@ defmodule FacetedSearch.Source do
   defp collect_data_fields(_fields), do: nil
 
   defp collect_scopes(scopes, module) when is_list(scopes) and scopes != [] do
-    Enum.map(scopes, &create_scope_entry(module, &1))
+    Enum.map(scopes, fn scope_key -> Scope.new(module, scope_key) end)
   end
 
   defp collect_scopes(_scopes, _module), do: nil
 
-  defp create_scope_entry(module, scope_key) do
-    struct(Scope, %{key: scope_key, module: module})
-  end
-
   defp collect_sort_fields(sort_fields) when is_list(sort_fields) and sort_fields != [] do
-    Enum.map(sort_fields, &create_sort_field_entry(&1))
+    Enum.map(sort_fields, fn field_options -> SortField.new(field_options) end)
   end
 
   defp collect_sort_fields(_sort_fields), do: nil
-
-  defp create_sort_field_entry(field_options) do
-    {name, cast} =
-      case field_options do
-        {name, [cast: cast]} -> {name, cast}
-        name -> {name, nil}
-      end
-
-    struct(
-      SortField,
-      %{
-        name: name,
-        cast: cast
-      }
-    )
-  end
 end

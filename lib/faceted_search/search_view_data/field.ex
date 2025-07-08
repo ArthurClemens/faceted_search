@@ -28,4 +28,13 @@ defmodule FacetedSearch.Field do
           binding: atom() | nil,
           field: atom() | nil
         }
+
+  def new(name, field_options, table_name) do
+    struct(
+      __MODULE__,
+      field_options
+      |> Keyword.put(:name, name)
+      |> Keyword.put(:table_name, table_name)
+    )
+  end
 end
