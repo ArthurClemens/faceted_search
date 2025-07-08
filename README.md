@@ -171,7 +171,7 @@ use FacetedSearch,
 ```
 
 To prevent conflicts with Flop (since custom fields, which are used internally, cannot be used for sorting),
-the generated column names are prefixed with `sort_`. For example, a field `title` will have a corresponding sort column `sort_title` which should be used in the Flop params:
+the generated column names are prefixed with `sort_`. For example, a field `title` will have a corresponding sort column `sort_title` which should be used in the Flop params. Note that the field names in the schema don't use the prefix.
 
 ```elixir
 params = %{
@@ -249,43 +249,20 @@ Assuming that `title` is listed under the `sort_fields` option:
 
 ## Faceted search
 
-Facet filters are a specialized form of search filters:
+### Setup
 
-- Selecting a single facet option activates the filter (the facet).
-- Selecting multiple facet options within the same facet combines the option values using an OR condition.
+Enabling faceted search involves the following steps:
 
-To achieve this behavior using Flop, you need to adjust the filter settings slightly:
-
-- Field names must be prefixed with `facet_`, so field `publication_year` becomes `facet_publication_year`.
-- The operator `op` must be `:==`.
-- The `value` must be an array.
-
-Adding facet filters to Flop params:
-
-```elixir
-%{filters: [%{field: :facet_publication_year, op: :==, value: [2012,2014,2016]}]}
-%{filters: [%{field: :facet_author, op: :==, value: ["Yotam Ottolenghi"]}]}
-```
-
-Combining a regular Flop filter (in this case, a text search) with a facet filter:
-
-```elixir
-%{filters: [
-  %{field: :text, op: :ilike, value: "simple"},
-  %{field: :facet_publication_year, op: :==, value: [2012,2014,2016]}
-]}
-```
-
-The same Flop params are passed to both `Flop.validate_and_run` and `FacetedSearch.search`.
+- Configure the schema using the [`facet_fields`](documentation/schema_configuration.md#facet_fields) option
+- Use `FacetedSearch.search/3` to perform the search
+- Provide facet filters params to to update the search results based on selected facets
 
 ### Example facet search
 
-`FacetedSearch.search` takes a reference to the schema, and search params:
+`FacetedSearch.search/3` takes a reference to the schema and search params:
 
 ```elixir
 ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
-
-params = %{filters: [%{field: :facet_publication_year, op: :==, value: [2018]}]}
 {:ok, facets} = FacetedSearch.search(ecto_schema, params)
 ```
 
@@ -296,10 +273,12 @@ iex> ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 {"fv_media", MyApp.FacetSchema}
 ```
 
-### Example search function
+### Combining Flop and facets
 
-Facet search is typically combined with filters and text search.
-The following example demonstrates how to combine a Flop search with facet search:
+Facet search is typically combined with filters and text search. This means calling both `Flop.validate_and_run` and
+`FacetedSearch.search` - see the following example.
+
+Note that this function returns a three-element tuple that includes the facet results.
 
 ```elixir
 def search_media(params \\ %{}) do
@@ -315,24 +294,60 @@ def search_media(params \\ %{}) do
 end
 ```
 
-Example result:
+Usage example:
 
 ```elixir
-{:ok,
- [
-   %FacetedSearch.FacetData.Facet{
-     type: "value",
-     field: :publication_year,
-     facet_options: [
-       %FacetedSearch.FacetData.FacetOption{value: "2010", count: 1, selected: false},
-       %FacetedSearch.FacetData.FacetOption{value: "2016", count: 2, selected: false},
-       %FacetedSearch.FacetData.FacetOption{value: "2018", count: 1, selected: true}
-     ]
-   }
- ]}
+params = %{filters: [
+  %{field: :text, op: :ilike, value: "Le Guin"},
+  %{field: :publication_year, op: :<=, value: 2000}
+]}
+{:ok, results, facets} = search_media(params)
+{books, meta} = results
 ```
 
-Facets that don't have any hits will be omitted from the results.
+The returned `facets` data will look like this:
+
+```elixir
+[
+ %FacetedSearch.FacetData.Facet{
+   type: "value",
+   field: :publication_year,
+   facet_options: [
+     %FacetedSearch.FacetData.FacetOption{value: "1968", count: 1, selected: false},
+     %FacetedSearch.FacetData.FacetOption{value: "1971", count: 1, selected: false},
+     %FacetedSearch.FacetData.FacetOption{value: "1972", count: 1, selected: false}
+   ]
+ }
+]
+```
+
+Facets that don't have any hits will be omitted from the returned data.
+
+### Facet filters
+
+Facet filters are a specialized form of search filters:
+
+- Selecting a single facet option activates the filter (the facet).
+- Selecting multiple facet options within the same facet combines the option values using an OR condition.
+
+To achieve this behavior using Flop, you need to adjust the filter settings slightly:
+
+- The `value` must be an array.
+- The operator `op` must be `:==`.
+- Field names must be prefixed with `facet_`, so field `publication_year` becomes `facet_publication_year` in the search params. Note that the field names in the schema don't use the prefix.
+
+#### Example search
+
+Let's say we have added checkbox groups to the search page, showing 2 checkbox groups titled "Publication year" and "Author".
+
+After the user has made a couple of selections, the search params may look like this:
+
+```elixir
+%{filters: [
+  %{field: :facet_publication_year, op: :==, value: [2012,2014,2016]},
+  %{field: :facet_author, op: :==, value: ["Yotam Ottolenghi"]}
+]}
+```
 
 ## Additional search view functionality
 
