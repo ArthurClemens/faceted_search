@@ -126,8 +126,7 @@ Example result:
       updated_at: # source timestamp
     },
     ...
-  ],
-  %Flop.Meta{}
+  ], %Flop.Meta{}}
 }
 ```
 
@@ -146,6 +145,7 @@ from(ecto_schema)
 ## Sorting
 
 Sorting search results can be done in 2 ways:
+
 1. Using Flop params
 2. Using Ecto queries
 
@@ -207,6 +207,7 @@ As with Flop, multiple fields can be passed to `order_by` and `order_directions`
 ### Sorting with Ecto
 
 Sometimes more advanced sorting techniques are required. For example:
+
 - Placing favorite items at the top
 - Sorting by values extracted from the `data` column
 - Prioritizing search matches in the result title
@@ -228,9 +229,23 @@ from(ecto_schema)
 Similarly, to sort on matches in titles:
 
 ```elixir
-desc: fragment("similarity(?::jsonb->>'book_title', ?)", schema.data, ^query),
+|> order_by([schema],
+  desc: fragment("similarity(?::jsonb->>'book_title', ?)", schema.data, ^query)
+)
 ```
 
+#### Using sort_fields with Ecto
+
+It is also possible to use the generated sort columns described in [Sorting with Flop](#sorting-with-flop) with an Ecto query.
+
+Assuming that `title` is listed under the `sort_fields` option:
+
+```elixir
+|> order_by([schema],
+  asc: fragment("?::jsonb->>'genre_title'", schema.data),
+  asc: :sort_title
+)
+```
 
 ## Faceted search
 
