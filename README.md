@@ -67,17 +67,11 @@ Set up the search view by passing a schema to `use FacetedSearch`.
 The schema defines:
 
 - From which tables to get data
-- Which other tables to join
-- Which columns to use for filtering and data extraction
-- Which columns to use for text search
-- Which columns to use for sorting
-- Which columns to use for facets
+- Which columns to use for filtering and data extraction, sorting and facets
 
 See [Schema configuration](documentation/schema_configuration.md) for documentation and examples.
 
 When the schema is defined, create the view with `FacetedSearch.create_search_view/3`.
-
-The database will now contain a materialized view named "fv_books".
 
 ### Updating the search view
 
@@ -396,7 +390,8 @@ Note that map key "field" references the table from "sources".
 3. Pass the scope to `FacetedSearch.create_search_view/3`:
 
 ```elixir
-FacetedSearch.create_search_view(MyApp.FacetSchema, "books", scope: %{current_user: current_user})
+FacetedSearch.create_search_view(MyApp.FacetSchema, "books",
+  scope: %{current_user: current_user})
 ```
 
 #### Combining scopes

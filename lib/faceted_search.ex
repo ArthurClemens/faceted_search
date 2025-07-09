@@ -181,8 +181,10 @@ defmodule FacetedSearch do
   Creates a search view that collects data for searching.
   If the seach view already exists, it will be dropped first.
 
+  The created materialized view is prefixed with `"fv_"`.
+
   Options:
-  - `scope` (optional) - The scope to be passed to the module function provided with option `scope_by` - see: [Supported options](#__using__/1-supported-options) under "sources".
+  - `scope` (optional) - The scope to be passed to the module function provided with option `scope_by` - see: [Scoping data](README.md#scoping-data).
   - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
 
   ## Examples
