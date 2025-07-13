@@ -2,7 +2,7 @@ defmodule FacetedSearch.SearchView do
   @moduledoc false
 
   use FacetedSearch.Types,
-    include: [:schema_options, :create_search_view_options]
+    include: [:schema_options, :create_search_view_options, :refresh_search_view_options]
 
   require Logger
 
@@ -41,7 +41,7 @@ defmodule FacetedSearch.SearchView do
       delete_search_view(view_id, opts)
     end
 
-    case build_search_view(search_view_description, config) do
+    case build_search_view(search_view_description, config, opts) do
       :ok ->
         Logger.info("FacetedSearch: search view '#{view_name_with_prefix}' created")
         refresh_search_view(view_id, opts)
@@ -71,16 +71,25 @@ defmodule FacetedSearch.SearchView do
   """
   # Skip warning: Query is not user-controlled.
   # sobelow_skip ["SQL.Query"]
-  @spec refresh_search_view(String.t(), [create_search_view_option()]) ::
+  @spec refresh_search_view(String.t(), [refresh_search_view_option()]) ::
           {:ok, String.t()} | {:error, Exception.t()}
   def refresh_search_view(view_id, opts) do
     %{view_name_with_prefix: view_name_with_prefix, repo: repo} = Config.new(view_id, opts)
+    concurrently = Keyword.get(opts, :concurrently)
+
+    params =
+      [
+        if(concurrently, do: "CONCURRENTLY", else: nil),
+        view_name_with_prefix
+      ]
+      |> Enum.filter(&(!!&1))
+      |> Enum.join(" ")
 
     sql = """
-    REFRESH MATERIALIZED VIEW #{view_name_with_prefix};
+    REFRESH MATERIALIZED VIEW #{params};
     """
 
-    case SQL.query(repo, sql, []) do
+    case SQL.query(repo, sql, [], postgrex_options(opts)) do
       {:ok, _result} ->
         Logger.info("FacetedSearch: search view '#{view_name_with_prefix}' refreshed")
         {:ok, view_id}
@@ -118,7 +127,7 @@ defmodule FacetedSearch.SearchView do
     DROP MATERIALIZED VIEW #{view_name_with_prefix};
     """
 
-    case SQL.query(repo, sql, []) do
+    case SQL.query(repo, sql, [], postgrex_options(opts)) do
       {:ok, _result} ->
         Logger.info("FacetedSearch: search view '#{view_name_with_prefix}' dropped")
         {:ok, view_id}
@@ -141,7 +150,7 @@ defmodule FacetedSearch.SearchView do
     LIMIT 1;
     """
 
-    case SQL.query(repo, sql, []) do
+    case SQL.query(repo, sql, [], postgrex_options(opts)) do
       {:ok, result} ->
         result != []
 
@@ -152,19 +161,25 @@ defmodule FacetedSearch.SearchView do
 
   # Skip warning: Query is not user-controlled.
   # sobelow_skip ["SQL.Query"]
-  defp build_search_view(search_view_description, config) do
+  defp build_search_view(search_view_description, config, opts) do
     %{view_name: view_name, view_name_with_prefix: view_name_with_prefix, repo: repo} = config
 
+    create_pg_trgm_sql = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
+
+    drop_id_index_sql = """
+    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_id_idx
+    """
+
     drop_data_index_sql = """
-    DROP INDEX IF EXISTS #{view_name_with_prefix}_data_idx
+    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_data_idx
     """
 
     drop_text_index_sql = """
-    DROP INDEX IF EXISTS #{view_name_with_prefix}_text_idx
+    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_text_idx
     """
 
-    drop_gin_index_sql = """
-    DROP INDEX IF EXISTS #{view_name_with_prefix}_tsv_gin_idx
+    drop_tsv_index_sql = """
+    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_tsv_gin_idx
     """
 
     drop_view_sql = """
@@ -180,37 +195,45 @@ defmodule FacetedSearch.SearchView do
     WITH NO DATA;
     """
 
+    create_id_index_sql = """
+    CREATE UNIQUE INDEX CONCURRENTLY #{view_name}_id_idx
+    ON #{view_name_with_prefix}(id)
+    """
+
     create_data_index_sql = """
-    CREATE INDEX #{view_name}_data_idx
+    CREATE INDEX CONCURRENTLY #{view_name}_data_idx
     ON #{view_name_with_prefix}
-    USING gin(to_tsvector('simple', data))
+    USING gin(data)
     """
 
     create_text_index_sql = """
-    CREATE INDEX #{view_name}_text_idx
+    CREATE INDEX CONCURRENTLY #{view_name}_text_idx
     ON #{view_name_with_prefix}
-    USING gin(to_tsvector('simple', text))
+    USING gin(text gin_trgm_ops)
     """
 
-    create_gin_index_sql = """
-    CREATE INDEX #{view_name}_tsv_gin_idx
+    create_tsv_index_sql = """
+    CREATE INDEX CONCURRENTLY #{view_name}_tsv_gin_idx
     ON #{view_name_with_prefix}
     USING gin(tsv)
     """
 
     result =
       [
+        create_pg_trgm_sql,
+        drop_id_index_sql,
         drop_data_index_sql,
         drop_text_index_sql,
-        drop_gin_index_sql,
+        drop_tsv_index_sql,
         drop_view_sql,
         create_view_sql,
+        create_id_index_sql,
         create_data_index_sql,
         create_text_index_sql,
-        create_gin_index_sql
+        create_tsv_index_sql
       ]
       |> Enum.reduce(%{errors: []}, fn sql, acc ->
-        case SQL.query(repo, sql, []) do
+        case SQL.query(repo, sql, [], postgrex_options(opts)) do
           {:ok, _} ->
             acc
 
@@ -650,5 +673,13 @@ defmodule FacetedSearch.SearchView do
     |> List.flatten()
     |> Enum.filter(&(!!&1))
     |> Enum.uniq()
+  end
+
+  defp postgrex_options(opts) do
+    [
+      timeout: Keyword.get(opts, :timeout, nil),
+      pool_timeout: Keyword.get(opts, :pool_timeout, nil)
+    ]
+    |> Enum.filter(fn {_, v} -> not is_nil(v) end)
   end
 end

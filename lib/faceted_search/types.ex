@@ -16,6 +16,14 @@ defmodule FacetedSearch.Types do
                 {:scope, term()}
                 | {:repo, module()}
                 | {:tenant, String.t()}
+                | {:timeout, integer()}
+                | {:pool_timeout, integer()}
+      end
+
+      if :refresh_search_view_options in unquote(includes) do
+        @type refresh_search_view_option ::
+                {:concurrently, boolean()}
+                | {:timeout, integer()}
       end
 
       if :config_options in unquote(includes) do

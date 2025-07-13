@@ -79,7 +79,7 @@ A materialized view is essentially a cache: it provides faster search performanc
 
 Updates could be performed periodically, or after after changes to the source tables - this should be decided at the application level.
 
-Refreshing the view is done using `FacetedSearch.refresh_search_view/3`:
+Refreshing the view is done using `FacetedSearch.refresh_search_view/3`.
 
 See also:
 
@@ -342,6 +342,10 @@ After the user has made a couple of selections, the search params may look like 
   %{field: :facet_author, op: :==, value: ["Yotam Ottolenghi"]}
 ]}
 ```
+
+## Performance
+
+This library takes a pragmatic approach that performs reasonably well in most cases, processing around 100,000 rows in 300ms, but for more demanding applications such as e-commerce, a faster, more optimized library may be necessary.
 
 ## Additional search view functionality
 

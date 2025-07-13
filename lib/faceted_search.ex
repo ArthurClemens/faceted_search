@@ -6,7 +6,12 @@ defmodule FacetedSearch do
   """
 
   use FacetedSearch.Types,
-    include: [:schema_options, :create_search_view_options, :flop_adapter_options]
+    include: [
+      :schema_options,
+      :create_search_view_options,
+      :refresh_search_view_options,
+      :flop_adapter_options
+    ]
 
   alias FacetedSearch.Facet
   alias FacetedSearch.Facets
@@ -42,7 +47,12 @@ defmodule FacetedSearch do
       use Ecto.Schema
 
       use FacetedSearch.Types,
-        include: [:schema_options, :create_search_view_options, :flop_adapter_options]
+        include: [
+          :schema_options,
+          :create_search_view_options,
+          :refresh_search_view_options,
+          :flop_adapter_options
+        ]
 
       @primary_key false
 
@@ -98,7 +108,7 @@ defmodule FacetedSearch do
       def create_search_view_if_not_exists(view_id, opts \\ []),
         do: SearchView.create_search_view_if_not_exists(options(), view_id, opts)
 
-      @spec refresh_search_view(String.t(), [create_search_view_option()]) ::
+      @spec refresh_search_view(String.t(), [refresh_search_view_option()]) ::
               :ok | {:error, term()}
       def refresh_search_view(view_id, opts \\ []),
         do: SearchView.refresh_search_view(view_id, opts)
@@ -214,13 +224,17 @@ defmodule FacetedSearch do
   @doc """
   Refreshes the search view.
 
+  Options:
+  - concurrently `boolean()`
+  - [Postgrex query options](https://hexdocs.pm/postgrex/Postgrex.html#query/4-options)
+
   ## Examples
 
       iex> FacetedSearch.refresh_search_view(MyApp.FacetSchema, "books")
       :ok
 
   """
-  @spec refresh_search_view(module(), String.t(), [create_search_view_option()]) ::
+  @spec refresh_search_view(module(), String.t(), [refresh_search_view_option()]) ::
           :ok | {:error, term()}
   def refresh_search_view(module, view_id, opts \\ []),
     do: module.refresh_search_view(view_id, opts)
