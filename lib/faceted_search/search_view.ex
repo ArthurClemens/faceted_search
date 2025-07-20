@@ -218,6 +218,11 @@ defmodule FacetedSearch.SearchView do
     USING gin(tsv)
     """
 
+    drop_sort_indexes_sql = drop_sort_indexes(search_view_description, view_name_with_prefix)
+
+    create_sort_indexes_sql =
+      create_sort_indexes(search_view_description, view_name, view_name_with_prefix)
+
     result =
       [
         create_pg_trgm_sql,
@@ -225,13 +230,16 @@ defmodule FacetedSearch.SearchView do
         drop_data_index_sql,
         drop_text_index_sql,
         drop_tsv_index_sql,
+        drop_sort_indexes_sql,
         drop_view_sql,
         create_view_sql,
         create_id_index_sql,
         create_data_index_sql,
         create_text_index_sql,
-        create_tsv_index_sql
+        create_tsv_index_sql,
+        create_sort_indexes_sql
       ]
+      |> List.flatten()
       |> Enum.reduce(%{errors: []}, fn sql, acc ->
         case SQL.query(repo, sql, [], postgrex_options(opts)) do
           {:ok, _} ->
@@ -289,6 +297,32 @@ defmodule FacetedSearch.SearchView do
     |> Enum.filter(&(!!&1))
     |> Enum.map_join("\n", &String.trim/1)
   end
+
+  defp create_sort_indexes(search_view_description, view_name, view_name_with_prefix) do
+    get_sort_column_names(search_view_description)
+    |> Enum.map(fn column_name ->
+      """
+      CREATE INDEX CONCURRENTLY #{view_name}_#{column_name}_idx
+      ON #{view_name_with_prefix}(#{column_name})
+      """
+    end)
+  end
+
+  defp drop_sort_indexes(search_view_description, view_name_with_prefix) do
+    get_sort_column_names(search_view_description)
+    |> Enum.map(fn column_name ->
+      """
+      DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_#{column_name}_idx
+      """
+    end)
+  end
+
+  defp get_sort_column_names(search_view_description) do
+    get_all_sort_fields(search_view_description)
+    |> Enum.map(&"sort_#{&1.name}")
+  end
+
+  # DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_text_idx
 
   defp create_joins(%{joins: joins} = source) when is_list(joins) and joins != [] do
     source.joins
