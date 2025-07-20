@@ -179,7 +179,15 @@ defmodule FacetedSearch.SearchView do
     """
 
     drop_tsv_index_sql = """
-    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_tsv_gin_idx
+    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_tsv_idx
+    """
+
+    drop_inserted_at_index_sql = """
+    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_inserted_at_idx
+    """
+
+    drop_updated_at_index_sql = """
+    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_updated_at_idx
     """
 
     drop_view_sql = """
@@ -213,9 +221,19 @@ defmodule FacetedSearch.SearchView do
     """
 
     create_tsv_index_sql = """
-    CREATE INDEX CONCURRENTLY #{view_name}_tsv_gin_idx
+    CREATE INDEX CONCURRENTLY #{view_name}_tsv_idx
     ON #{view_name_with_prefix}
     USING gin(tsv)
+    """
+
+    create_inserted_at_index_sql = """
+    CREATE INDEX CONCURRENTLY #{view_name}_inserted_at_idx
+    ON #{view_name_with_prefix}(inserted_at)
+    """
+
+    create_updated_at_index_sql = """
+    CREATE INDEX CONCURRENTLY #{view_name}_updated_at_idx
+    ON #{view_name_with_prefix}(updated_at)
     """
 
     drop_sort_indexes_sql = drop_sort_indexes(search_view_description, view_name_with_prefix)
@@ -231,13 +249,17 @@ defmodule FacetedSearch.SearchView do
         drop_text_index_sql,
         drop_tsv_index_sql,
         drop_sort_indexes_sql,
+        drop_inserted_at_index_sql,
+        drop_updated_at_index_sql,
         drop_view_sql,
         create_view_sql,
         create_id_index_sql,
         create_data_index_sql,
         create_text_index_sql,
         create_tsv_index_sql,
-        create_sort_indexes_sql
+        create_sort_indexes_sql,
+        create_inserted_at_index_sql,
+        create_updated_at_index_sql
       ]
       |> List.flatten()
       |> Enum.reduce(%{errors: []}, fn sql, acc ->
