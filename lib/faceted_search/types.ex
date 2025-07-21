@@ -30,8 +30,10 @@ defmodule FacetedSearch.Types do
         @type config_option :: {:repo, module()}
       end
 
-      if :flop_adapter_options in unquote(includes) do
-        @type flop_adapter_option :: {:repo, module()} | {:query_opts, Keyword.t()}
+      if :facet_search_options in unquote(includes) do
+        @type facet_search_option ::
+                {:repo, module()}
+                | {:query_opts, Keyword.t() | {:cache_facets, boolean()}}
       end
     end
   end

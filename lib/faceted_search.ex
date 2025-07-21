@@ -10,7 +10,7 @@ defmodule FacetedSearch do
       :schema_options,
       :create_search_view_options,
       :refresh_search_view_options,
-      :flop_adapter_options
+      :facet_search_options
     ]
 
   alias FacetedSearch.Facet
@@ -51,7 +51,7 @@ defmodule FacetedSearch do
           :schema_options,
           :create_search_view_options,
           :refresh_search_view_options,
-          :flop_adapter_options
+          :facet_search_options
         ]
 
       @primary_key false
@@ -110,24 +110,44 @@ defmodule FacetedSearch do
 
       @spec refresh_search_view(String.t(), [refresh_search_view_option()]) ::
               :ok | {:error, term()}
-      def refresh_search_view(view_id, opts \\ []),
-        do: SearchView.refresh_search_view(view_id, opts)
+      def refresh_search_view(view_id, opts \\ []) do
+        SearchView.refresh_search_view(view_id, opts)
+        |> tap(fn
+          {:ok, view_id} -> ecto_schema(view_id) |> Facets.clear_cache()
+          _ -> nil
+        end)
+      end
 
       @spec drop_search_view(String.t(), [create_search_view_option()]) ::
               :ok | {:error, term()}
       def drop_search_view(view_id, opts \\ []),
-        do: SearchView.drop_search_view(view_id, opts)
+        do:
+          SearchView.drop_search_view(view_id, opts)
+          |> tap(fn
+            {:ok, view_id} -> search_view_name(view_id) |> Facets.clear_cache()
+            _ -> nil
+          end)
 
       @spec search_view_name(String.t()) :: String.t()
       def search_view_name(view_id), do: SearchView.search_view_name(view_id)
 
-      @spec search(Ecto.Queryable.t(), map() | nil, [flop_adapter_option()]) ::
+      @spec search(Ecto.Queryable.t(), map() | nil, [
+              facet_search_option()
+            ]) ::
               {:ok, list(Facet.t())}
               | {:error, Flop.Meta.t()}
               | {:error, Exception.t()}
       def search(ecto_schema, search_params \\ %{}, opts \\ []) do
         Facets.search(ecto_schema, search_params, opts)
       end
+
+      @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: list()
+      def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []),
+        do: Facets.warm_cache(ecto_schema, search_params_list, facet_search_options)
+
+      @spec clear_facets_cache(Ecto.Queryable.t()) :: {:ok, String.t()} | {:error, :no_table}
+      def clear_facets_cache(ecto_schema),
+        do: Facets.clear_cache(ecto_schema)
     end
   end
 
@@ -326,12 +346,52 @@ defmodule FacetedSearch do
         error -> error
       end
   """
-  @spec search(Ecto.Queryable.t(), map() | nil, [flop_adapter_option()]) ::
+  @spec search(Ecto.Queryable.t(), map() | nil, [facet_search_option()]) ::
           {:ok, list(Facet.t())}
           | {:error, Flop.Meta.t()}
           | {:error, Exception.t()}
   def search(ecto_schema, search_params \\ %{}, opts \\ []) do
     {_view_name, module} = ecto_schema
     module.search(ecto_schema, search_params, opts)
+  end
+
+  @doc """
+  Facet data optimization. Creates cache entries for the provided list of search params,
+  so searches using those params will return cached facet data.
+
+  From the search params, only `filter` entries will be read.
+
+  ## Examples
+
+      params = [
+        %{filters: [%{field: :facet_publication_year, value: [2014,2016], op: :==}]},
+        %{filters: [%{field: :facet_languages, value: ["en"], op: :==}]},
+        %{filters: [%{field: :languages, value: ["en", "fr"], op: :==}]},
+        %{filters: [%{field: :languages, value: ["en"], op: :==}]}
+      ]
+
+      ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
+      FacetedSearch.warm_cache(ecto_schema, params)
+
+  """
+  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: list()
+  def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []) do
+    {_view_name, module} = ecto_schema
+    module.warm_cache(ecto_schema, search_params_list, facet_search_options)
+  end
+
+  @doc """
+  Clears the facets cache.
+
+  ## Examples
+
+      ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
+      FacetedSearch.clear_facets_cache(ecto_schema)
+
+  """
+  @spec clear_facets_cache(Ecto.Queryable.t()) :: {:ok, String.t()} | {:error, :no_table}
+  def clear_facets_cache(ecto_schema) do
+    {_view_name, module} = ecto_schema
+    module.clear_facets_cache(ecto_schema)
   end
 end

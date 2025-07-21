@@ -166,29 +166,15 @@ defmodule FacetedSearch.SearchView do
 
     create_pg_trgm_sql = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
-    drop_id_index_sql = """
-    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_id_idx
-    """
-
-    drop_data_index_sql = """
-    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_data_idx
-    """
-
-    drop_text_index_sql = """
-    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_text_idx
-    """
-
-    drop_tsv_index_sql = """
-    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_tsv_idx
-    """
-
-    drop_inserted_at_index_sql = """
-    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_inserted_at_idx
-    """
-
-    drop_updated_at_index_sql = """
-    DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_updated_at_idx
-    """
+    drop_indexes_sql = [
+      (["id", "data", "text", "tsv", "inserted_at", "updated_at"] ++
+         get_sort_column_names(search_view_description))
+      |> Enum.map(fn name ->
+        """
+        DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_#{name}_idx
+        """
+      end)
+    ]
 
     drop_view_sql = """
     DROP MATERIALIZED VIEW IF EXISTS #{view_name_with_prefix};
@@ -203,63 +189,43 @@ defmodule FacetedSearch.SearchView do
     WITH NO DATA;
     """
 
-    create_id_index_sql = """
-    CREATE UNIQUE INDEX CONCURRENTLY #{view_name}_id_idx
-    ON #{view_name_with_prefix}(id)
-    """
+    create_indexes_sql = [
+      ([
+         %{name: "id", unique: true},
+         %{name: "data", using: "gin(data)"},
+         %{name: "text", using: "gin(text gin_trgm_ops)"},
+         %{name: "tsv", using: "gin(tsv)"},
+         %{name: "inserted_at"},
+         %{name: "updated_at"}
+       ] ++
+         (get_sort_column_names(search_view_description)
+          |> Enum.map(&%{name: &1})))
+      |> Enum.map(fn data ->
+        name = data.name
 
-    create_data_index_sql = """
-    CREATE INDEX CONCURRENTLY #{view_name}_data_idx
-    ON #{view_name_with_prefix}
-    USING gin(data)
-    """
+        command = if data[:unique], do: "CREATE UNIQUE", else: "CREATE"
 
-    create_text_index_sql = """
-    CREATE INDEX CONCURRENTLY #{view_name}_text_idx
-    ON #{view_name_with_prefix}
-    USING gin(text gin_trgm_ops)
-    """
+        on =
+          if data[:using] do
+            "ON #{view_name_with_prefix} USING #{data[:using]}"
+          else
+            "ON #{view_name_with_prefix}(#{name})"
+          end
 
-    create_tsv_index_sql = """
-    CREATE INDEX CONCURRENTLY #{view_name}_tsv_idx
-    ON #{view_name_with_prefix}
-    USING gin(tsv)
-    """
-
-    create_inserted_at_index_sql = """
-    CREATE INDEX CONCURRENTLY #{view_name}_inserted_at_idx
-    ON #{view_name_with_prefix}(inserted_at)
-    """
-
-    create_updated_at_index_sql = """
-    CREATE INDEX CONCURRENTLY #{view_name}_updated_at_idx
-    ON #{view_name_with_prefix}(updated_at)
-    """
-
-    drop_sort_indexes_sql = drop_sort_indexes(search_view_description, view_name_with_prefix)
-
-    create_sort_indexes_sql =
-      create_sort_indexes(search_view_description, view_name, view_name_with_prefix)
+        """
+        #{command} INDEX CONCURRENTLY #{view_name}_#{name}_idx
+        #{on}
+        """
+      end)
+    ]
 
     result =
       [
         create_pg_trgm_sql,
-        drop_id_index_sql,
-        drop_data_index_sql,
-        drop_text_index_sql,
-        drop_tsv_index_sql,
-        drop_sort_indexes_sql,
-        drop_inserted_at_index_sql,
-        drop_updated_at_index_sql,
+        drop_indexes_sql,
         drop_view_sql,
         create_view_sql,
-        create_id_index_sql,
-        create_data_index_sql,
-        create_text_index_sql,
-        create_tsv_index_sql,
-        create_sort_indexes_sql,
-        create_inserted_at_index_sql,
-        create_updated_at_index_sql
+        create_indexes_sql
       ]
       |> List.flatten()
       |> Enum.reduce(%{errors: []}, fn sql, acc ->
@@ -320,31 +286,10 @@ defmodule FacetedSearch.SearchView do
     |> Enum.map_join("\n", &String.trim/1)
   end
 
-  defp create_sort_indexes(search_view_description, view_name, view_name_with_prefix) do
-    get_sort_column_names(search_view_description)
-    |> Enum.map(fn column_name ->
-      """
-      CREATE INDEX CONCURRENTLY #{view_name}_#{column_name}_idx
-      ON #{view_name_with_prefix}(#{column_name})
-      """
-    end)
-  end
-
-  defp drop_sort_indexes(search_view_description, view_name_with_prefix) do
-    get_sort_column_names(search_view_description)
-    |> Enum.map(fn column_name ->
-      """
-      DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_#{column_name}_idx
-      """
-    end)
-  end
-
   defp get_sort_column_names(search_view_description) do
     get_all_sort_fields(search_view_description)
     |> Enum.map(&"sort_#{&1.name}")
   end
-
-  # DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_text_idx
 
   defp create_joins(%{joins: joins} = source) when is_list(joins) and joins != [] do
     source.joins
