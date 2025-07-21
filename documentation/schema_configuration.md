@@ -378,8 +378,13 @@ The referenced fields populate the `text` column in the search view.
 ### Examples
 
 ```
-text_fields: [
-  :author
+sources: [
+  books: [
+    ...
+    text_fields: [
+      :author
+    ]
+  ]
 ]
 ```
 
@@ -400,9 +405,14 @@ The referenced fields populate the `tsv` column in the search view.
 ### Examples
 
 ```
-facet_fields: [
-  :publication_year,
-  :genres
+sources: [
+  books: [
+    ...
+    facet_fields: [
+      :publication_year,
+      :genres
+    ]
+  ]
 ]
 ```
 
@@ -427,19 +437,29 @@ Either:
 ### Examples
 
 ```
-sort_fields: [
-  :title,
-  :publication_year
+sources: [
+  books: [
+    ...
+    sort_fields: [
+      :title,
+      :publication_year
+    ]
+  ]
 ]
 ```
 
-Casting a string value to a float:
+Casting a sort value to a float:
 
 ```
-sort_fields: [
-  :title,
-  publication_year: [
-    cast: :float
+sources: [
+  books: [
+    ...
+    sort_fields: [
+      :title,
+      publication_year: [
+        cast: :float
+      ]
+    ]
   ]
 ]
 ```

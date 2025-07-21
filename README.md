@@ -3,18 +3,7 @@
 > **WARNING**
 > This library is in its early stages: tests are not yet in place, and breaking changes are expected.
 
-FacetedSearch integrates faceting into your application with [Flop](https://hexdocs.pm/flop) as the underlying search library.
-
-Faceted search allows users to gradually refine search results by selecting filters based on structured fields
-such as category, author, price range, and so on. Filters that would lead to zero results are hidden from the interface to prevent dead ends.
-
-Key benefits include:
-
-- Keeps all your data private, stored in your own database — no need to set up an external server or pay for a faceted search provider.
-- Integrates seamlessly with an existing Flop setup, using the same concepts and functions.
-- Combines faceted search with regular Flop-based filters and text search.
-- Allows scoping per table, user, or any other scope you define.
-- Because search data is cached in a database view, searching may be a lot faster.
+FacetedSearch integrates faceting into your application with [Flop ⤴](https://hexdocs.pm/flop) as the underlying search library.
 
 ## Installation
 
@@ -31,18 +20,42 @@ def deps do
 end
 ```
 
-## Overview
+## Background
 
-- Searching, filtering and faceting is performed on a "search view", a materialized database view that has searchable data cached in a database table.
-- The search view is created using a configuration that defines which current database tables the data is fetched from.
-- Searching and filtering is done using Flop search on the search view table.
-- Faceting is done with `FacetedSearch.search/3`, using the same Flop params. Facet results can be used to create facet controls, such as checkbox groups.
+Faceted search allows users to gradually refine search results by selecting filters based on structured fields
+such as category, author, price range, and so on. Filters that would lead to zero results are hidden from the interface to prevent dead ends.
+
+While faceted search was popularized by e-commerce platforms, many other types of applications can benefit from it. Some examples:
+
+- Media libraries
+- Medical care applications
+- Course catalogs
+- Scientific data repositories
+- Fansites
+- Admin interfaces
+
+This FacetedSearch library aims to provide the tooling to bring faceted search to your Elixir application, using Elixir code and a Postgres database.
+
+This brings the following benefits:
+
+- Keeps all your data private, stored in your own database — no need to set up an external server or pay for a faceted search provider.
+- Integrates seamlessly with an existing Flop setup, using the same concepts and functions.
+- Combines faceted search with regular Flop-based filters and text search.
+- Allows scoping per table, user, or any other scope you define.
+- Because search data is cached in a database view, searching may be a lot faster.
+
+## Library concepts
+
+- Searching, filtering and faceting is performed on a "search view", a [materialized view ⤴](https://en.wikipedia.org/wiki/Materialized_view) that has searchable data cached in a database table.
+- The search view is created from a [schema configuration](documentation/schema_configuration.md) that defines which database tables the data is fetched from.
+- Searching and filtering is done using [Flop search ⤴](https://hexdocs.pm/flop) on the search view.
+- [Faceting](#faceted-search) is performed with the same Flop search parameters. Facet results includes available facets and options, along with result counts, and can be used to create UI controls.
 
 ## The search view
 
 ### Properties
 
-Data from one or more database tables and columns is aggregated into a "search view" - a materialized database view.
+Data from one or more database tables and columns is aggregated into a "search view" - a materialized view.
 
 The search view contains these base columns:
 
@@ -194,7 +207,7 @@ sort_fields: [
 ]
 ```
 
-The cast value can be any valid [Postgres data type](https://www.postgresql.org/docs/current/datatype.html). With non-standard types, results may vary.
+The cast value can be any valid [Postgres data type ⤴](https://www.postgresql.org/docs/current/datatype.html).
 
 As with Flop, multiple fields can be passed to `order_by` and `order_directions`.
 
@@ -243,13 +256,17 @@ Assuming that `title` is listed under the `sort_fields` option:
 
 ## Faceted search
 
+So far, we've seen how to search, filter, and sort data. The resulting search results are often the starting point
+for further exploration using facets.
+
 ### Setup
 
 Enabling faceted search involves the following steps:
 
-- Configure the schema using the [`facet_fields`](documentation/schema_configuration.md#facet_fields) option
-- Use `FacetedSearch.search/3` to perform the search
-- Provide facet filters params to to update the search results based on selected facets
+1. Configure the schema using the [`facet_fields`](documentation/schema_configuration.md#facet_fields) option
+1. Use `FacetedSearch.search/3` to perform the search
+1. Handle the returned facet data in your application to draw UI controls (usually checkbox groups)
+1. After user interaction, pass facet filter parameters to update the search results
 
 ### Example facet search
 
@@ -260,28 +277,33 @@ ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 {:ok, facets} = FacetedSearch.search(ecto_schema, params)
 ```
 
-Utility function `FacetedSearch.ecto_schema/2` creates the reference using the schema and the view ID:
+The utility function `FacetedSearch.ecto_schema/2` creates the reference using the schema and the view ID:
 
 ```elixir
 iex> ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 {"fv_media", MyApp.FacetSchema}
 ```
 
+The `ecto_schema` variable is an `Ecto.Queryable` and is used in building an Ecto query. Similar to
+`from(u in Users)` we write `from(ecto_schema)`.
+
 ### Combining Flop and facets
 
-Facet search is typically combined with filters and text search. This means calling both `Flop.validate_and_run` and
-`FacetedSearch.search` - see the following example.
+Facet search is typically combined with filters and text search. So it makes sense to combine both `Flop.validate_and_run` and
+`FacetedSearch.search` in a single search function.
 
 Note that this function returns a three-element tuple that includes the facet results.
 
 ```elixir
-def search_media(params \\ %{}) do
+def search_media(search_params \\ %{}) do
   ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+  query = from(ecto_schema)
 
-  with {:ok, results} <-
-         from(ecto_schema) |> Flop.validate_and_run(params, for: MyApp.FacetSchema),
-       {:ok, facets} <- FacetedSearch.search(ecto_schema, params) do
-    {:ok, results, facets}
+  with {:ok, flop_results} <-
+         Flop.validate_and_run(query, search_params, for: FacetSchema),
+       {:ok, facets} <-
+         FacetedSearch.search(ecto_schema, search_params) do
+    {:ok, flop_results, facets}
   else
     error -> error
   end
@@ -291,27 +313,32 @@ end
 Usage example:
 
 ```elixir
-params = %{filters: [
-  %{field: :text, op: :ilike, value: "Le Guin"},
-  %{field: :publication_year, op: :<=, value: 2000}
-]}
-{:ok, results, facets} = search_media(params)
-{books, meta} = results
+search_params = %{
+  filters: [
+    %{field: :text, op: :ilike, value: "Le Guin"},
+  ],
+  page_size: 10
+}
+{:ok, flop_results, facets} = search_media(search_params)
+{books, meta} = flop_results
 ```
 
 The returned `facets` data will look like this:
 
 ```elixir
 [
- %FacetedSearch.FacetData.Facet{
-   type: "value",
-   field: :publication_year,
-   facet_options: [
-     %FacetedSearch.FacetData.FacetOption{value: "1968", count: 1, selected: false},
-     %FacetedSearch.FacetData.FacetOption{value: "1971", count: 1, selected: false},
-     %FacetedSearch.FacetData.FacetOption{value: "1972", count: 1, selected: false}
-   ]
- }
+  ...
+  %FacetedSearch.Facet{
+    type: "value",
+    field: :publication_year,
+    facet_values: [
+      %FacetedSearch.FacetValue{value: "1964", count: 2, selected: false},
+      %FacetedSearch.FacetValue{value: "1966", count: 2, selected: false},
+      %FacetedSearch.FacetValue{value: "1967", count: 1, selected: false},
+      %FacetedSearch.FacetValue{value: "1968", count: 1, selected: false},
+      ...
+    ]
+  }
 ]
 ```
 
@@ -332,20 +359,64 @@ To achieve this behavior using Flop, you need to adjust the filter settings slig
 
 #### Example search
 
-Let's say we have added checkbox groups to the search page, showing 2 checkbox groups titled "Publication year" and "Author".
-
-After the user has made a couple of selections, the search params may look like this:
+If we provide a checkbox group to the search page to select the publication year (not the best UI, just an example), and
+the user has selected the year 1966, the search params may look like this:
 
 ```elixir
 %{filters: [
-  %{field: :facet_publication_year, op: :==, value: [2012,2014,2016]},
-  %{field: :facet_author, op: :==, value: ["Yotam Ottolenghi"]}
+  %{field: :text, op: :ilike, value: "Le Guin"},
+  %{field: :facet_publication_year, op: :==, value: [1966]},
 ]}
 ```
 
+The returned `facets` data will look like this:
+
+```elixir
+[
+  ...
+  %FacetedSearch.Facet{
+    type: "value",
+    field: :publication_year,
+    facet_values: [
+      %FacetedSearch.FacetValue{value: "1964", count: 2, selected: false},
+      %FacetedSearch.FacetValue{value: "1966", count: 2, selected: true},
+      %FacetedSearch.FacetValue{value: "1967", count: 1, selected: false},
+      %FacetedSearch.FacetValue{value: "1968", count: 1, selected: false},
+      ...
+    ]
+  }
+]
+```
+
+When a facet contains at least one selected option, the other options within the facet stay available.
+
 ## Performance
 
-This library takes a pragmatic approach that performs reasonably well in most cases, processing around 100,000 rows in 300ms, but for more demanding applications such as e-commerce, a faster, more optimized library may be necessary.
+When the search view grows to a great number of rows, performance tweaking will be needed.
+At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
+A rough ballpark is that queries should take no longer than 300ms.
+
+### Measuring query time
+
+...
+
+### Built-in measures
+
+Indexes on all columns
+
+### Optimising queries
+
+- Apply filter to get less results → ecommerce categories
+- Translate text queries to filters. e.g. “blue xxx” can be changed to filters, removing the :text filter entry. Filters can more easily be cached, see below.
+
+### Caching facets data
+
+- ETS table
+- Activate with option `cache_facets`
+  - example
+- Cache warming
+- Clearing the cache
+- Automatically clearing the cache after updates
 
 ## Additional search view functionality
 
@@ -563,10 +634,10 @@ def search_media(params \\ %{}, opts \\ []) do
   prefix = Keyword.get(opts, :prefix)
   ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 
-  with {:ok, results} <-
+  with {:ok, flop_results} <-
          from(ecto_schema) |> Flop.validate_and_run(params, for: MyApp.FacetSchema, query_opts: [prefix: prefix]),
        {:ok, facets} <- FacetedSearch.search(ecto_schema, params, query_opts: [prefix: prefix]) do
-    {:ok, results, facets}
+    {:ok, flop_results, facets}
   else
     error -> error
   end
