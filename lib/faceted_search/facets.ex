@@ -82,21 +82,42 @@ defmodule FacetedSearch.Facets do
 
     opts = Keyword.put(facet_search_options, :for, module)
 
-    case get_facet_results(repo, ecto_schema, search_params, opts) do
-      {:ok, filtered_facet_rows} ->
-        facet_results =
-          consolidate_facet_results(
-            filtered_facet_rows,
-            search_params,
-            facet_configs
-          )
+    search_params_for_all_facets =
+      create_search_params_for_all_facets(search_params, facet_configs)
 
-        {:ok, facet_results}
+    with {:ok, all_facet_rows} <-
+           get_facet_results(repo, ecto_schema, search_params_for_all_facets, opts),
+         {:ok, filtered_facet_rows} <-
+           get_facet_results(repo, ecto_schema, search_params, opts) do
+      facet_results =
+        consolidate_facet_results(
+          all_facet_rows,
+          filtered_facet_rows,
+          search_params,
+          facet_configs
+        )
 
+      {:ok, facet_results}
+    else
       error ->
         error
     end
   end
+
+  @spec create_search_params_for_all_facets(map(), %{atom() => FacetConfig.t()}) :: map()
+  defp create_search_params_for_all_facets(%{filters: filters} = search_params, facet_configs)
+       when is_list(filters) do
+    prefix = Filter.facet_search_field_prefix()
+
+    facet_fields =
+      Map.keys(facet_configs) |> Enum.map(&"#{prefix}#{&1}")
+
+    update_in(search_params, [:filters], fn filters ->
+      Enum.filter(filters, &(to_string(&1.field) not in facet_fields))
+    end)
+  end
+
+  defp create_search_params_for_all_facets(search_params, _facet_configs), do: search_params
 
   @spec get_facet_results(Ecto.Repo.t(), Ecto.Queryable.t(), map(), Keyword.t()) ::
           {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}
@@ -173,22 +194,30 @@ defmodule FacetedSearch.Facets do
     end
   end
 
-  @spec consolidate_facet_results(list(result_row()), map(), %{
+  @spec consolidate_facet_results(list(result_row()), list(result_row()), map(), %{
           atom() => FacetConfig.t()
         }) ::
           list(result_row())
   defp consolidate_facet_results(
+         all_facet_rows,
          filtered_facet_rows,
          search_params,
          facet_configs
        ) do
+    filtered_facet_groups =
+      filtered_facet_rows
+      |> Enum.group_by(fn {name, _value, _count} -> name end)
+
+    filtered_facet_keys = Map.keys(filtered_facet_groups)
     search_params_value_lookup = create_search_params_value_lookup(search_params)
 
-    filtered_facet_rows
+    all_facet_rows
     |> Enum.group_by(fn {name, _value, _count} -> name end)
+    |> Enum.filter(fn {key, _} -> key in filtered_facet_keys end)
     |> Enum.map(fn {_key, result_rows} ->
       cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup)
     end)
+    |> List.flatten()
   end
 
   @spec create_search_params_value_lookup(map()) :: %{String.t() => boolean()}
