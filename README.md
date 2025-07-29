@@ -49,7 +49,7 @@ This brings the following benefits:
 - Searching, filtering and faceting is performed on a "search view", a [materialized view ⤴](https://en.wikipedia.org/wiki/Materialized_view) that has searchable data cached in a database table.
 - The search view is created from a [schema configuration](documentation/schema_configuration.md) that defines which database tables the data is fetched from.
 - Searching and filtering is done using [Flop search ⤴](https://hexdocs.pm/flop) on the search view.
-- [Faceting](#faceted-search) is performed with the same Flop search parameters. Facet results includes available facets and options, along with result counts, and can be used to create UI controls.
+- [Faceting](#faceted-search ↓) is performed with the same Flop search parameters. Facet results includes available facets and options, along with result counts, and can be used to create UI controls.
 
 ## The search view
 
@@ -67,7 +67,7 @@ The search view contains these base columns:
 - `inserted_at` - Source timestamp
 - `updated_at` - Source timestamp
 
-Additional sort columns are added when option `sort_fields` is used - see [Sorting](#sorting).
+Additional sort columns are added when option `sort_fields` is used - see [Sorting](#sorting ↓).
 
 A single schema can generate different search views, each with its own scope - for example, a view per user or per media type.
 
@@ -243,7 +243,7 @@ Similarly, to sort on matches in titles:
 
 #### Using sort_fields with Ecto
 
-It is also possible to use the generated sort columns described in [Sorting with Flop](#sorting-with-flop) with an Ecto query.
+It is also possible to use the generated sort columns described in [Sorting with Flop](#sorting-with-flop ↓) with an Ecto query.
 
 Assuming that `title` is listed under the `sort_fields` option:
 
@@ -392,50 +392,123 @@ When a facet contains at least one selected option, the other options within the
 
 ## Performance
 
-When the search view grows to a great number of rows, performance tweaking will be needed.
+Even though FacetedSearch adds indexes to all columns in the search view, additional performance tweaking will be needed when the search view grows to a substantial number of rows.
+
 At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
-A rough ballpark is that queries should take no longer than 300ms.
+
+When using facets, retrieving facet data takes up the bulk of the query time, because all rows need to be filtered and grouped. When querying more than 100,000 rows, this adds up.
 
 ### Measuring query time
 
-...
+Query performance can be measured using `:timer.tc/1` to wrap the search function:
 
-### Built-in measures
+```elixir
+:timer.tc(fn ->
+  search_media(search_params)
+)
+```
 
-Indexes on all columns
+The returned query time is measured in microseconds, so divide by 1,000 to get milliseconds.
 
-### Optimising queries
+A rough performance goal for a search query is to take less than 300ms.
 
-- Apply filter to get less results → ecommerce categories
-- Translate text queries to filters. e.g. “blue xxx” can be changed to filters, removing the :text filter entry. Filters can more easily be cached, see below.
+### Optimizing queries
+
+#### Scoping
+
+One way to improve query time is to break up a single search view into multiple ones, each scoped with a filter.
+
+This is common in ecommerce: instead of searching in everything, the user is first guided through main categories or even subcategories before facets are even offered. 
+
+The idea of scoped search views is that the number of rows are smaller, resulting in faster search responses, and that facets can be made more specific to the subdomain.
+
+See [Scoping data ↓](#scoping-data) for details.
+
+#### Caching
+
+Query results can be cached, see [Caching facets data ↓](#caching-facets-data).
+
+#### Working around common text searches
+
+Because of input variations, text searches are hard to optimize using caching, even more so when results are displayed as you type (debounced results). Or it would require a large number of caches, which should be avoided too.
+
+One way is to translate a text query to a filtered query. For example, “blue trousers” can be interpreted as filters "apparel:trousers" and "color:blue". The user is then redirected to the category page with filters applied, and cached results are displayed.
 
 ### Caching facets data
 
-- ETS table
-- Activate with option `cache_facets`
-  - example
-- Cache warming
-- Clearing the cache
-- Automatically clearing the cache after updates
+#### cache_facets option
 
-## Additional search view functionality
+Caching of facet results can be activated with `FacetedSearch.search/3` option `cache_facets` (boolean).
 
-### Multiple sources
+#### ETS table
 
-TODO
+Data is cached in an [ETS table ⤴](https://hexdocs.pm/elixir/main/ets.html), where the cache key is the combination of the search view name and the used filters.
 
-### Scoping data
+The cache is only written and read when option `cache_facets` is `true`.
 
-Limiting the data in a search view is useful when working with large datasets or in multi-tenant applications,
-where each user or tenant should only have access to a specific subset of the data.
+#### Automatic clearing
 
-A scope is defined using three components:
+When the search view is updated, any exsisting cache that contains a key with the search view name is cleared.
 
-1. The `scopes` option, which contains a list of scope identifiers.
-2. A callback function `scope_by/2`, defined in the same schema module where `use FacetedSearch` is called. The first parameter is the scope identifier.
-3. The `scope` option passed to `FacetedSearch.create_search_view/3`, containing any value that `scope_by/2` should handle.
+Alternatively, it can be cleard with `FacetedSearch.clear_facets_cache/1`.
 
-#### Example: scoping to the current user
+#### Example
+
+Below, the example search function from before is expanded with caching, using the following logic:
+- Don't cache when text search is invoked
+- Only cache when the result count is greater than 1,000
+
+```elixir
+def search_media(search_params \\ %{}) do
+  ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+  query = from(ecto_schema)
+  is_text_search = Enum.any?(search_params.filters, &(&1.field == :text))
+
+  with {:ok, {_results, meta} = flop_results} <-
+         Flop.validate_and_run(query, search_params, for: FacetSchema),
+       cache_facets <- meta.total_count > 1_000 and not is_text_search,
+       {:ok, facets} <-
+         FacetedSearch.search(ecto_schema, search_params, cache_facets: cache_facets) do
+    {:ok, flop_results, facets}
+  else
+    error -> error
+  end
+end
+```
+
+#### Cache warming
+
+Caches can be created upfront, by passing a list of filters to `FacetedSearch.warm_cache/2`.
+
+For example:
+
+```elixir
+params = [
+  %{filters: [%{field: :apparel, value: "men", op: :==}]}
+  %{filters: [%{field: :apparel, value: "women", op: :==}]}
+  %{filters: [%{field: :apparel, value: "unisex", op: :==}]}
+  %{filters: [%{field: :facet_colors, value: ["blue"], op: :==}]},
+]
+
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
+FacetedSearch.warm_cache(ecto_schema, params)
+```
+
+## Scoping data
+
+Scoping is the method of filtering search view data upfront, in order to create multiple search views.
+
+This is useful:
+- When working with large datasets, where data can be split up in separate logical parts, for example items filtered by category, source or date.
+- In multi-tenant applications, where each user or tenant should only have access to a specific subset of the data.
+
+A scope is created in three steps:
+
+1. By providing the schema option `scopes` with a list of scope identifiers.
+2. By writing callback function `scope_by/2`, defined in the same schema module where `use FacetedSearch` is called. The first parameter is the scope identifier.
+3. By calling `FacetedSearch.create_search_view/3` with option `scope`, containing any value that `scope_by/2` should handle.
+
+### Example: scoping to the current user
 
 1. Pass `scopes` to the `source` option:
 
@@ -469,7 +542,7 @@ FacetedSearch.create_search_view(MyApp.FacetSchema, "books",
   scope: %{current_user: current_user})
 ```
 
-#### Combining scopes
+### Combining scopes
 
 Using a list of scope keys, scope evaluation is AND-ed
 
@@ -513,7 +586,11 @@ FacetedSearch.create_search_view(
 )
 ```
 
-### Joining tables
+## Multiple sources
+
+TODO
+
+## Joining tables
 
 To continue with the books example, we would like to add genres to the search table.
 
@@ -633,9 +710,10 @@ Example search function with prefix options:
 def search_media(params \\ %{}, opts \\ []) do
   prefix = Keyword.get(opts, :prefix)
   ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+  query = from(ecto_schema)
 
   with {:ok, flop_results} <-
-         from(ecto_schema) |> Flop.validate_and_run(params, for: MyApp.FacetSchema, query_opts: [prefix: prefix]),
+         Flop.validate_and_run(query, params, for: MyApp.FacetSchema, query_opts: [prefix: prefix]),
        {:ok, facets} <- FacetedSearch.search(ecto_schema, params, query_opts: [prefix: prefix]) do
     {:ok, flop_results, facets}
   else
