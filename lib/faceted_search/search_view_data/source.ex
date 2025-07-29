@@ -14,7 +14,7 @@ defmodule FacetedSearch.Source do
   ]
 
   defstruct table_name: nil,
-            scopes: nil,
+            scope_keys: nil,
             prefix: nil,
             fields: nil,
             joins: nil,
@@ -28,7 +28,7 @@ defmodule FacetedSearch.Source do
           table_name: atom(),
           # optional
           prefix: String.t() | nil,
-          scopes: list(Scope.t()) | nil,
+          scope_keys: list(Scope.t()) | nil,
           joins: list(Join.t()) | nil,
           fields: list(Field.t()) | nil,
           data_fields: list(atom()) | nil,
@@ -43,7 +43,7 @@ defmodule FacetedSearch.Source do
     %__MODULE__{
       table_name: table_name,
       prefix: Keyword.get(options, :prefix),
-      scopes: Keyword.get(options, :scopes) |> collect_scopes(module),
+      scope_keys: Keyword.get(options, :scope_keys) |> collect_scopes(module),
       joins: Keyword.get(options, :joins) |> collect_joins(),
       fields: Keyword.get(options, :fields) |> collect_fields(table_name),
       data_fields: Keyword.get(options, :data_fields) |> collect_data_fields(),
@@ -74,11 +74,11 @@ defmodule FacetedSearch.Source do
 
   defp collect_data_fields(_fields), do: nil
 
-  defp collect_scopes(scopes, module) when is_list(scopes) and scopes != [] do
-    Enum.map(scopes, fn scope_key -> Scope.new(module, scope_key) end)
+  defp collect_scopes(scope_keys, module) when is_list(scope_keys) and scope_keys != [] do
+    Enum.map(scope_keys, fn scope_key -> Scope.new(module, scope_key) end)
   end
 
-  defp collect_scopes(_scopes, _module), do: nil
+  defp collect_scopes(_scope_keys, _module), do: nil
 
   defp collect_sort_fields(sort_fields) when is_list(sort_fields) and sort_fields != [] do
     Enum.map(sort_fields, fn field_options -> SortField.new(field_options) end)

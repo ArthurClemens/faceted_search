@@ -73,7 +73,7 @@ defmodule FacetedSearch.NimbleSchema do
             sort_fields: [
               type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}}
             ],
-            scopes: [
+            scope_keys: [
               type: {:list, :atom}
             ]
           ]
@@ -109,7 +109,7 @@ defmodule FacetedSearch.NimbleSchema do
       Keyword.get_values(opts, :sources)
       |> List.flatten()
       |> Enum.map(fn {_, sublist} ->
-        Keyword.has_key?(sublist, :scopes) and Keyword.get(sublist, :scopes) != []
+        Keyword.has_key?(sublist, :scope_keys) and Keyword.get(sublist, :scope_keys) != []
       end)
       |> List.flatten()
       |> Enum.any?()

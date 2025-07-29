@@ -13,7 +13,7 @@ defmodule FacetedSearch.Types do
 
       if :create_search_view_options in unquote(includes) do
         @type create_search_view_option ::
-                {:scope, term()}
+                {:scopes, term()}
                 | {:repo, module()}
                 | {:tenant, String.t()}
                 | {:timeout, integer()}

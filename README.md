@@ -504,42 +504,38 @@ This is useful:
 
 A scope is created in three steps:
 
-1. By providing the schema option `scopes` with a list of scope identifiers.
+1. By providing the schema option `scope_keys` with a list of scope identifiers.
 2. By writing callback function `scope_by/2`, defined in the same schema module where `use FacetedSearch` is called. The first parameter is the scope identifier.
-3. By calling `FacetedSearch.create_search_view/3` with option `scope`, containing any value that `scope_by/2` should handle.
+3. By calling `FacetedSearch.create_search_view/3` with option `scopes`, containing any value that `scope_by/2` should handle.
 
 ### Example: scoping to the current user
 
-1. Pass `scopes` to the `source` option:
+#### 1. Pass `scope_keys` to the `source` option:
 
 ```elixir
-scopes: [:current_user],
+scope_keys: [:current_user],
 ```
 
-2. Define the callback:
+#### 2. Define the callback:
 
 ```elixir
 @behaviour FacetedSearch
-def scope_by(:current_user, %{current_user: current_user} = _scope) do
+def scope_by(:current_user, %{current_user: current_user} = _scopes) do
   %{
     field: :user_id,
     comparison: "=",
     value: current_user.id
   }
 end
-
-def scope(:other_scope_key, scope) do
-  ...
-end
 ```
 
-Note that map key "field" references the table from "sources".
+The value at key `field` should reference either a column from the sources table, or a field listed in `fields`.
 
-3. Pass the scope to `FacetedSearch.create_search_view/3`:
+#### 3. Pass the scope to `FacetedSearch.create_search_view/3`:
 
 ```elixir
 FacetedSearch.create_search_view(MyApp.FacetSchema, "books",
-  scope: %{current_user: current_user})
+  scopes: %{current_user: current_user})
 ```
 
 ### Combining scopes
@@ -552,26 +548,26 @@ with the columns defined in the [`data_fields`](documentation/schema_configurati
 For example, to scope by publication year, limiting the table to the current user and to books published after 2018, add both scope keys:
 
 ```elixir
-scopes: [:current_user, :publication_year],
+scope_keys: [:current_user, :publication_year],
 ```
 
 Define the filter callbacks:
 
 ```elixir
 @behaviour FacetedSearch
-def scope_by(:current_user, scope) do
+def scope_by(:current_user, scopes) do
   %{
     field: :user_id,
     comparison: "=",
-    value: scope.user.id
+    value: scopes.user.id
   }
 end
 
-def scope_by(:publication_year, scope) do
+def scope_by(:publication_year, scopes) do
   %{
     field: :publication_year,
     comparison: ">",
-    value: scope.publication_year
+    value: scopes.publication_year
   }
 end
 ```
@@ -582,7 +578,7 @@ Create the scoped search view:
 FacetedSearch.create_search_view(
   MyApp.FacetSchema,
   "user-books-after-2018",
-  scope: %{user: current_user, publication_year: 2018}
+  scopes: %{user: current_user, publication_year: 2018}
 )
 ```
 
@@ -687,7 +683,7 @@ use FacetedSearch,
 
 ```elixir
 FacetedSearch.create_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
-FacetedSearch.create_search_view(MyApp.FacetSchema, user.id, [scope: %{current_user: user}, prefix: "user_catalogs"])
+FacetedSearch.create_search_view(MyApp.FacetSchema, user.id, [scopes: %{current_user: user}, prefix: "user_catalogs"])
 ```
 
 #### Refreshing a view

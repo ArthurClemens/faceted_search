@@ -214,7 +214,7 @@ defmodule FacetedSearch do
   The created materialized view is prefixed with `"fv_"`.
 
   Options:
-  - `scope` (optional) - The scope to be passed to the module function provided with option `scope_by` - see: [Scoping data](README.md#scoping-data).
+  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see: [Scoping data](README.md#scoping-data).
   - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
 
   ## Examples
@@ -223,7 +223,7 @@ defmodule FacetedSearch do
       :ok
 
       iex> FacetedSearch.create_search_view(MyApp.FacetSchema, "books",
-      ...>   scope: %{current_user: current_user})
+      ...>   scopes: %{current_user: current_user})
       :ok
 
 
