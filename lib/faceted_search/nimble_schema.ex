@@ -68,7 +68,7 @@ defmodule FacetedSearch.NimbleSchema do
               type: {:list, :atom}
             ],
             facet_fields: [
-              type: {:list, :atom}
+              type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}}
             ],
             sort_fields: [
               type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}}

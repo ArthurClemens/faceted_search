@@ -49,7 +49,7 @@ This brings the following benefits:
 - Searching, filtering and faceting is performed on a "search view", a [materialized view ⤴](https://en.wikipedia.org/wiki/Materialized_view) that has searchable data cached in a database table.
 - The search view is created from a [schema configuration](documentation/schema_configuration.md) that defines which database tables the data is fetched from.
 - Searching and filtering is done using [Flop search ⤴](https://hexdocs.pm/flop) on the search view.
-- [Faceting](#faceted-search ↓) is performed with the same Flop search parameters. Facet results includes available facets and options, along with result counts, and can be used to create UI controls.
+- [Faceted search](#faceted-search ↓) is performed with the same Flop search parameters. Facet results includes available facets and options, along with result counts, and can be used to create UI controls.
 
 ## The search view
 
@@ -67,7 +67,7 @@ The search view contains these base columns:
 - `inserted_at` - Source timestamp
 - `updated_at` - Source timestamp
 
-Additional sort columns are added when option `sort_fields` is used - see [Sorting](#sorting ↓).
+Additional sort columns are added when option `sort_fields` is used - see [Sorting ↓](#sorting).
 
 A single schema can generate different search views, each with its own scope - for example, a view per user or per media type.
 
@@ -243,7 +243,7 @@ Similarly, to sort on matches in titles:
 
 #### Using sort_fields with Ecto
 
-It is also possible to use the generated sort columns described in [Sorting with Flop](#sorting-with-flop ↓) with an Ecto query.
+It is also possible to use the generated sort columns described in [Sorting with Flop ↓](#sorting-with-flop) with an Ecto query.
 
 Assuming that `title` is listed under the `sort_fields` option:
 
@@ -256,19 +256,29 @@ Assuming that `title` is listed under the `sort_fields` option:
 
 ## Faceted search
 
-So far, we've seen how to search, filter, and sort data. The resulting search results are often the starting point
-for further exploration using facets.
+So far, we've seen how to search, filter, and sort data from the search view using the Flop API. In this section we will expand this with facet data.
 
-### Setup
+Getting facet results, and filtering using facets, involve the following steps:
 
-Enabling faceted search involves the following steps:
+1. Configure the schema with option `facet_fields`
+2. Use `FacetedSearch.search` to perform the search.
+3. Handle the facet results in the application.
+4. Refine the search with facet selection
 
-1. Configure the schema using the [`facet_fields`](documentation/schema_configuration.md#facet_fields) option
-1. Use `FacetedSearch.search/3` to perform the search
-1. Handle the returned facet data in your application to draw UI controls (usually checkbox groups)
-1. After user interaction, pass facet filter parameters to update the search results
+### 1. Configure the schema
 
-### Example facet search
+Option [`facet_fields`](documentation/schema_configuration.md#facet_fields) configures the search view to store values from the listed fields. After performing a search, the collected facet results (containing value, label and count for each option) are then passed to the facet search results.
+
+A simple schema entry with 2 facet fields would be:
+
+```elixir
+facet_fields: [
+  :publication_year,
+  :genres
+]
+```
+
+### 2. Performing a facet search
 
 `FacetedSearch.search/3` takes a reference to the schema and search params:
 
@@ -287,7 +297,14 @@ iex> ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
 The `ecto_schema` variable is an `Ecto.Queryable` and is used in building an Ecto query. Similar to
 `from(u in Users)` we write `from(ecto_schema)`.
 
-### Combining Flop and facets
+An Ecto query can be initialized with:
+
+```elixir
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+query = from(ecto_schema)
+```
+
+#### Combining Flop and facets
 
 Facet search is typically combined with filters and text search. So it makes sense to combine both `Flop.validate_and_run` and
 `FacetedSearch.search` in a single search function.
@@ -310,7 +327,9 @@ def search_media(search_params \\ %{}) do
 end
 ```
 
-Usage example:
+#### Usage example
+
+If the user has typed "Le Guin" in the search box, the Flop parameters and search instructions will look like this:
 
 ```elixir
 search_params = %{
@@ -323,19 +342,18 @@ search_params = %{
 {books, meta} = flop_results
 ```
 
-The returned `facets` data will look like this:
+The returned facet results will look like this:
 
 ```elixir
 [
   ...
   %FacetedSearch.Facet{
-    type: "value",
     field: :publication_year,
-    facet_values: [
-      %FacetedSearch.FacetValue{value: "1964", count: 2, selected: false},
-      %FacetedSearch.FacetValue{value: "1966", count: 2, selected: false},
-      %FacetedSearch.FacetValue{value: "1967", count: 1, selected: false},
-      %FacetedSearch.FacetValue{value: "1968", count: 1, selected: false},
+    options: [
+      %FacetedSearch.Option{value: 1964, label: "1964", count: 2, selected: false},
+      %FacetedSearch.Option{value: 1966, label: "1966", count: 2, selected: false},
+      %FacetedSearch.Option{value: 1967, label: "1967", count: 1, selected: false},
+      %FacetedSearch.Option{value: 1968, label: "1968", count: 1, selected: false},
       ...
     ]
   }
@@ -344,59 +362,93 @@ The returned `facets` data will look like this:
 
 Facets that don't have any hits will be omitted from the returned data.
 
-### Facet filters
+### 3. Handling facet results
+
+The facet results can be used to create facet UI controls to show the current facet filter state, and on selection, trigger a new search.
+
+UI controls are outside of the scope of this library; this section describes the data elements that support creating them.
+
+```elixir
+[
+  %FacetedSearch.Facet{
+    field: :publication_year,
+    options: [
+      %FacetedSearch.Option{value: 1964, label: "1964", count: 2, selected: false},
+      ...
+    ]
+  },
+  ...
+]
+```
+
+#### Option: value
+
+The `value ` field contains the data from a table's column, cast to the `ecto_type` defined in schema `fields`. Its main use is to set the filter value - see [Facet selection ↓](#4-facet-selection). The value is also useful for sorting the list of options in case their values are numeric.
+
+#### Option: label
+
+The `label` field contains the string value of the `value` field. It is often desirable to differentiate values and UI texts, so the label field can be configured to contain text from another column or joined table - see [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields). 
+
+#### Option: count
+
+The `count` field corresponds to the the number of rows with the column value with search filters applied. The count is frequently used in faceted search UI's, but many applications choose not to.
+
+#### Option: selected
+
+The `selected` field simply stores the selected state of the applied filter.
+ 
+### 4. Facet selection
+
+Selected facet options are translated to additional search filters, using the configured [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields).
+
+#### Facet filters
 
 Facet filters are a specialized form of search filters:
 
-- Selecting a single facet option activates the filter (the facet).
-- Selecting multiple facet options within the same facet combines the option values using an OR condition.
+- Selecting a single facet option activates the facet (the filter).
+- Selecting multiple facet options from different facets combines the option values using an AND condition.
+- Selecting multiple facet options within the same facet combines the option values within that facet using an OR condition. When a facet contains at least one selected option, the other options within the facet stay available.
 
-To achieve this behavior using Flop, you need to adjust the filter settings slightly:
+To achieve this behavior using Flop, we need to create filters using the following rules:
 
+- Field names must be prefixed with `facet_`, so field `publication_year` becomes `facet_publication_year` in the search params.
+  - Note that the field names in the schema don't use the prefix.
 - The `value` must be an array.
 - The operator `op` must be `:==`.
-- Field names must be prefixed with `facet_`, so field `publication_year` becomes `facet_publication_year` in the search params. Note that the field names in the schema don't use the prefix.
 
 #### Example search
 
-If we provide a checkbox group to the search page to select the publication year (not the best UI, just an example), and
-the user has selected the year 1966, the search params may look like this:
+If we provide a checkbox group to the search page to select the publication year (not the best UI - just an example), and the user has typed "Le Guin" in the search box, and selected the years 1964 and 1966, the Flop search parameters will look like this:
 
 ```elixir
 %{filters: [
   %{field: :text, op: :ilike, value: "Le Guin"},
-  %{field: :facet_publication_year, op: :==, value: [1966]},
+  %{field: :facet_publication_year, op: :==, value: [1964, 1966]},
 ]}
 ```
 
-The returned `facets` data will look like this:
+The returned facet results will look like this:
 
 ```elixir
 [
-  ...
   %FacetedSearch.Facet{
-    type: "value",
     field: :publication_year,
-    facet_values: [
-      %FacetedSearch.FacetValue{value: "1964", count: 2, selected: false},
-      %FacetedSearch.FacetValue{value: "1966", count: 2, selected: true},
-      %FacetedSearch.FacetValue{value: "1967", count: 1, selected: false},
-      %FacetedSearch.FacetValue{value: "1968", count: 1, selected: false},
+    options: [
+      %FacetedSearch.Option{value: 1964, label: "1964", count: 2, selected: true},
+      %FacetedSearch.Option{value: 1966, label: "1966", count: 2, selected: true},
+      %FacetedSearch.Option{value: 1967, label: "1967", count: 1, selected: false},
+      %FacetedSearch.Option{value: 1968, label: "1968", count: 1, selected: false},
       ...
     ]
   }
 ]
 ```
 
-When a facet contains at least one selected option, the other options within the facet stay available.
-
 ## Performance
 
-Even though FacetedSearch adds indexes to all columns in the search view, additional performance tweaking will be needed when the search view grows to a substantial number of rows.
+Even though FacetedSearch adds indexes to all columns in the search view, when the search view grows to a substantial number of rows, additional performance tweaking will be needed. At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
 
-At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
-
-When using facets, retrieving facet data takes up the bulk of the query time, because all rows need to be filtered and grouped. When querying more than 100,000 rows, this adds up.
+When using facets, retrieving facet data takes up the bulk of the query time: it involves an extra database query where all rows are filtered and grouped. When querying more than 100,000 rows, this adds up.
 
 ### Measuring query time
 
@@ -426,7 +478,7 @@ See [Scoping data ↓](#scoping-data) for details.
 
 #### Caching
 
-Query results can be cached, see [Caching facets data ↓](#caching-facets-data).
+Query results can be cached, see [Caching facets results ↓](#caching-facets-results).
 
 #### Working around common text searches
 
@@ -434,7 +486,7 @@ Because of input variations, text searches are hard to optimize using caching, e
 
 One way is to translate a text query to a filtered query. For example, “blue trousers” can be interpreted as filters "apparel:trousers" and "color:blue". The user is then redirected to the category page with filters applied, and cached results are displayed.
 
-### Caching facets data
+### Caching facets results
 
 #### cache_facets option
 

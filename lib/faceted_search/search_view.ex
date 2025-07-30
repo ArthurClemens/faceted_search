@@ -498,15 +498,32 @@ defmodule FacetedSearch.SearchView do
   @spec create_tsv_column(Source.t(), SearchViewDescription.t()) :: String.t()
   defp create_tsv_column(%{fields: fields, facet_fields: facet_fields, joins: joins} = _source, _)
        when is_list(facet_fields) and facet_fields != [] do
-    fields
-    |> Enum.filter(&(&1.name in facet_fields))
-    |> Enum.map_join(", ", fn field ->
+    facet_fields
+    |> Enum.reduce([], fn %{name: name, label_field: label_field}, acc ->
+      field = Enum.find(fields, &(&1.name == name))
+      label_field = Enum.find(fields, &(&1.name == label_field))
+
+      if field do
+        [%{field: field, label_field: label_field} | acc]
+      else
+        acc
+      end
+    end)
+    |> Enum.map_join(", ", fn %{field: field, label_field: label_field} ->
       %{name: name} = field
 
       {table_name, column_name} = get_table_and_column(field, joins)
       table_and_column = table_and_column_string(table_name, column_name)
 
-      "'#{name}' || ':' || #{table_and_column}"
+      label_table_and_column =
+        if label_field do
+          {label_table_name, label_column_name} = get_table_and_column(label_field, joins)
+          table_and_column_string(label_table_name, label_column_name)
+        else
+          "''"
+        end
+
+      "'#{name}' || ':' || #{table_and_column} || ':' || #{label_table_and_column}"
     end)
     |> tsv_column_wrap()
   end

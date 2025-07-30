@@ -13,10 +13,13 @@ defmodule FacetedSearch.Facets do
   alias FacetedSearch.Facet
   alias FacetedSearch.FacetConfig
   alias FacetedSearch.FacetsCache
-  alias FacetedSearch.FacetValue
   alias FacetedSearch.Filter
+  alias FacetedSearch.Option
 
-  @typep result_row :: {String.t(), String.t(), integer()}
+  @typep result_value :: String.t()
+  @typep result_label :: String.t()
+  @typep result_count :: integer()
+  @typep result_row :: {result_value(), result_label(), result_count()}
 
   @spec search(Ecto.Queryable.t(), map() | nil, [facet_search_option()]) ::
           {:ok, list(Facet.t())}
@@ -172,6 +175,7 @@ defmodule FacetedSearch.Facets do
     SELECT
       split_part(word, ':', 1) AS attr,
       split_part(word, ':', 2) AS value,
+      split_part(word, ':', 3) AS label,
       ndoc AS count
     FROM ts_stat($$
       #{sql_with_variables}
@@ -187,7 +191,11 @@ defmodule FacetedSearch.Facets do
   defp run_query(tsv_query, repo) do
     case SQL.query(repo, tsv_query, []) do
       {:ok, result} ->
-        {:ok, result.rows |> Enum.map(fn [name, value, count] -> {name, value, count} end)}
+        {:ok,
+         result.rows
+         |> Enum.map(fn [name, value, label, count] ->
+           {name, value, if(label != "", do: label, else: value), count}
+         end)}
 
       {:error, error} ->
         {:error, error}
@@ -206,13 +214,13 @@ defmodule FacetedSearch.Facets do
        ) do
     filtered_facet_groups =
       filtered_facet_rows
-      |> Enum.group_by(fn {name, _value, _count} -> name end)
+      |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
 
     filtered_facet_keys = Map.keys(filtered_facet_groups)
     search_params_value_lookup = create_search_params_value_lookup(search_params)
 
     all_facet_rows
-    |> Enum.group_by(fn {name, _value, _count} -> name end)
+    |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
     |> Enum.filter(fn {key, _} -> key in filtered_facet_keys end)
     |> Enum.map(fn {_key, result_rows} ->
       cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup)
@@ -248,13 +256,12 @@ defmodule FacetedSearch.Facets do
         ) :: list(Facet.t())
   defp cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup) do
     result_rows
-    |> Enum.group_by(fn {name, _value, _count} -> name end)
+    |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
     |> Enum.reduce([], fn {name, result_rows}, acc ->
       facet = %Facet{
-        type: "value",
         field: String.to_existing_atom(name),
-        facet_values:
-          create_facet_values(
+        options:
+          create_option(
             result_rows,
             get_in(facet_configs, [Access.key(String.to_existing_atom(name))]),
             search_params_value_lookup
@@ -265,12 +272,13 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  @spec create_facet_values(list(result_row()), FacetConfig.t() | nil, map()) ::
+  @spec create_option(list(result_row()), FacetConfig.t() | nil, map()) ::
           list(Facet.t())
-  defp create_facet_values(facet_results, facet_config, search_params_value_lookup) do
-    Enum.map(facet_results, fn {name, raw_value, count} ->
-      %FacetValue{
+  defp create_option(facet_results, facet_config, search_params_value_lookup) do
+    Enum.map(facet_results, fn {name, raw_value, label, count} ->
+      %Option{
         value: cast_value(raw_value, facet_config),
+        label: label,
         count: count,
         selected:
           !!search_params_value_lookup[name] and raw_value in search_params_value_lookup[name]

@@ -36,8 +36,8 @@ defmodule FacetedSearch.FacetConfig do
     |> List.flatten()
     |> Enum.filter(& &1)
     |> Enum.reduce(%{}, fn facet_field, acc ->
-      Map.put(acc, facet_field, %FacetConfig{
-        ecto_type: ecto_types_by_field[facet_field]
+      Map.put(acc, facet_field.name, %FacetConfig{
+        ecto_type: ecto_types_by_field[facet_field.name]
       })
     end)
   end
