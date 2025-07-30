@@ -4,6 +4,7 @@ defmodule FacetedSearch.Source do
   """
 
   alias FacetedSearch.DataField
+  alias FacetedSearch.FacetField
   alias FacetedSearch.Field
   alias FacetedSearch.Join
   alias FacetedSearch.Scope
@@ -33,7 +34,7 @@ defmodule FacetedSearch.Source do
           fields: list(Field.t()) | nil,
           data_fields: list(atom()) | nil,
           text_fields: list(atom()) | nil,
-          facet_fields: list(atom()) | nil,
+          facet_fields: list(FacetField.t()) | nil,
           sort_fields: list(SortField.t()) | nil
         }
 
@@ -48,7 +49,7 @@ defmodule FacetedSearch.Source do
       fields: Keyword.get(options, :fields) |> collect_fields(table_name),
       data_fields: Keyword.get(options, :data_fields) |> collect_data_fields(),
       text_fields: Keyword.get(options, :text_fields),
-      facet_fields: Keyword.get(options, :facet_fields),
+      facet_fields: Keyword.get(options, :facet_fields) |> collect_facet_fields(),
       sort_fields: Keyword.get(options, :sort_fields) |> collect_sort_fields()
     }
   end
@@ -85,4 +86,10 @@ defmodule FacetedSearch.Source do
   end
 
   defp collect_sort_fields(_sort_fields), do: nil
+
+  defp collect_facet_fields(facet_fields) when is_list(facet_fields) and facet_fields != [] do
+    Enum.map(facet_fields, fn field_options -> FacetField.new(field_options) end)
+  end
+
+  defp collect_facet_fields(_facet_fields), do: nil
 end

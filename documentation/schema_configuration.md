@@ -390,19 +390,28 @@ sources: [
 
 ## facet_fields
 
-A list of field names used to create facets.
+A list of field names used to create facets. 
 
-The referenced fields populate the `tsv` column in the search view.
+The referenced fields populate the `tsv` column in the search view. A field label can optionally be set.
 
-- Type: `list(atom())`
+- Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > facet_fields`
 
 ### List entries
 
+Either:
+
 - A field name of a field listed under option `fields`.
   - Type: `atom()`
+- A keyword list containing key `label` that references a field listed under option `fields`.
+  - Type: `{atom(), Keyword.t()}`
+
 
 ### Examples
+
+#### Without labels
+
+By default, the field value will be returned as label from `FacetedSearch.search/3`.
 
 ```
 sources: [
@@ -411,6 +420,37 @@ sources: [
     facet_fields: [
       :publication_year,
       :genres
+    ]
+  ]
+]
+```
+
+#### With label
+
+The example adds `genre_title` as label, which is referenced from `fields`.
+
+```
+sources: [
+  books: [
+    joins: [
+      ...
+      genres: [
+        on: "genres.id = book_genres.genre_id"
+      ]
+    ],
+    fields: [
+      ...
+      genre_title: [
+        binding: :genres,
+        field: :title,
+        ecto_type: :string
+      ],
+    ]
+    facet_fields: [
+      :publication_year,
+      genres: [
+        label: :genre_title
+      ]
     ]
   ]
 ]
@@ -436,6 +476,8 @@ Either:
 
 ### Examples
 
+#### Without casting
+
 ```
 sources: [
   books: [
@@ -448,7 +490,7 @@ sources: [
 ]
 ```
 
-Casting a sort value to a float:
+#### With casting
 
 ```
 sources: [
