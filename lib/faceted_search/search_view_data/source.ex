@@ -15,7 +15,7 @@ defmodule FacetedSearch.Source do
   ]
 
   defstruct table_name: nil,
-            scope_keys: nil,
+            scopes: nil,
             prefix: nil,
             fields: nil,
             joins: nil,
@@ -29,7 +29,7 @@ defmodule FacetedSearch.Source do
           table_name: atom(),
           # optional
           prefix: String.t() | nil,
-          scope_keys: list(Scope.t()) | nil,
+          scopes: list(Scope.t()) | nil,
           joins: list(Join.t()) | nil,
           fields: list(Field.t()) | nil,
           data_fields: list(atom()) | nil,
@@ -44,7 +44,7 @@ defmodule FacetedSearch.Source do
     %__MODULE__{
       table_name: table_name,
       prefix: Keyword.get(options, :prefix),
-      scope_keys: Keyword.get(options, :scope_keys) |> collect_scopes(module),
+      scopes: Keyword.get(options, :scope_keys) |> collect_scopes(module),
       joins: Keyword.get(options, :joins) |> collect_joins(),
       fields: Keyword.get(options, :fields) |> collect_fields(table_name),
       data_fields: Keyword.get(options, :data_fields) |> collect_data_fields(),

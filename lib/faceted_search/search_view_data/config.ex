@@ -32,7 +32,7 @@ defmodule FacetedSearch.Config do
       raise SearchViewError, %{error: "Missing view_id"}
     end
 
-    current_scope = Keyword.get(options, :scope)
+    current_scope = Keyword.get(options, :scopes)
     prefix = Keyword.get(options, :prefix)
     repo = get_repo(options)
 
