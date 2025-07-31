@@ -8,6 +8,7 @@ defmodule FacetedSearch.SearchView do
 
   alias Ecto.Adapters.SQL
   alias FacetedSearch.Config
+  alias FacetedSearch.Constants
   alias FacetedSearch.DataField
   alias FacetedSearch.Errors.SearchViewError
   alias FacetedSearch.Field
@@ -142,7 +143,7 @@ defmodule FacetedSearch.SearchView do
   # Skip warning: Query is not user-controlled.
   # sobelow_skip ["SQL.Query"]
   @spec search_view_exists?(String.t(), [create_search_view_option()]) :: boolean()
-  defp search_view_exists?(view_id, opts) do
+  def search_view_exists?(view_id, opts) do
     %{view_name_with_prefix: view_name_with_prefix, repo: repo} = Config.new(view_id, opts)
 
     sql = """
@@ -523,7 +524,9 @@ defmodule FacetedSearch.SearchView do
           "''"
         end
 
-      "'#{name}' || ':' || #{table_and_column} || ':' || #{label_table_and_column}"
+      separator = Constants.tsv_separator()
+
+      "'#{name}' || '#{separator}' || #{table_and_column} || '#{separator}' || #{label_table_and_column}"
     end)
     |> tsv_column_wrap()
   end

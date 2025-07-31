@@ -7,7 +7,7 @@ defmodule FacetedSearch.FacetsCache do
   @cache_id :facet_results
 
   def get(view_name, data_key) do
-    case(:ets.whereis(@cache_id)) do
+    case :ets.whereis(@cache_id) do
       :undefined -> {:error, :no_table}
       _table -> lookup(view_name, data_key)
     end
@@ -27,8 +27,20 @@ defmodule FacetedSearch.FacetsCache do
 
   def set(view_name, data_key, data) do
     table = get_or_create_table()
-    Logger.debug("FacetedSearch FacetsCache.set/3: data stored in cache")
-    {:ok, :ets.insert(table, {cache_key(view_name, data_key), data})}
+    :ets.insert(table, {cache_key(view_name, data_key), data})
+
+    case get(view_name, data_key) do
+      {:error, :no_table} ->
+        Logger.debug(
+          "FacetedSearch FacetsCache.set/3: error inserting data in table, table: #{table}"
+        )
+
+        {:error, false}
+
+      _ ->
+        Logger.debug("FacetedSearch FacetsCache.set/3: data stored in cache, table: #{table}")
+        {:ok, true}
+    end
   end
 
   def set_with_fun(view_name, data_key, fun) do
@@ -56,9 +68,12 @@ defmodule FacetedSearch.FacetsCache do
   end
 
   defp get_or_create_table do
-    case(:ets.whereis(@cache_id)) do
-      :undefined -> :ets.new(@cache_id, @ets_settings)
-      table -> table
+    case :ets.whereis(@cache_id) do
+      :undefined ->
+        :ets.new(@cache_id, @ets_settings)
+
+      table ->
+        table
     end
   end
 

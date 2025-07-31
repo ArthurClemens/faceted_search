@@ -546,6 +546,8 @@ ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
 FacetedSearch.warm_cache(ecto_schema, params)
 ```
 
+In order to fetch the cached data, option `cache_facets` must be set to `true`.
+
 ## Scoping data
 
 Scoping is the method of filtering search view data upfront, in order to create multiple search views.

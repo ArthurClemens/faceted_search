@@ -3,6 +3,7 @@ defmodule FacetedSearch.FlopSchema do
 
   use FacetedSearch.Types, include: [:schema_options]
 
+  alias FacetedSearch.Constants
   alias FacetedSearch.Filter
 
   @spec create_custom_fields_option(schema_options()) :: Keyword.t()
@@ -52,7 +53,7 @@ defmodule FacetedSearch.FlopSchema do
       ecto_type = Keyword.get(column_options, :ecto_type)
 
       # Atoms are generated at compile time
-      facet_column_name = :"#{Filter.facet_search_field_prefix()}#{column_name}"
+      facet_column_name = :"#{Constants.facet_search_field_prefix()}#{column_name}"
       # source_is_array: data is stored in JSON as array
       {facet_ecto_type, source_is_array} = normalize_facet_field_ecto_type(ecto_type)
 

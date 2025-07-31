@@ -8,6 +8,8 @@ defmodule FacetedSearch.Filter do
 
   require Logger
 
+  alias FacetedSearch.Constants
+
   def filter(query, %Flop.Filter{field: field, value: value, op: op}, opts) do
     ecto_type = Keyword.get(opts, :ecto_type)
     source_is_array = Keyword.get(opts, :source_is_array, false)
@@ -47,13 +49,11 @@ defmodule FacetedSearch.Filter do
     end
   end
 
-  def facet_search_field_prefix, do: "facet_"
-
   @spec extract_name_attributes(atom()) :: {String.t(), boolean()}
   defp extract_name_attributes(field) do
     name_str = to_string(field)
-    is_facet_search = String.starts_with?(name_str, facet_search_field_prefix())
-    name = String.trim_leading(name_str, facet_search_field_prefix())
+    is_facet_search = String.starts_with?(name_str, Constants.facet_search_field_prefix())
+    name = String.trim_leading(name_str, Constants.facet_search_field_prefix())
     {name, is_facet_search}
   end
 

@@ -103,6 +103,10 @@ defmodule FacetedSearch do
       def create_search_view(view_id, opts \\ []),
         do: SearchView.create_search_view(options(), view_id, opts)
 
+      @spec search_view_exists?(String.t(), [create_search_view_option()]) :: boolean()
+      def search_view_exists?(view_id, opts \\ []),
+        do: SearchView.search_view_exists?(view_id, opts)
+
       @spec create_search_view_if_not_exists(String.t(), [create_search_view_option()]) ::
               :ok | {:error, term()}
       def create_search_view_if_not_exists(view_id, opts \\ []),
@@ -124,7 +128,7 @@ defmodule FacetedSearch do
         do:
           SearchView.drop_search_view(view_id, opts)
           |> tap(fn
-            {:ok, view_id} -> search_view_name(view_id) |> Facets.clear_cache()
+            {:ok, view_id} -> ecto_schema(view_id) |> Facets.clear_cache()
             _ -> nil
           end)
 
@@ -232,6 +236,10 @@ defmodule FacetedSearch do
           :ok | {:error, term()}
   def create_search_view(module, view_id, opts \\ []),
     do: module.create_search_view(view_id, opts)
+
+  @spec search_view_exists?(module(), String.t(), [create_search_view_option()]) :: boolean()
+  def search_view_exists?(module, view_id, opts \\ []),
+    do: module.search_view_exists?(view_id, opts)
 
   @doc """
   Creates the search view if it does not exist.

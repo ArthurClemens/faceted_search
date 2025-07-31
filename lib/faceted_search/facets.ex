@@ -10,10 +10,10 @@ defmodule FacetedSearch.Facets do
 
   alias Ecto.Adapters.SQL
   alias FacetedSearch.Config
+  alias FacetedSearch.Constants
   alias FacetedSearch.Facet
   alias FacetedSearch.FacetConfig
   alias FacetedSearch.FacetsCache
-  alias FacetedSearch.Filter
   alias FacetedSearch.Option
 
   @typep result_value :: String.t()
@@ -32,9 +32,9 @@ defmodule FacetedSearch.Facets do
       ) do
     search_params = clean_search_params(raw_search_params)
 
-    cache_facets = Keyword.get(facet_search_options, :cache_facets)
+    is_cache_facets = Keyword.get(facet_search_options, :cache_facets)
 
-    if cache_facets do
+    if is_cache_facets do
       maybe_get_results_from_cache(ecto_schema, search_params, facet_search_options)
     else
       create_facet_results(ecto_schema, search_params, facet_search_options)
@@ -110,7 +110,7 @@ defmodule FacetedSearch.Facets do
   @spec create_search_params_for_all_facets(map(), %{atom() => FacetConfig.t()}) :: map()
   defp create_search_params_for_all_facets(%{filters: filters} = search_params, facet_configs)
        when is_list(filters) do
-    prefix = Filter.facet_search_field_prefix()
+    prefix = Constants.facet_search_field_prefix()
 
     facet_fields =
       Map.keys(facet_configs) |> Enum.map(&"#{prefix}#{&1}")
@@ -171,11 +171,13 @@ defmodule FacetedSearch.Facets do
           acc |> String.replace("$#{index + 1}", ~s(#{param}))
       end)
 
+    separator = Constants.tsv_separator()
+
     """
     SELECT
-      split_part(word, ':', 1) AS attr,
-      split_part(word, ':', 2) AS value,
-      split_part(word, ':', 3) AS label,
+      split_part(word, '#{separator}', 1) AS attr,
+      split_part(word, '#{separator}', 2) AS value,
+      split_part(word, '#{separator}', 3) AS label,
       ndoc AS count
     FROM ts_stat($$
       #{sql_with_variables}
@@ -231,7 +233,7 @@ defmodule FacetedSearch.Facets do
   @spec create_search_params_value_lookup(map()) :: %{String.t() => boolean()}
   defp create_search_params_value_lookup(%{filters: filters} = search_params)
        when is_list(filters) do
-    prefix = Filter.facet_search_field_prefix()
+    prefix = Constants.facet_search_field_prefix()
 
     search_params.filters
     |> Enum.map(&{to_string(&1.field), &1.value})
