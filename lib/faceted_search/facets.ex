@@ -25,7 +25,6 @@ defmodule FacetedSearch.Facets do
           {:ok, list(Facet.t())}
           | {:error, Flop.Meta.t()}
           | {:error, Exception.t()}
-          | {:error, :no_cache_process}
 
   def search(
         ecto_schema,
@@ -35,25 +34,39 @@ defmodule FacetedSearch.Facets do
     search_params = clean_search_params(raw_search_params)
 
     is_cache_facets = Keyword.get(facet_search_options, :cache_facets)
-    cache_pid = Process.whereis(Cache)
 
-    cond do
-      is_cache_facets and not is_nil(cache_pid) ->
-        maybe_get_results_from_cache(ecto_schema, search_params, facet_search_options)
-
-      is_cache_facets and is_nil(cache_pid) ->
-        Logger.error(
-          "FacetedSearch.Cache process is not running. Make sure to add it to a supervisor."
-        )
-
-        {:error, :no_cache_process}
-
-      true ->
-        create_facet_results(ecto_schema, search_params, facet_search_options)
-    end
+    get_facet_results(
+      ecto_schema,
+      search_params,
+      facet_search_options,
+      is_cache_facets,
+      Process.whereis(Cache)
+    )
   end
 
-  defp maybe_get_results_from_cache(ecto_schema, search_params, facet_search_options) do
+  defp get_facet_results(
+         _ecto_schema,
+         _search_params,
+         _facet_search_options,
+         is_cache_facets,
+         cache_pid
+       )
+       when is_cache_facets and not is_pid(cache_pid) do
+    Logger.error(
+      "FacetedSearch.Cache process is not running. Make sure to add it to a supervisor."
+    )
+
+    {:error, :no_cache_process}
+  end
+
+  defp get_facet_results(
+         ecto_schema,
+         search_params,
+         facet_search_options,
+         is_cache_facets,
+         _cache_pid
+       )
+       when is_cache_facets do
     {view_name, _module} = ecto_schema
     cache_key = search_params.filters
 
@@ -64,6 +77,16 @@ defmodule FacetedSearch.Facets do
       {:error, :no_cache} ->
         create_and_cache_facet_results(ecto_schema, search_params, facet_search_options)
     end
+  end
+
+  defp get_facet_results(
+         ecto_schema,
+         search_params,
+         facet_search_options,
+         _is_cache_facets,
+         _cache_pid
+       ) do
+    create_facet_results(ecto_schema, search_params, facet_search_options)
   end
 
   @spec create_and_cache_facet_results(Ecto.Queryable.t(), map(), [facet_search_option()]) ::
