@@ -387,7 +387,7 @@ The `value ` field contains the data from a table's column, cast to the `ecto_ty
 
 #### Option: label
 
-The `label` field contains the string value of the `value` field. It is often desirable to differentiate values and UI texts, so the label field can be configured to contain text from another column or joined table - see [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields). 
+The `label` field contains the string value of the `value` field, unless configured otherwise. See [Option labels ↓](#option-labels). 
 
 #### Option: count
 
@@ -443,6 +443,62 @@ The returned facet results will look like this:
   }
 ]
 ```
+
+## Option labels
+
+Instead of displaying the option values, option labels may contain texts that are better suited for a user interface. 
+
+Two scenarios are supported:
+1. A database table provides text representations - for example, product names, genre titles, user roles, etc.
+2. Custom text is needed, and it's preferable that UI components do not have to process the option values themselves.
+
+### Labels from database tables
+
+In the schema configuration for `facet_fields`, option `label` references a field to read the label text from:
+
+```elixir
+facet_fields: [
+  genres: [
+    label: :genre_title
+  ]
+]
+```
+
+See [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields) for details.
+
+### Custom labels
+
+In the schema module, callback `option_label/3` creates label texts for a given value or database label:
+
+```elixir
+defmodule MyApp.FacetSchema do
+
+  def option_label(:favorite, value, _) do
+    if value, do: "Yes", else: "No"
+  end
+
+  def option_label(:user_roles, value, _) do
+    case value do
+      :admin -> gettext("Admin")
+      :support -> gettext("Support")
+      :qa -> gettext("Q&A")
+      _ -> value
+    end
+  end
+
+  def option_label(:languages, value, database_label) do
+    case value do
+      "en" -> "English (UK)"
+      _ -> database_label
+    end
+  end
+  
+  def option_label(_, _, _), do: nil
+
+  ...
+```
+
+See [option_label/3](FacetedSearch.html#c:option_label/3) for details
 
 ## Performance
 
@@ -576,7 +632,6 @@ scope_keys: [:current_user],
 #### 2. Define the callback:
 
 ```elixir
-@behaviour FacetedSearch
 def scope_by(:current_user, %{current_user: current_user} = _scopes) do
   %{
     field: :user_id,
@@ -611,7 +666,6 @@ scope_keys: [:current_user, :publication_year],
 Define the filter callbacks:
 
 ```elixir
-@behaviour FacetedSearch
 def scope_by(:current_user, scopes) do
   %{
     field: :user_id,

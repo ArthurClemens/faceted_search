@@ -16,8 +16,6 @@ defmodule FacetedSearch.SearchView do
   alias FacetedSearch.SearchViewDescription
   alias FacetedSearch.Source
 
-  @scope_func :scope_by
-
   @doc """
   The normalized Postgres view name generated from `view_id`.
   """
@@ -339,7 +337,7 @@ defmodule FacetedSearch.SearchView do
       raise SearchViewError, %{error: "Missing behaviour scope_by", module: module}
     end
 
-    scope_by_result = apply(module, @scope_func, [key, current_scope])
+    scope_by_result = apply(module, Constants.scope_callback(), [key, current_scope])
 
     %{
       field: field,

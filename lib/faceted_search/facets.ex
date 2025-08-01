@@ -147,7 +147,8 @@ defmodule FacetedSearch.Facets do
           all_facet_rows,
           filtered_facet_rows,
           search_params,
-          facet_configs
+          facet_configs,
+          module
         )
 
       {:ok, facet_results}
@@ -245,7 +246,7 @@ defmodule FacetedSearch.Facets do
         {:ok,
          result.rows
          |> Enum.map(fn [name, value, label, count] ->
-           {name, value, if(label != "", do: label, else: value), count}
+           {name, value, if(label != "", do: label, else: nil), count}
          end)}
 
       {:error, error} ->
@@ -253,15 +254,22 @@ defmodule FacetedSearch.Facets do
     end
   end
 
-  @spec consolidate_facet_results(list(result_row()), list(result_row()), map(), %{
-          atom() => FacetConfig.t()
-        }) ::
+  @spec consolidate_facet_results(
+          list(result_row()),
+          list(result_row()),
+          map(),
+          %{
+            atom() => FacetConfig.t()
+          },
+          module()
+        ) ::
           list(result_row())
   defp consolidate_facet_results(
          all_facet_rows,
          filtered_facet_rows,
          search_params,
-         facet_configs
+         facet_configs,
+         module
        ) do
     filtered_facet_groups =
       filtered_facet_rows
@@ -274,7 +282,7 @@ defmodule FacetedSearch.Facets do
     |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
     |> Enum.filter(fn {key, _} -> key in filtered_facet_keys end)
     |> Enum.map(fn {_key, result_rows} ->
-      cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup)
+      cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup, module)
     end)
     |> List.flatten()
   end
@@ -303,19 +311,24 @@ defmodule FacetedSearch.Facets do
           %{
             atom() => FacetConfig.t()
           },
-          map()
+          map(),
+          module()
         ) :: list(Facet.t())
-  defp cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup) do
+  defp cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup, module) do
     result_rows
     |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
     |> Enum.reduce([], fn {name, result_rows}, acc ->
+      field = String.to_existing_atom(name)
+
       facet = %Facet{
-        field: String.to_existing_atom(name),
+        field: field,
         options:
           create_option(
             result_rows,
             get_in(facet_configs, [Access.key(String.to_existing_atom(name))]),
-            search_params_value_lookup
+            search_params_value_lookup,
+            field,
+            module
           )
       }
 
@@ -323,13 +336,25 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  @spec create_option(list(result_row()), FacetConfig.t() | nil, map()) ::
+  @spec create_option(list(result_row()), FacetConfig.t() | nil, map(), atom(), module()) ::
           list(Facet.t())
-  defp create_option(facet_results, facet_config, search_params_value_lookup) do
+  defp create_option(facet_results, facet_config, search_params_value_lookup, field, module) do
+    has_option_label_callback =
+      Kernel.function_exported?(module, Constants.option_label_callback(), 3)
+
     Enum.map(facet_results, fn {name, raw_value, label, count} ->
+      value = cast_value(raw_value, facet_config)
+
+      # Callback option_label/3 may override the label found in the database through facet_fields->label.
+      # In case it returns nil, the label from the database is used instead.
+      # If that is not available either, the value is converted to a string and used as the label.
+      option_label =
+        if has_option_label_callback,
+          do: apply(module, Constants.option_label_callback(), [field, value, label])
+
       %Option{
-        value: cast_value(raw_value, facet_config),
-        label: label,
+        value: value,
+        label: option_label || label || to_string(value),
         count: count,
         selected:
           !!search_params_value_lookup[name] and raw_value in search_params_value_lookup[name]
