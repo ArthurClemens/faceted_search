@@ -280,7 +280,7 @@ facet_fields: [
 
 ### 2. Performing a facet search
 
-`FacetedSearch.search/3` takes a reference to the schema and search params:
+`FacetedSearch.search/3` takes a reference to the schema and search parameters:
 
 ```elixir
 ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
@@ -411,7 +411,7 @@ Facet filters are a specialized form of search filters:
 
 To achieve this behavior using Flop, we need to create filters using the following rules:
 
-- Field names must be prefixed with `facet_`, so field `publication_year` becomes `facet_publication_year` in the search params.
+- Field names must be prefixed with `facet_`, so field `publication_year` becomes `facet_publication_year` in the search parameters.
   - Note that the field names in the schema don't use the prefix.
 - The `value` must be an array.
 - The operator `op` must be `:==`.
@@ -478,7 +478,7 @@ See [Scoping data ↓](#scoping-data) for details.
 
 #### Caching
 
-Query results can be cached, see [Caching facets results ↓](#caching-facets-results).
+Query results can be cached, see [Caching facet results ↓](#caching-facet-results).
 
 #### Working around common text searches
 
@@ -486,27 +486,50 @@ Because of input variations, text searches are hard to optimize using caching, e
 
 One way is to translate a text query to a filtered query. For example, “blue trousers” can be interpreted as filters "apparel:trousers" and "color:blue". The user is then redirected to the category page with filters applied, and cached results are displayed.
 
-### Caching facets results
+## Caching facet results
 
-#### cache_facets option
+GenServer `FacetSearch.Cache` handles caching of facet results. Data is cached in an [ETS table ⤴](https://hexdocs.pm/elixir/main/ets.html), where the cache key is the combination of the search view name and the used filters.
 
-Caching of facet results can be activated with `FacetedSearch.search/3` option `cache_facets` (boolean).
+When the search view is updated, any exsisting cache that contains a key with the search view name is automatically cleared. Alternatively, call `FacetedSearch.clear_facets_cache/1`.
 
-#### ETS table
+The cache is only written and read when option `cache_facets` is `true` - see below.
 
-Data is cached in an [ETS table ⤴](https://hexdocs.pm/elixir/main/ets.html), where the cache key is the combination of the search view name and the used filters.
+### Setup caching
 
-The cache is only written and read when option `cache_facets` is `true`.
+1. Add `FacetSearch.Cache` to a supervisor (typically in `application.ex`):
+   ```elixir
+   children = [
+     {FacetSearch.Cache, []}
+     ...
+   ]
 
-#### Automatic clearing
+   Supervisor.start_link(children, options)
+   ```
+2. Enable caching of results from filter parameters by calling `FacetedSearch.search/3` with option `cache_facets` set to `true`.
 
-When the search view is updated, any exsisting cache that contains a key with the search view name is cleared.
+### Cache warming
 
-Alternatively, it can be cleard with `FacetedSearch.clear_facets_cache/1`.
+Caches can be created upfront, by passing a list of filters to `FacetedSearch.warm_cache/2`.
 
-#### Example
+For example:
 
-Below, the example search function from before is expanded with caching, using the following logic:
+```elixir
+search_params_to_cache = [
+  %{filters: [%{field: :apparel, value: "men", op: :==}]}
+  %{filters: [%{field: :apparel, value: "women", op: :==}]}
+  %{filters: [%{field: :apparel, value: "unisex", op: :==}]}
+  %{filters: [%{field: :facet_colors, value: ["blue"], op: :==}]},
+]
+
+ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
+FacetedSearch.warm_cache(ecto_schema, search_params_to_cache)
+```
+
+Note: cached data, including from a warmed cache, is only returned when option `cache_facets` is set to `true`.
+
+### Example of conditional caching
+
+Builing upon the example search function from before, we add conditional caching with the following logic:
 - Don't cache when text search is invoked
 - Only cache when the result count is greater than 1,000
 
@@ -518,7 +541,7 @@ def search_media(search_params \\ %{}) do
 
   with {:ok, {_results, meta} = flop_results} <-
          Flop.validate_and_run(query, search_params, for: FacetSchema),
-       cache_facets <- meta.total_count > 1_000 and not is_text_search,
+       cache_facets <- not is_text_search and meta.total_count > 1_000,
        {:ok, facets} <-
          FacetedSearch.search(ecto_schema, search_params, cache_facets: cache_facets) do
     {:ok, flop_results, facets}
@@ -527,26 +550,6 @@ def search_media(search_params \\ %{}) do
   end
 end
 ```
-
-#### Cache warming
-
-Caches can be created upfront, by passing a list of filters to `FacetedSearch.warm_cache/2`.
-
-For example:
-
-```elixir
-params = [
-  %{filters: [%{field: :apparel, value: "men", op: :==}]}
-  %{filters: [%{field: :apparel, value: "women", op: :==}]}
-  %{filters: [%{field: :apparel, value: "unisex", op: :==}]}
-  %{filters: [%{field: :facet_colors, value: ["blue"], op: :==}]},
-]
-
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
-FacetedSearch.warm_cache(ecto_schema, params)
-```
-
-In order to fetch the cached data, option `cache_facets` must be set to `true`.
 
 ## Scoping data
 
