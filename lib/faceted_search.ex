@@ -141,15 +141,16 @@ defmodule FacetedSearch do
               {:ok, list(Facet.t())}
               | {:error, Flop.Meta.t()}
               | {:error, Exception.t()}
+              | {:error, :no_cache_process}
       def search(ecto_schema, search_params \\ %{}, opts \\ []) do
         Facets.search(ecto_schema, search_params, opts)
       end
 
-      @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: list()
+      @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: no_return()
       def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []),
         do: Facets.warm_cache(ecto_schema, search_params_list, facet_search_options)
 
-      @spec clear_facets_cache(Ecto.Queryable.t()) :: {:ok, String.t()} | {:error, :no_table}
+      @spec clear_facets_cache(Ecto.Queryable.t()) :: no_return()
       def clear_facets_cache(ecto_schema),
         do: Facets.clear_cache(ecto_schema)
     end
@@ -218,7 +219,7 @@ defmodule FacetedSearch do
   The created materialized view is prefixed with `"fv_"`.
 
   Options:
-  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see: [Scoping data](README.md#scoping-data).
+  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
   - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
 
   ## Examples
@@ -282,7 +283,7 @@ defmodule FacetedSearch do
     do: module.drop_search_view(view_id, opts)
 
   @doc """
-  Returns the provided options. Useful for debugging issues.
+  Returns the provided options. Useful for debugging problems.
 
   ## Examples
 
@@ -295,7 +296,7 @@ defmodule FacetedSearch do
     do: module.options()
 
   @doc """
-  Returns the `FacetedSearch.SearchViewDescription` used to build the search view. Useful for debugging issues.
+  Returns the `FacetedSearch.SearchViewDescription` used to build the search view. Useful for debugging problems.
 
   ## Examples
 
@@ -338,7 +339,12 @@ defmodule FacetedSearch do
     do: module.ecto_schema(view_id)
 
   @doc """
-  Performs a Flop search with search params and returns a list of matching facets.
+  Performs a Flop search with search parameters and returns a list of matching facets.
+
+  Options:
+  - `cache_facets` - see [Caching facet results](README.md#caching-facet-results)
+  - `query_opts` - Supports `prefix`
+  - `repo` - Custom database repo
 
   ## Examples
 
@@ -358,20 +364,23 @@ defmodule FacetedSearch do
           {:ok, list(Facet.t())}
           | {:error, Flop.Meta.t()}
           | {:error, Exception.t()}
+          | {:error, :no_cache_process}
   def search(ecto_schema, search_params \\ %{}, opts \\ []) do
     {_view_name, module} = ecto_schema
     module.search(ecto_schema, search_params, opts)
   end
 
   @doc """
-  Facet data optimization. Creates cache entries for the provided list of search params,
+  Facet data optimization. Creates cache entries for the provided list of search parameters,
   so searches using those params will return cached facet data.
 
-  From the search params, only `filter` entries will be read.
+  From the search parameters, only `filter` entries will be read.
+
+  To activate caching, see [Caching facet results](README.md#caching-facet-results)
 
   ## Examples
 
-      params = [
+      search_params_to_cache = [
         %{filters: [%{field: :facet_publication_year, value: [2014,2016], op: :==}]},
         %{filters: [%{field: :facet_languages, value: ["en"], op: :==}]},
         %{filters: [%{field: :languages, value: ["en", "fr"], op: :==}]},
@@ -379,10 +388,10 @@ defmodule FacetedSearch do
       ]
 
       ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
-      FacetedSearch.warm_cache(ecto_schema, params)
+      FacetedSearch.warm_cache(ecto_schema, search_params_to_cache)
 
   """
-  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: list()
+  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: no_return()
   def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []) do
     {_view_name, module} = ecto_schema
     module.warm_cache(ecto_schema, search_params_list, facet_search_options)
