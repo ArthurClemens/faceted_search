@@ -37,7 +37,6 @@ defmodule FacetedSearch.Errors.MissingCallbackError do
 
         Add a function `scope_by/2` that accepts the same key and a scope parameter to read from:
 
-            @behaviour FacetedSearch
             def scope_by(:current_user, current_user) do
               %{
                 field: "user_id",

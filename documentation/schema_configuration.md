@@ -425,7 +425,7 @@ sources: [
 ]
 ```
 
-#### With label
+#### With label from a database table
 
 The example adds `genre_title` as label, which is referenced from `fields`.
 

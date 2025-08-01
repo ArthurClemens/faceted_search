@@ -1,6 +1,7 @@
 defmodule FacetedSearch.NimbleSchema do
   @moduledoc false
 
+  alias FacetedSearch.Constants
   alias FacetedSearch.Errors.InvalidOptionsError
   alias FacetedSearch.Errors.MissingCallbackError
 
@@ -118,7 +119,7 @@ defmodule FacetedSearch.NimbleSchema do
   end
 
   defp require_scope_by_callback(module, has_scopes_option) when has_scopes_option do
-    if not Module.defines?(module, {:scope_by, 2}) do
+    if not Module.defines?(module, {Constants.scope_callback(), 2}) do
       raise MissingCallbackError.message(%{
               callback: "scope_by/2",
               module: module

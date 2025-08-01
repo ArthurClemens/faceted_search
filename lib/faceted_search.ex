@@ -54,6 +54,8 @@ defmodule FacetedSearch do
           :facet_search_options
         ]
 
+      @behaviour FacetedSearch
+
       @primary_key false
 
       @derive {
@@ -156,8 +158,11 @@ defmodule FacetedSearch do
     end
   end
 
-  @typep scope_key :: atom()
-  @typep scope :: term()
+  @type scope_key :: atom()
+  @type scope :: term()
+  @type facet_name :: atom()
+  @type option_value :: term()
+  @type database_label :: String.t()
 
   @doc """
   Configures one or more scopes when creating the search view.
@@ -171,7 +176,7 @@ defmodule FacetedSearch do
 
   If the schema module contains:
 
-      defmodule KitchenJournalSchemas.FacetSchema do
+      defmodule MyApp.FacetSchema do
 
           use FacetedSearch,
             sources: [
@@ -181,9 +186,8 @@ defmodule FacetedSearch do
 
   Then 2 `scopy_by/2` callback functions with corresponding keys will define the scope rules. For example:
 
-      defmodule KitchenJournalSchemas.FacetSchema do
+      defmodule MyApp.FacetSchema do
 
-          @behaviour FacetedSearch
           def scope_by(:current_user, scope) do
             %{
               field: :user_id,
@@ -203,14 +207,55 @@ defmodule FacetedSearch do
           use FacetedSearch,
             ...
   """
-  @callback scope_by(scope_key, scope | nil) :: %{
+  @callback scope_by(scope_key(), scope() | nil) :: %{
               table: atom() | nil,
               field: atom(),
               comparison: String.t(),
               value: term()
             }
 
-  @optional_callbacks scope_by: 2
+  @doc """
+  Returns a custom option label. If `nil` is returned, the option value as string will be used.
+
+  Make sure to add a fallback that returns nil, in case no match was found.
+
+  Parameters:
+  - `facet_name` - Name of the facet
+  - `option_value` - Value or cast value
+  - `database_label` - The database label if set in [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields)
+
+  ## Examples
+
+      defmodule MyApp.FacetSchema do
+
+        def option_label(:favorite, value, _) do
+          if value, do: "Yes", else: "No"
+        end
+
+        def option_label(:user_roles, value, _) do
+          case value do
+            :admin -> gettext("Admin")
+            :support -> gettext("Support")
+            :qa -> gettext("Q&A")
+            _ -> value
+          end
+        end
+
+        def option_label(:languages, value, database_label) do
+          case value do
+            "en" -> "English (UK)"
+            _ -> database_label
+          end
+        end
+
+        def option_label(_, _, _), do: nil
+
+      ...
+
+  """
+  @callback option_label(facet_name(), option_value(), database_label() | nil) :: String.t() | nil
+
+  @optional_callbacks scope_by: 2, option_label: 3
 
   @doc """
   Creates a search view that collects data for searching.
