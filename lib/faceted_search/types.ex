@@ -35,6 +35,14 @@ defmodule FacetedSearch.Types do
                 {:repo, module()}
                 | {:query_opts, Keyword.t() | {:cache_facets, boolean()}}
       end
+
+      if :range_types in unquote(includes) do
+          @type range_bound :: number()
+          @type range_bucket_lower :: list(:lower | range_bound())
+          @type range_bucket_middle :: list(range_bound())
+          @type range_bucket_upper :: list(range_bound() | :upper)
+          @type range_bucket :: {range_bucket_lower() | range_bucket_middle() | range_bucket_upper(), integer()}
+      end
     end
   end
 end
