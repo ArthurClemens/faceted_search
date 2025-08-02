@@ -144,11 +144,11 @@ defmodule FacetedSearch.Facets do
            get_facet_results(repo, ecto_schema, search_params, opts) do
       facet_results =
         consolidate_facet_results(
+          module,
           all_facet_rows,
           filtered_facet_rows,
           search_params,
-          facet_configs,
-          module
+          facet_configs
         )
 
       {:ok, facet_results}
@@ -255,21 +255,21 @@ defmodule FacetedSearch.Facets do
   end
 
   @spec consolidate_facet_results(
+          module(),
           list(result_row()),
           list(result_row()),
           map(),
           %{
             atom() => FacetConfig.t()
-          },
-          module()
+          }
         ) ::
           list(result_row())
   defp consolidate_facet_results(
+         module,
          all_facet_rows,
          filtered_facet_rows,
          search_params,
-         facet_configs,
-         module
+         facet_configs
        ) do
     filtered_facet_groups =
       filtered_facet_rows
@@ -282,7 +282,7 @@ defmodule FacetedSearch.Facets do
     |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
     |> Enum.filter(fn {key, _} -> key in filtered_facet_keys end)
     |> Enum.map(fn {_key, result_rows} ->
-      cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup, module)
+      cast_to_facet_list(module, result_rows, facet_configs, search_params_value_lookup)
     end)
     |> List.flatten()
   end
@@ -307,14 +307,14 @@ defmodule FacetedSearch.Facets do
   defp create_search_params_value_lookup(_search_params), do: %{}
 
   @spec cast_to_facet_list(
+          module(),
           list(result_row()),
           %{
             atom() => FacetConfig.t()
           },
-          map(),
-          module()
+          map()
         ) :: list(Facet.t())
-  defp cast_to_facet_list(result_rows, facet_configs, search_params_value_lookup, module) do
+  defp cast_to_facet_list(module, result_rows, facet_configs, search_params_value_lookup) do
     result_rows
     |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
     |> Enum.reduce([], fn {name, result_rows}, acc ->
@@ -324,11 +324,11 @@ defmodule FacetedSearch.Facets do
         field: field,
         options:
           create_option(
+            module,
+            field,
             result_rows,
             get_in(facet_configs, [Access.key(String.to_existing_atom(name))]),
-            search_params_value_lookup,
-            field,
-            module
+            search_params_value_lookup
           )
       }
 
@@ -336,9 +336,9 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  @spec create_option(list(result_row()), FacetConfig.t() | nil, map(), atom(), module()) ::
+  @spec create_option(module(), atom(), list(result_row()), FacetConfig.t() | nil, map()) ::
           list(Facet.t())
-  defp create_option(facet_results, facet_config, search_params_value_lookup, field, module) do
+  defp create_option(module, field, facet_results, facet_config, search_params_value_lookup) do
     has_option_label_callback =
       Kernel.function_exported?(module, Constants.option_label_callback(), 3)
 
