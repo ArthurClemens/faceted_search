@@ -6,12 +6,36 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
   @doc false
   def from_nimble(%NimbleOptions.ValidationError{} = error, opts) do
     %__MODULE__{
-      key: error.key,
-      keys_path: error.keys_path,
-      message: Exception.message(error),
       module: Keyword.fetch!(opts, :module),
-      value: error.value
+      key: error.key,
+      value: error.value,
+      keys_path: error.keys_path,
+      message: Exception.message(error)
     }
+  end
+
+  def message(error) do
+    path = Enum.join(error.path, ".")
+
+    info =
+      case error.type do
+        :invalid_value ->
+          ~s(Option "#{path}" contains an invalid value for key "#{error.key}": #{error.reason}.)
+
+        :incorrect_reference ->
+          ~s(Option "#{path}" contains an incorrect reference: `#{error.key}`: #{error.reason}.)
+
+        :unsupported_key ->
+          ~s(Option "#{path}" contains a key that is not supported: `#{error.key}`.)
+      end
+
+    """
+
+    Invalid option for source "#{error.source}".
+
+    #{info}
+
+    """
   end
 end
 
@@ -24,9 +48,10 @@ defmodule FacetedSearch.Errors.MissingCallbackError do
 
   def message(error) do
     """
+
     No callback defined.
 
-    Option `scopes` was used, and that requires the behaviour callback #{error.callback} to be defined in module #{error.module}.
+    Option "scopes" was used, and that requires the behaviour callback #{error.callback} to be defined in module #{error.module}.
 
     Example:
 
@@ -57,6 +82,7 @@ defmodule FacetedSearch.Errors.NoRepoError do
 
   def message(_) do
     """
+
     No repo specified.
 
     A repo can be configured in Flop - see Flop documentation at https://hexdocs.pm/flop
@@ -75,6 +101,7 @@ defmodule FacetedSearch.Errors.SearchViewError do
   @impl true
   def exception(value) do
     message = """
+
     Search view error.
 
     Error creating search view:

@@ -87,13 +87,15 @@ defmodule FacetedSearch.NimbleSchema do
 
   def option_schema, do: @option_schema
 
-  def validate!(opts, module) do
-    validate!(opts, option_schema(), module)
-  end
+  def validate!(opts, module), do: validate!(opts, option_schema(), module)
 
   def validate!(opts, %NimbleOptions{} = schema, module) do
     case NimbleOptions.validate(opts, schema) do
       {:ok, opts} ->
+        validate_data_fields_options(opts)
+        validate_text_fields_options(opts)
+        validate_facet_fields_options(opts)
+        validate_sort_fields_options(opts)
         validate_scope_callback(opts, opts[:module])
 
         opts
@@ -103,6 +105,274 @@ defmodule FacetedSearch.NimbleSchema do
                 module: module
               )
     end
+  end
+
+  defp validate_data_fields_options(opts) do
+    option = :data_fields
+
+    get_validation_entries(opts, option)
+    |> Enum.map(fn %{source: source, entries: entries, field_keys: field_keys} ->
+      entries
+      |> Enum.filter(fn
+        field when is_atom(field) ->
+          if field in field_keys do
+            field
+          else
+            raise_incorrect_reference(source, [option], field)
+          end
+
+        entry ->
+          entry
+      end)
+      # credo:disable-for-next-line
+      |> Enum.filter(fn
+        {custom_data_option, custom_data} when is_list(custom_data) and custom_data != [] ->
+          Enum.filter(custom_data, fn
+            # Test field reference in custom data
+            # required unless options `binding` and `field` are used
+            field when is_atom(field) ->
+              if field in field_keys do
+                field
+              else
+                raise_incorrect_reference(source, [option, custom_data_option], field)
+              end
+
+            {field, key_value} = entry ->
+              is_valid_binding_keys =
+                Keyword.keys(key_value) |> Enum.all?(&(&1 in [:binding, :field]))
+
+              cond do
+                field not in field_keys and is_valid_binding_keys ->
+                  entry
+
+                field in field_keys ->
+                  entry
+
+                true ->
+                  raise InvalidOptionsError.message(%{
+                          source: source,
+                          path: [option, custom_data_option],
+                          key: field,
+                          type: :incorrect_reference,
+                          reason:
+                            ~s(expected a name that is listed in `fields`, or "#{field}" to include options `binding` and `field`)
+                        })
+              end
+
+            entry ->
+              entry
+          end)
+
+        entry ->
+          entry
+      end)
+      # credo:disable-for-next-line
+      |> Enum.filter(fn
+        {custom_data_option, custom_data} when is_list(custom_data) and custom_data != [] ->
+          Enum.filter(custom_data, fn
+            {field, [cast: value]} = entry ->
+              if is_atom(value) do
+                entry
+              else
+                raise InvalidOptionsError.message(%{
+                        source: source,
+                        path: [option, custom_data_option, field],
+                        key: :cast,
+                        type: :invalid_value,
+                        reason: "expected an atom"
+                      })
+              end
+
+            {field, [{key, _value}]} ->
+              raise InvalidOptionsError.message(%{
+                      source: source,
+                      path: [option, custom_data_option, field],
+                      key: key,
+                      type: :unsupported_key
+                    })
+
+            entry ->
+              entry
+          end)
+
+        entry ->
+          entry
+      end)
+    end)
+  end
+
+  defp validate_text_fields_options(opts) do
+    option = :text_fields
+
+    get_validation_entries(opts, option)
+    |> Enum.map(fn %{source: source, entries: entries, field_keys: field_keys} ->
+      entries
+      |> Enum.filter(fn
+        field when is_atom(field) ->
+          if field in field_keys do
+            field
+          else
+            raise_incorrect_reference(source, [option], field)
+          end
+
+        entry ->
+          entry
+      end)
+    end)
+  end
+
+  defp validate_facet_fields_options(opts) do
+    option = :facet_fields
+
+    get_validation_entries(opts, option)
+    |> Enum.map(fn %{source: source, entries: entries, field_keys: field_keys} ->
+      entries
+      |> Enum.filter(fn
+        field when is_atom(field) ->
+          if field in field_keys do
+            field
+          else
+            raise_incorrect_reference(source, [option], field)
+          end
+
+        {field, _} = entry ->
+          if field in field_keys do
+            entry
+          else
+            raise_incorrect_reference(source, [option], field)
+          end
+
+        entry ->
+          entry
+      end)
+      # credo:disable-for-next-line
+      |> Enum.filter(fn
+        {field, [range_bounds: value]} = entry ->
+          if is_list(value) and value != [] and Enum.all?(value, &is_number(&1)) do
+            entry
+          else
+            raise InvalidOptionsError.message(%{
+                    source: source,
+                    path: [option, field],
+                    key: :range_bounds,
+                    type: :invalid_value,
+                    reason: "expected a list of numbers"
+                  })
+          end
+
+        {field, [label: value]} = entry ->
+          if is_atom(value) do
+            entry
+          else
+            raise InvalidOptionsError.message(%{
+                    source: source,
+                    path: [option, field],
+                    key: :label,
+                    type: :invalid_value,
+                    reason: "expected an atom"
+                  })
+          end
+
+        {field, [{key, _value}]} ->
+          raise InvalidOptionsError.message(%{
+                  source: source,
+                  path: [option, field],
+                  key: key,
+                  type: :unsupported_key
+                })
+
+        entry ->
+          entry
+      end)
+    end)
+  end
+
+  defp validate_sort_fields_options(opts) do
+    option = :sort_fields
+
+    get_validation_entries(opts, option)
+    |> Enum.map(fn %{source: source, entries: entries, field_keys: field_keys} ->
+      entries
+      |> Enum.filter(fn
+        field when is_atom(field) ->
+          if field in field_keys do
+            field
+          else
+            raise_incorrect_reference(source, [option], field)
+          end
+
+        {field, _} = entry ->
+          if field in field_keys do
+            entry
+          else
+            raise_incorrect_reference(source, [option], field)
+          end
+
+        entry ->
+          entry
+      end)
+      # credo:disable-for-next-line
+      |> Enum.filter(fn
+        {_field, [cast: value]} = entry ->
+          if is_atom(value) do
+            entry
+          else
+            raise InvalidOptionsError.message(%{
+                    source: source,
+                    path: [option],
+                    key: :cast,
+                    type: :invalid_value,
+                    reason: "expected an atom"
+                  })
+          end
+
+        {_field, [{key, _value}]} ->
+          raise InvalidOptionsError.message(%{
+                  source: source,
+                  path: [option],
+                  key: key,
+                  type: :unsupported_key
+                })
+
+        entry ->
+          entry
+      end)
+    end)
+  end
+
+  defp get_validation_entries(opts, key) do
+    opts
+    |> Keyword.get_values(:sources)
+    |> List.flatten()
+    |> Enum.reduce([], fn {source, source_options}, acc ->
+      entries =
+        source_options
+        |> Keyword.get_values(key)
+        |> List.flatten()
+
+      field_keys = Keyword.get_values(source_options, :fields) |> List.flatten() |> Keyword.keys()
+
+      [
+        %{
+          source: source,
+          entries: entries,
+          field_keys: field_keys
+        }
+        | acc
+      ]
+    end)
+  end
+
+  defp raise_incorrect_reference(source, path, field) do
+    raise(
+      InvalidOptionsError.message(%{
+        source: source,
+        path: path,
+        key: field,
+        type: :incorrect_reference,
+        reason: "expected a name that is listed in `fields`"
+      })
+    )
   end
 
   defp validate_scope_callback(opts, module) do
