@@ -349,8 +349,10 @@ defmodule FacetedSearch.Facets do
       # In case it returns nil, the label from the database is used instead.
       # If that is not available either, the value is converted to a string and used as the label.
       option_label =
-        if has_option_label_callback,
-          do: apply(module, Constants.option_label_callback(), [field, value, label])
+        if has_option_label_callback do
+          value = maybe_get_range_bucket_value(value, facet_config)
+          apply(module, Constants.option_label_callback(), [field, value, label])
+        end
 
       %Option{
         value: value,
@@ -361,6 +363,15 @@ defmodule FacetedSearch.Facets do
       }
     end)
   end
+
+  # If range_buckets contains valid entries, return the bucket for the given value
+  # otherwise, return the value unchanged.
+  defp maybe_get_range_bucket_value(value, %{range_buckets: range_buckets} = _facet_config)
+       when is_list(range_buckets) and range_buckets != [] do
+    Enum.find(range_buckets, fn {_bounds, bucket} -> bucket == value end)
+  end
+
+  defp maybe_get_range_bucket_value(value, _), do: value
 
   defp cast_value(raw_value, facet_config) when not is_nil(facet_config) do
     case Ecto.Type.cast(facet_config.ecto_type, raw_value) do
