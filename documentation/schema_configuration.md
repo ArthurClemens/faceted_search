@@ -223,7 +223,7 @@ Additionally, custom fields can be defined to generate data from other sources.
 
 Either:
 
-- A field name of a field listed under option `fields`.
+- A field name from option `fields`.
   - Type: `atom()`
 - A keyword list of field name/entry options to generate JSON data from joined tables or fields listed in the `fields` option.
 
@@ -363,7 +363,7 @@ sources: [
 
 ## text_fields
 
-A list of field names used for text search.
+A list of fields used for text search.
 
 The referenced fields populate the `text` column in the search view.
 
@@ -372,7 +372,7 @@ The referenced fields populate the `text` column in the search view.
 
 ### List entries
 
-- A field name of a field listed under option `fields`.
+- A field name from option `fields`.
   - Type: `atom()`
 
 ### Examples
@@ -390,9 +390,9 @@ sources: [
 
 ## facet_fields
 
-A list of field names used to create facets. 
+A list of fields used to create facets, with options for labels from a database table, and ranges.
 
-The referenced fields populate the `tsv` column in the search view. A field label can optionally be set.
+The referenced fields populate the `tsv` column in the search view. 
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > facet_fields`
@@ -401,17 +401,23 @@ The referenced fields populate the `tsv` column in the search view. A field labe
 
 Either:
 
-- A field name of a field listed under option `fields`.
-  - Type: `atom()`
-- A keyword list containing key `label` that references a field listed under option `fields`.
-  - Type: `{atom(), Keyword.t()}`
+- A field name from option `fields`.
+- A keyword list:
+  - Key: a field name from option `fields`
+  - Value (either or both):
+    - To reference a label from a database table/column:
+      - Key: `label` 
+      - Value: a field name from option `fields`
+    - To create a range:
+      - Key: `range_bounds`
+      - Value: a list of numbers
 
 
 ### Examples
 
-#### Without labels
+#### List of field names
 
-By default, the field value will be returned as label from `FacetedSearch.search/3`.
+By default, the field value will be returned as label.
 
 ```
 sources: [
@@ -425,7 +431,7 @@ sources: [
 ]
 ```
 
-#### With label from a database table
+#### With a label from a database table
 
 The example adds `genre_title` as label, which is referenced from `fields`.
 
@@ -456,11 +462,38 @@ sources: [
 ]
 ```
 
+#### With a range
+
+Range buckets are categories for numerical values. Use option `range_bounds` to define the bounds of the buckets.
+
+Given the example list `[1980, 2000, 2020]`, the following buckets are created:
+
+- 0: items before 1980
+- 1: items from 1980 up to (but not including) 2000
+- 2: items from 2000 up to (but not including) 2020
+- 3: items from 2020 onwards
+
+Note: Lower bounds are inclusive, upper bounds are exclusive.
+
+```
+sources: [
+  books: [
+    ...
+    facet_fields: [
+      publication_year: [
+        range_bounds: [1980, 2000, 2020]
+      ],
+      :genres
+    ]
+  ]
+]
+```
+
 ## sort_fields
 
-A list of fields used for sorting results.
+A list of fields used for sorting results. Field values can optionally be cast to another data type.
 
-The fields referenced from the `fields` option are used to create extra columns in the search view. Field values can optionally be cast to another data type.
+The fields referenced from the `fields` option are used to create extra columns in the search view. 
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > sort_fields`
@@ -469,7 +502,7 @@ The fields referenced from the `fields` option are used to create extra columns 
 
 Either:
 
-- A field name of a field listed under option `fields`.
+- A field name from option `fields`.
   - Type: `atom()`
 - A keyword list containing key `cast` to cast the orginal value to a sort value - see examples below.
   - Type: `{atom(), Keyword.t()}`

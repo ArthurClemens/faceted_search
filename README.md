@@ -498,7 +498,60 @@ defmodule MyApp.FacetSchema do
   ...
 ```
 
-See [option_label/3](FacetedSearch.html#c:option_label/3) for details
+- See [Callbacks: option_label/3](FacetedSearch.html#c:option_label/3) for details
+- See [Ranges ↓](#ranges) for an example with range values
+
+## Ranges
+
+Ranges divide numerical entries into distinct categories (buckets), for example: movies created between 2000 and 2010, prices from EUR 0 to 10, etc.
+
+### Configuration
+
+In the schema configuration for `facet_fields`, use option `range_bounds` to define the bounds of the buckets.
+
+```elixir
+facet_fields: [
+  publication_year: [
+    range_bounds: [1980, 2000, 2020]
+  ]
+]
+```
+
+See [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields) for details.
+
+### Range labels
+
+Use [custom labels](#custom-labels) to create readable option labels for the ranges.
+
+The value passed to callback `option_label/3` contains a tuple containing:
+- The lower and upper bound:
+  - The bound value
+  - `:lower` indicates "lower than the first bound"
+  - `:upper` indicates "higher than the last bound"
+- The bucket number
+
+With the range bounds in the example above, the values are:
+
+```elixir
+{[:lower, 1980], 0}
+{[1980, 2000], 1}
+{[2000, 2020], 2}
+{[2020, :upper], 3}
+```
+
+Example of `option_label` callback for ranges:
+
+```elixir
+def option_label(:publication_year, value, _) do
+  {bounds, _bucket} =  value
+
+  case bounds do
+    [:lower, to] -> "before #{to}"
+    [from, :upper] -> "after #{from}"
+    [from, to] -> "#{from}-#{to}"
+  end
+end
+```
 
 ## Performance
 
