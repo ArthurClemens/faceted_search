@@ -98,12 +98,16 @@ defmodule FacetedSearch.FlopSchema do
       {name, cast} =
         case sort_field do
           {name, [cast: cast]} -> {name, cast}
+          {name, _} -> {name, nil}
           name -> {name, nil}
         end
 
+      field_data = Keyword.get(custom_fields, name)
+      ecto_type = if field_data, do: Keyword.get(field_data, :ecto_type), else: :string
+
       %{
         name: :"sort_#{name}",
-        ecto_type: Keyword.get(custom_fields, name) |> Keyword.get(:ecto_type),
+        ecto_type: ecto_type,
         cast: cast
       }
     end)

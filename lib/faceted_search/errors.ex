@@ -3,6 +3,8 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
 
   defexception [:key, :message, :value, :keys_path, :module]
 
+  @indent "    "
+
   @doc false
   def from_nimble(%NimbleOptions.ValidationError{} = error, opts) do
     %__MODULE__{
@@ -14,28 +16,36 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
     }
   end
 
-  def message(error) do
-    path = Enum.join(error.path, ".")
+  def message(errors) do
+    errors
+    |> Enum.map_join("\n", fn error ->
+      path = Enum.join(error.path, ".")
 
-    info =
-      case error.type do
-        :invalid_value ->
-          ~s(Option "#{path}" contains an invalid value for key "#{error.key}": #{error.reason}.)
+      info =
+        case error.type do
+          :invalid_value ->
+            ~s("#{path}" contains an invalid value for key "#{error.key}".)
 
-        :incorrect_reference ->
-          ~s(Option "#{path}" contains an incorrect reference: `#{error.key}`: #{error.reason}.)
+          :incorrect_reference ->
+            ~s("#{path}" contains an incorrect reference: "#{error.key}".)
 
-        :unsupported_key ->
-          ~s(Option "#{path}" contains a key that is not supported: `#{error.key}`.)
-      end
+          :unsupported_option ->
+            keys = Enum.map_join(error.key, ", ", &~s("#{&1}"))
 
-    """
+            if Enum.count(error.key) == 1 do
+              ~s("#{path}" contains an option that is not supported: #{keys}.)
+            else
+              ~s("#{path}" contains options that are not supported: #{keys}.)
+            end
+        end
 
-    Invalid option for source "#{error.source}".
+      """
 
-    #{info}
-
-    """
+      #{@indent}Module: #{error.module}
+      #{@indent}#{@indent}Invalid option for source "#{error.source}":
+      #{@indent}#{@indent}#{info}#{if error.reason, do: "\n#{@indent}#{@indent}#{error.reason}", else: ""}
+      """
+    end)
   end
 end
 
@@ -49,26 +59,26 @@ defmodule FacetedSearch.Errors.MissingCallbackError do
   def message(error) do
     """
 
-    No callback defined.
+        No callback defined.
 
-    Option "scopes" was used, and that requires the behaviour callback #{error.callback} to be defined in module #{error.module}.
+        Option "scopes" was used, and that requires the behaviour callback #{error.callback} to be defined in module #{error.module}.
 
-    Example:
+        Example:
 
-        For schema with option:
+            For schema with option:
 
-            scopes: [:current_user],
-            ...
+                scopes: [:current_user],
+                ...
 
-        Add a function `scope_by/2` that accepts the same key and a scope parameter to read from:
+            Add a function `scope_by/2` that accepts the same key and a scope parameter to read from:
 
-            def scope_by(:current_user, current_user) do
-              %{
-                field: "user_id",
-                comparison: "=",
-                value: current_user.id
-              }
-            end
+                def scope_by(:current_user, current_user) do
+                  %{
+                    field: "user_id",
+                    comparison: "=",
+                    value: current_user.id
+                  }
+                end
     """
   end
 end
