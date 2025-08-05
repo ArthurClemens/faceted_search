@@ -95,10 +95,8 @@ defmodule FacetedSearch.NimbleSchema do
         collected_errors =
           []
           |> validate_options(module, opts, :data_fields,
-            validate_keyword_list: true,
-            supported_keyword_list_options: [:cast, :binding, :field],
-            allow_non_field_keys: true,
-            keyword_list_value_types: %{
+            allow_non_field_keys_for_keyword_lists: true,
+            supported_keyword_list_options: %{
               cast: :atom,
               binding: :atom,
               field: :atom
@@ -106,23 +104,23 @@ defmodule FacetedSearch.NimbleSchema do
           )
           |> validate_options(module, opts, :text_fields, validate_keyword_list: false)
           |> validate_options(module, opts, :facet_fields,
-            validate_keyword_list: true,
-            supported_keyword_list_options: [:range_bounds, :label],
-            keyword_list_value_types: %{
+            supported_keyword_list_options: %{
               label: :atom,
               range_bounds: {:array, :number}
             }
           )
           |> validate_options(module, opts, :sort_fields,
-            validate_keyword_list: true,
-            supported_keyword_list_options: [:cast],
-            keyword_list_value_types: %{
+            supported_keyword_list_options: %{
               cast: :atom
             }
           )
+          # Place items with same error type together
+          |> Enum.group_by(& &1.error_type)
+          |> Map.values()
+          |> List.flatten()
 
-        if collected_errors != [] do
-          raise InvalidOptionsError.message(collected_errors)
+        if not Enum.empty?(collected_errors) do
+          raise InvalidOptionsError.messages(collected_errors)
         end
 
         validate_scope_callback(opts, opts[:module])
@@ -138,206 +136,204 @@ defmodule FacetedSearch.NimbleSchema do
   end
 
   defp validate_options(collected_errors, module, opts, option, validation_opts) do
-    is_validate_keyword_list = Keyword.get(validation_opts, :validate_keyword_list, false)
-    allow_non_field_keys = Keyword.get(validation_opts, :allow_non_field_keys, false)
-    supported_keyword_list_options = Keyword.get(validation_opts, :supported_keyword_list_options)
-    keyword_list_value_types = Keyword.get(validation_opts, :keyword_list_value_types)
-
     get_source_entries(opts, option)
-    |> Enum.reduce(collected_errors, fn %{entries: entries, data: data}, acc ->
-      # First pass: validate field keys
-      acc =
-        Enum.reduce(entries, acc, fn
-          field, acc_1 when is_atom(field) ->
-            validate_atom_field_reference(acc_1, module, field, [option], data)
+    |> Enum.reduce(collected_errors, fn %{processed: processed, field_keys: field_keys}, acc ->
+      validation_opts = Keyword.put_new(validation_opts, :field_keys, field_keys)
 
-          {field, field_options}, acc_1
-          when not allow_non_field_keys and is_atom(field) and is_list(field_options) and
-                 field_options != [] ->
-            # Ignore custom data entry in data_fields
-            validate_atom_field_reference(acc_1, module, field, [option], data)
-
-          {field, field_options}, acc_1 when is_list(field_options) and field_options == [] ->
-            add_error_empty_list(acc_1, module, field, [option], data)
-
-          _, acc_1 ->
-            acc_1
-        end)
-
-      # Second pass: validate key-values that are not keyword lists
-      acc =
-        Enum.reduce(entries, acc, fn
-          {field, [{keyword_list_key, value}]}, acc_1 when is_validate_keyword_list ->
-            if Keyword.keyword?(value) do
-              # Handle in next pass
-              acc_1
-            else
-              if keyword_list_key in supported_keyword_list_options do
-                validate_value_type(
-                  acc_1,
-                  module,
-                  keyword_list_key,
-                  [option, field],
-                  data,
-                  value,
-                  keyword_list_value_types[keyword_list_key]
-                )
-              else
-                add_error(
-                  acc_1,
-                  unsupported_keys_error(
-                    module,
-                    data.source,
-                    [option, field],
-                    [keyword_list_key]
-                  )
-                )
-              end
-            end
-
-          _, acc_1 ->
-            acc_1
-        end)
-
-      # Third pass: validate contents of keyword lists
-      Enum.reduce(entries, acc, fn
-        {field, field_options}, acc_1
-        when is_validate_keyword_list and is_atom(field) and is_list(field_options) ->
-          validation_fn = fn
-            errors, keyword_list_key, [{key, value}] when is_atom(keyword_list_key) ->
-              value_types = Map.keys(keyword_list_value_types)
-
-              if key in value_types do
-                errors
-                |> validate_atom_field_reference(
-                  module,
-                  keyword_list_key,
-                  [option, field],
-                  data
-                )
-                |> validate_value_type(
-                  module,
-                  keyword_list_key,
-                  [option, field],
-                  data,
-                  value,
-                  keyword_list_value_types[key]
-                )
-              else
-                errors
-              end
-
-            errors, keyword_list_key, keyword_list
-            when is_atom(keyword_list_key) and is_list(keyword_list) and keyword_list == [] ->
-              add_error_empty_list(errors, module, keyword_list_key, [option, field], data)
-
-            errors, _, _ ->
-              errors
-          end
-
-          validate_keyword_list(
-            acc_1,
-            module,
-            field_options,
-            [option, field],
-            data,
-            supported_keyword_list_options,
-            keyword_list_value_types,
-            validation_fn
-          )
-
-        _, acc_1 ->
-          acc_1
+      Enum.reduce(processed, acc, fn {type, entries}, acc_1 ->
+        list_errored_entries(type, entries, validation_opts)
+        |> Enum.map(&Map.merge(&1, %{type: type, option: option}))
+        |> Enum.concat(acc_1)
       end)
     end)
+    |> Enum.map(&to_error_entry(&1, module))
   end
 
-  defp validate_keyword_list(
-         errors,
-         module,
-         keyword_list,
-         path,
-         data,
-         supported_keyword_list_options,
-         _keyword_list_value_types,
-         validation_fn
-       ) do
-    Enum.reduce(keyword_list, errors, fn
-      keyword_list_key, acc when is_atom(keyword_list_key) ->
-        validate_atom_field_reference(acc, module, keyword_list_key, path, data)
+  defp get_source_entries(opts, option) do
+    opts
+    |> Keyword.get_values(:sources)
+    |> List.flatten()
+    |> Enum.reduce([], fn {source, source_options}, acc ->
+      field_keys = Keyword.get_values(source_options, :fields) |> List.flatten() |> Keyword.keys()
 
-      {keyword_list_key, keyword_list}, acc ->
-        if Keyword.keyword?(keyword_list) do
-          keys = Keyword.keys(keyword_list)
-          unsupported_keys = keys -- supported_keyword_list_options
+      entries =
+        source_options
+        |> Keyword.get_values(option)
+        |> List.flatten()
 
-          if unsupported_keys == [] do
-            validation_fn.(acc, keyword_list_key, keyword_list)
-          else
-            add_error(
-              acc,
-              unsupported_keys_error(
-                module,
-                data.source,
-                path,
-                unsupported_keys
-              )
-            )
-          end
-        else
-          # Ignore: already handled
-          acc
-        end
+      processed_entries = process_entries(entries, [:sources, source, option])
 
-      _, acc ->
-        acc
+      [
+        %{
+          entries: entries,
+          processed: processed_entries,
+          source: source,
+          field_keys: field_keys
+        }
+        | acc
+      ]
+      |> Enum.reverse()
     end)
   end
 
-  defp validate_atom_field_reference(errors, module, field, path, data, reason \\ nil) do
-    %{source: source, field_keys: field_keys} = data
+  defp process_entries(entries, path) do
+    merge_entries = fn entries, acc ->
+      Enum.reduce(entries, acc, fn
+        {key, value}, acc ->
+          Map.update(acc, key, [], fn existing -> [value | existing] |> List.flatten() end)
 
-    if field in field_keys do
-      errors
-    else
-      add_error(errors, incorrect_reference_error(module, source, path, field, reason))
+        _, acc ->
+          acc
+      end)
     end
-  end
 
-  defp add_error_empty_list(errors, module, field, path, data) do
-    %{source: source} = data
+    Enum.reduce(
+      entries,
+      %{atom_keys: [], empty_lists: [], keyword_lists: [], key_values: []},
+      fn
+        # empty_lists
+        {key, values}, acc when values == [] ->
+          Map.update(acc, :empty_lists, [], fn existing ->
+            [%{key: key, path: path} | existing]
+          end)
 
-    add_error(
-      errors,
-      invalid_value_error(
-        module,
-        source,
-        path,
-        field,
-        "Expected a non-empty keyword list."
-      )
+        # keyword_lists and non_keyword_lists (typed to key_values)
+        {key, values}, acc when is_list(values) ->
+          is_keyword_list = Keyword.keyword?(values)
+          type = if is_keyword_list, do: :keyword_lists, else: :key_values
+
+          # Recurse
+          acc = process_entries(values, path ++ [key]) |> merge_entries.(acc)
+
+          Map.update(acc, type, [], fn existing ->
+            new_entry =
+              if is_keyword_list do
+                %{key: key, path: path, values: %{raw: values}}
+              else
+                %{key: key, path: path, raw: values}
+              end
+
+            [new_entry | existing]
+          end)
+
+        # atom_keys
+        key, acc when is_atom(key) ->
+          Map.update(acc, :atom_keys, [], fn existing ->
+            [%{key: key, path: path} | existing]
+          end)
+
+        # key_values
+        {key, value}, acc ->
+          Map.update(acc, :key_values, [], fn existing ->
+            [%{key: key, path: path, raw: value} | existing]
+          end)
+
+        _, acc ->
+          acc
+      end
     )
+    |> Enum.filter(fn
+      {_k, v} when v == [] -> false
+      _ -> true
+    end)
   end
 
-  defp validate_value_type(errors, module, field, path, data, value, type) do
-    if valid_type?(value, type) do
-      errors
-    else
-      add_error(
-        errors,
-        invalid_value_error(
-          module,
-          data.source,
-          path,
-          field,
-          "Expected type: #{type |> Kernel.inspect()}."
-        )
-      )
-    end
+  defp list_errored_entries(:empty_lists, entries, _validation_opts) do
+    entries |> insert_error_type(:empty_lists)
   end
 
-  defp add_error(errors, error) do
-    [error | errors] |> Enum.reverse()
+  defp list_errored_entries(:atom_keys, entries, validation_opts) do
+    field_keys = Keyword.get(validation_opts, :field_keys, [])
+
+    entries
+    |> Enum.filter(&(&1.key not in field_keys))
+    |> insert_error_type(:invalid_reference)
+  end
+
+  defp list_errored_entries(:keyword_lists, entries, validation_opts) do
+    # Note: allow_non_field_keys_for_keyword_lists is only applicable to the first
+    # level key inside a type entry (path level 3)
+    allow_non_field_keys_for_keyword_lists =
+      Keyword.get(validation_opts, :allow_non_field_keys_for_keyword_lists, false)
+
+    %{
+      supported_keys: supported_keys,
+      supported_keyword_list_option_keys: supported_keyword_list_option_keys
+    } = get_supported_options(validation_opts)
+
+    entries
+    |> Enum.reduce([], fn %{key: key, path: path} = entry, acc ->
+      cond do
+        allow_non_field_keys_for_keyword_lists and Enum.count(path) == 3 ->
+          acc
+
+        key not in supported_keys ->
+          [
+            Map.put(entry, :supported_keys, supported_keyword_list_option_keys)
+            | acc
+          ]
+
+        true ->
+          acc
+      end
+    end)
+    |> insert_error_type(:unsupported_option)
+  end
+
+  defp list_errored_entries(:key_values, entries, validation_opts) do
+    %{
+      supported_keys: supported_keys,
+      supported_keyword_list_option_keys: supported_keyword_list_option_keys,
+      supported_keyword_list_options: supported_keyword_list_options
+    } = get_supported_options(validation_opts)
+
+    unsupported_options =
+      entries
+      |> Enum.reduce([], fn %{key: key} = entry, acc ->
+        if key in supported_keys do
+          acc
+        else
+          [
+            Map.put(entry, :supported_keys, supported_keyword_list_option_keys)
+            | acc
+          ]
+        end
+      end)
+      |> insert_error_type(:unsupported_option)
+
+    invalid_values =
+      entries
+      |> Enum.reduce([], fn %{key: key, raw: raw} = entry, acc ->
+        type = supported_keyword_list_options[key]
+
+        if valid_type?(raw, type) do
+          acc
+        else
+          [Map.put(entry, :expected_type, error_message_type(type)) | acc]
+        end
+      end)
+      |> insert_error_type(:invalid_value)
+
+    Enum.concat(unsupported_options, invalid_values) |> Enum.uniq_by(&[&1.key | &1.path])
+  end
+
+  defp get_supported_options(validation_opts) do
+    supported_keyword_list_options =
+      Keyword.get(validation_opts, :supported_keyword_list_options)
+
+    supported_keyword_list_option_keys = Map.keys(supported_keyword_list_options)
+    field_keys = Keyword.get(validation_opts, :field_keys, [])
+    supported_keys = Enum.concat(supported_keyword_list_option_keys, field_keys)
+
+    %{
+      supported_keys: supported_keys,
+      supported_keyword_list_option_keys: supported_keyword_list_option_keys,
+      supported_keyword_list_options: supported_keyword_list_options
+    }
+  end
+
+  defp insert_error_type(list, error_type) do
+    Enum.map(list, &Map.put(&1, :error_type, error_type))
   end
 
   defp valid_type?(value, type) when type == :atom do
@@ -350,27 +346,14 @@ defmodule FacetedSearch.NimbleSchema do
 
   defp valid_type?(_, _), do: false
 
-  defp get_source_entries(opts, option) do
-    opts
-    |> Keyword.get_values(:sources)
-    |> List.flatten()
-    |> Enum.reduce([], fn {source, source_options}, acc ->
-      entries =
-        source_options
-        |> Keyword.get_values(option)
-        |> List.flatten()
+  defp error_message_type(:atom), do: "atom"
+  defp error_message_type({:array, :number}), do: "list of numbers"
+  defp error_message_type(type), do: type
 
-      field_keys = Keyword.get_values(source_options, :fields) |> List.flatten() |> Keyword.keys()
-
-      [
-        %{
-          entries: entries,
-          data: %{source: source, option: option, field_keys: field_keys}
-        }
-        | acc
-      ]
-      |> Enum.reverse()
-    end)
+  defp to_error_entry(entry, module) do
+    entry
+    |> Map.drop([:raw, :values])
+    |> Map.put(:module, module)
   end
 
   defp validate_scope_callback(opts, module) do
@@ -396,34 +379,4 @@ defmodule FacetedSearch.NimbleSchema do
   end
 
   defp require_scope_by_callback(_module, _has_scopes_option), do: nil
-
-  defp incorrect_reference_error(module, source, path, field, reason) do
-    error_entry(
-      module,
-      source,
-      path,
-      field,
-      :incorrect_reference,
-      reason || ~s(Expected a name that is listed in "fields".)
-    )
-  end
-
-  defp invalid_value_error(module, source, path, field, reason) do
-    error_entry(module, source, path, field, :invalid_value, reason)
-  end
-
-  defp unsupported_keys_error(module, source, path, options) do
-    error_entry(module, source, path, options, :unsupported_option)
-  end
-
-  defp error_entry(module, source, path, field_or_options, type, reason \\ nil) do
-    %{
-      module: module,
-      source: source,
-      path: path,
-      key: field_or_options,
-      type: type,
-      reason: reason
-    }
-  end
 end

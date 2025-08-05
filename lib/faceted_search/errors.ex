@@ -16,35 +16,79 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
     }
   end
 
-  def message(errors) do
+  def messages(errors) do
     errors
     |> Enum.map_join("\n", fn error ->
-      path = Enum.join(error.path, ".")
-
       info =
-        case error.type do
-          :invalid_value ->
-            ~s("#{path}" contains an invalid value for key "#{error.key}".)
+        case error.error_type do
+          :empty_lists ->
+            """
+            Invalid value for key "#{error.key}".
+            Expected a non-empty keyword list.
+            """
 
-          :incorrect_reference ->
-            ~s("#{path}" contains an incorrect reference: "#{error.key}".)
+          :invalid_reference ->
+            """
+            Option "#{error.key}" is not supported.
+            Expected a name that is listed in `fields`.
+            """
+
+          :invalid_value ->
+            """
+            Invalid value for "#{error.key}".
+            Expected type: #{error.expected_type}.
+            """
 
           :unsupported_option ->
-            keys = Enum.map_join(error.key, ", ", &~s("#{&1}"))
+            cond do
+              error.option == :data_fields ->
+                """
+                Key "#{error.key}" is not supported or it is misconfigured.
+                Valid entries are:
+                - Names that are listed in `fields`.
+                - A keyword list with a name that is listed in `fields` and nested key "cast".
+                - A self-named keyword list with nested keys "binding" and "field".
+                """
 
-            if Enum.count(error.key) == 1 do
-              ~s("#{path}" contains an option that is not supported: #{keys}.)
-            else
-              ~s("#{path}" contains options that are not supported: #{keys}.)
+              error[:supported_keys] ->
+                """
+                Key "#{error.key}" is not supported.
+                Supported keys are: #{Enum.map_join(error.supported_keys, ", ", &~s("#{&1}"))}.
+                """
+
+              true ->
+                ""
             end
         end
 
-      """
+      path = Enum.join(error.path, ".")
 
-      #{@indent}Module: #{error.module}
-      #{@indent}#{@indent}Invalid option for source "#{error.source}":
-      #{@indent}#{@indent}#{info}#{if error.reason, do: "\n#{@indent}#{@indent}#{error.reason}", else: ""}
-      """
+      [
+        %{
+          text: "",
+          indent: 1
+        },
+        %{
+          text: "Module: #{error.module}",
+          indent: 1
+        },
+        %{
+          text: "Data path: #{path}",
+          indent: 1
+        }
+      ]
+      |> Enum.concat(
+        info
+        |> String.split("\n")
+        |> Enum.filter(&(&1 != ""))
+        |> Enum.map(
+          &%{
+            text: &1,
+            indent: 2
+          }
+        )
+      )
+      |> Enum.map_join("\n", &"#{String.duplicate(@indent, &1.indent)}#{&1.text}")
     end)
   end
 end
