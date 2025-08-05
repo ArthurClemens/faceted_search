@@ -498,23 +498,36 @@ defmodule FacetedSearch.SearchView do
   defp create_tsv_column(%{fields: fields, facet_fields: facet_fields, joins: joins} = _source, _)
        when is_list(facet_fields) and facet_fields != [] do
     facet_fields
-    |> Enum.reduce([], fn %{name: name, label_field: label_field}, acc ->
+    |> Enum.reduce([], fn %{name: name, label_field: label_field, range_bounds: range_bounds},
+                          acc ->
       field = Enum.find(fields, &(&1.name == name))
       label_field = Enum.find(fields, &(&1.name == label_field))
 
       if field do
-        [%{field: field, label_field: label_field} | acc]
+        [%{field: field, label_field: label_field, range_bounds: range_bounds} | acc]
       else
         acc
       end
     end)
-    |> Enum.map_join(", ", fn %{field: field, label_field: label_field} ->
+    |> Enum.map_join(", ", fn %{
+                                field: field,
+                                label_field: label_field,
+                                range_bounds: range_bounds
+                              } ->
       %{name: name} = field
 
       {table_name, column_name} = get_table_and_column(field, joins)
-      table_and_column = table_and_column_string(table_name, column_name)
 
-      label_table_and_column =
+      value =
+        if range_bounds do
+          table_and_column = table_and_column_string(table_name, column_name)
+          range_bounds_str = Enum.map_join(range_bounds, ", ", & &1)
+          "width_bucket(#{table_and_column}, ARRAY[#{range_bounds_str}])"
+        else
+          table_and_column_string(table_name, column_name)
+        end
+
+      label =
         if label_field do
           {label_table_name, label_column_name} = get_table_and_column(label_field, joins)
           table_and_column_string(label_table_name, label_column_name)
@@ -524,7 +537,7 @@ defmodule FacetedSearch.SearchView do
 
       separator = Constants.tsv_separator()
 
-      "'#{name}' || '#{separator}' || #{table_and_column} || '#{separator}' || #{label_table_and_column}"
+      "'#{name}' || '#{separator}' || #{value} || '#{separator}' || #{label}"
     end)
     |> tsv_column_wrap()
   end

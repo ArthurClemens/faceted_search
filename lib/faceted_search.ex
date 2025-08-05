@@ -217,8 +217,6 @@ defmodule FacetedSearch do
   @doc """
   Returns a custom option label. If `nil` is returned, the option value as string will be used.
 
-  Make sure to add a fallback that returns nil, in case no match was found.
-
   Parameters:
   - `facet_name` - Name of the facet
   - `option_value` - Value or cast value

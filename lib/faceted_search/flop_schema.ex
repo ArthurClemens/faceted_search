@@ -6,27 +6,29 @@ defmodule FacetedSearch.FlopSchema do
   alias FacetedSearch.Constants
   alias FacetedSearch.Filter
 
+  @default_filterable_fields [:source, :text]
+
   @spec create_custom_fields_option(schema_options()) :: Keyword.t()
   def create_custom_fields_option(options) do
-    table_options =
+    source_options =
       options
       |> Keyword.get_values(:sources)
       |> List.flatten()
-      |> Enum.reduce([], fn {_source, table_options}, acc ->
-        fields = Keyword.get_values(table_options, :fields)
+      |> Enum.reduce([], fn {_source, source_options}, acc ->
+        fields = Keyword.get_values(source_options, :fields)
         Enum.concat(acc, fields)
       end)
       |> List.flatten()
       |> Enum.uniq()
 
     Enum.concat(
-      create_filter_field_options(table_options),
-      create_facet_search_field_options(table_options)
+      create_filter_field_options(source_options),
+      create_facet_search_field_options(source_options)
     )
   end
 
-  defp create_filter_field_options(table_options) do
-    table_options
+  defp create_filter_field_options(source_options) do
+    source_options
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
       ecto_type = Keyword.get(column_options, :ecto_type)
       filter = Keyword.get(column_options, :filter)
@@ -47,8 +49,8 @@ defmodule FacetedSearch.FlopSchema do
 
   # Skip warning: Atoms are generated at compile time.
   # sobelow_skip ["DOS.BinToAtom"]
-  defp create_facet_search_field_options(table_options) do
-    table_options
+  defp create_facet_search_field_options(source_options) do
+    source_options
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
       ecto_type = Keyword.get(column_options, :ecto_type)
 
@@ -69,8 +71,6 @@ defmodule FacetedSearch.FlopSchema do
     end)
   end
 
-  @default_filterable_fields [:source, :text]
-
   @spec create_filterable_fields_option(Keyword.t()) :: Keyword.t()
   def create_filterable_fields_option(custom_fields_option) do
     Enum.uniq(@default_filterable_fields ++ Keyword.keys(custom_fields_option))
@@ -83,27 +83,31 @@ defmodule FacetedSearch.FlopSchema do
     options
     |> Keyword.get_values(:sources)
     |> List.flatten()
-    |> Enum.reduce([], fn {_source, table_options}, acc ->
-      Enum.concat(acc, create_sortable_field_data(table_options, custom_fields))
+    |> Enum.reduce([], fn {_source, source_options}, acc ->
+      Enum.concat(acc, create_sortable_field_data(source_options, custom_fields))
     end)
     |> Enum.uniq()
   end
 
   # Skip warning: Atoms are generated at compile time.
   # sobelow_skip ["DOS.BinToAtom"]
-  defp create_sortable_field_data(table_options, custom_fields) do
-    Keyword.get_values(table_options, :sort_fields)
+  defp create_sortable_field_data(source_options, custom_fields) do
+    Keyword.get_values(source_options, :sort_fields)
     |> List.flatten()
     |> Enum.map(fn sort_field ->
       {name, cast} =
         case sort_field do
           {name, [cast: cast]} -> {name, cast}
+          {name, _} -> {name, nil}
           name -> {name, nil}
         end
 
+      field_data = Keyword.get(custom_fields, name)
+      ecto_type = if field_data, do: Keyword.get(field_data, :ecto_type), else: :string
+
       %{
         name: :"sort_#{name}",
-        ecto_type: Keyword.get(custom_fields, name) |> Keyword.get(:ecto_type),
+        ecto_type: ecto_type,
         cast: cast
       }
     end)

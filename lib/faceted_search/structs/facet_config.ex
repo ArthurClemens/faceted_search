@@ -3,6 +3,9 @@ defmodule FacetedSearch.FacetConfig do
   Contains type information for a facet.
   """
 
+  use FacetedSearch.Types,
+    include: [:range_types]
+
   alias FacetedSearch.FacetConfig
   alias FacetedSearch.SearchViewDescription
 
@@ -10,11 +13,14 @@ defmodule FacetedSearch.FacetConfig do
     :ecto_type
   ]
 
-  defstruct ecto_type: nil
+  defstruct ecto_type: nil, range_bounds: nil, range_buckets: nil
 
   @type t() :: %__MODULE__{
           # required
-          ecto_type: Ecto.Type.t()
+          ecto_type: Ecto.Type.t(),
+          # optional
+          range_bounds: list(range_bound()) | nil,
+          range_buckets: list(range_bucket()) | nil
         }
 
   @doc """
@@ -37,7 +43,9 @@ defmodule FacetedSearch.FacetConfig do
     |> Enum.filter(& &1)
     |> Enum.reduce(%{}, fn facet_field, acc ->
       Map.put(acc, facet_field.name, %FacetConfig{
-        ecto_type: ecto_types_by_field[facet_field.name]
+        ecto_type: ecto_types_by_field[facet_field.name],
+        range_bounds: facet_field.range_bounds,
+        range_buckets: facet_field.range_buckets
       })
     end)
   end
