@@ -485,11 +485,11 @@ defmodule FacetedSearch.SearchView do
     field = fields |> Enum.find(&(&1.name == name))
 
     if field do
-      prefix = Constants.facet_search_field_prefix()
+      suffix = Constants.range_facet_search_field_suffix()
       {table_name, column_name} = get_table_and_column(field, joins)
       table_and_column = table_and_column_string(table_name, column_name)
       width_bucket = create_width_bucket(table_and_column, range_bounds)
-      "'#{prefix}#{name}', #{width_bucket}"
+      "'#{name}#{suffix}', #{width_bucket}"
     else
       ""
     end

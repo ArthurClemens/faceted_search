@@ -79,10 +79,13 @@ defmodule FacetedSearch.FlopSchema do
       ecto_type = Keyword.get(field_options, :ecto_type)
 
       # field_reference is used in Filter to get the field name in the JSON data
-      # For ranges, we use the facet_ prefix; for other facet fields the original field name
+      # For ranges/buckets, we use the facet_ prefix; for other facet fields the original field name
       {field_reference, ecto_type} =
         if Keyword.has_key?(column_options, :range_bounds) do
-          {facet_column_name, :integer}
+          # Atoms are generated at compile time
+          suffix = Constants.range_facet_search_field_suffix()
+          range_facet_column_name = :"#{column_name}#{suffix}"
+          {range_facet_column_name, :integer}
         else
           {column_name, ecto_type}
         end
