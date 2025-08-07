@@ -11,6 +11,7 @@ defmodule FacetedSearch.SearchView do
   alias FacetedSearch.Constants
   alias FacetedSearch.DataField
   alias FacetedSearch.Errors.SearchViewError
+  alias FacetedSearch.FacetField
   alias FacetedSearch.Field
   alias FacetedSearch.Join
   alias FacetedSearch.SearchViewDescription
@@ -367,10 +368,13 @@ defmodule FacetedSearch.SearchView do
   defp create_data_column(%{fields: fields, data_fields: data_fields} = source, _)
        when is_list(fields) and fields != [] and is_list(data_fields) and data_fields != [] do
     name_ref_data_column_entries = create_name_ref_data_column_entries(source)
-    generated_data_column_entries = create_generated_data_column_entries(source)
+    custom_data_entries = create_custom_data_entries(source)
+    bucket_entries = create_bucket_entries(source)
 
     object_string =
-      Enum.concat(name_ref_data_column_entries, generated_data_column_entries)
+      name_ref_data_column_entries
+      |> Enum.concat(custom_data_entries)
+      |> Enum.concat(bucket_entries)
       |> Enum.filter(&(&1 != []))
       |> Enum.join(",\n#{line_indent(1)}")
 
@@ -410,15 +414,15 @@ defmodule FacetedSearch.SearchView do
     end
   end
 
-  @spec create_generated_data_column_entries(Source.t()) :: list(String.t())
-  defp create_generated_data_column_entries(source) do
+  @spec create_custom_data_entries(Source.t()) :: list(String.t())
+  defp create_custom_data_entries(source) do
     source.data_fields
     |> Enum.filter(&(not is_nil(&1.entries)))
-    |> Enum.map(&create_generated_data_column_entry(&1, source))
+    |> Enum.map(&create_custom_data_entry(&1, source))
   end
 
-  @spec create_generated_data_column_entry(DataField.t(), Source.t()) :: String.t()
-  defp create_generated_data_column_entry(
+  @spec create_custom_data_entry(DataField.t(), Source.t()) :: String.t()
+  defp create_custom_data_entry(
          %{name: name, entries: entries},
          %{fields: fields, joins: joins} = _source
        ) do
@@ -466,8 +470,30 @@ defmodule FacetedSearch.SearchView do
     |> String.trim()
   end
 
-  defp line_indent(level) when level == 0, do: ""
-  defp line_indent(level), do: "  " <> line_indent(level - 1)
+  @spec create_bucket_entries(Source.t()) :: list(String.t())
+  defp create_bucket_entries(source) do
+    source.facet_fields
+    |> Enum.filter(&(not is_nil(&1.range_bounds)))
+    |> Enum.map(&create_bucket_entry(&1, source))
+  end
+
+  @spec create_bucket_entry(FacetField.t(), Source.t()) :: String.t()
+  defp create_bucket_entry(
+         %{name: name, range_bounds: range_bounds},
+         %{fields: fields, joins: joins} = _source
+       ) do
+    field = fields |> Enum.find(&(&1.name == name))
+
+    if field do
+      prefix = Constants.facet_search_field_prefix()
+      {table_name, column_name} = get_table_and_column(field, joins)
+      table_and_column = table_and_column_string(table_name, column_name)
+      width_bucket = create_width_bucket(table_and_column, range_bounds)
+      "'#{prefix}#{name}', #{width_bucket}"
+    else
+      ""
+    end
+  end
 
   @spec create_text_column(Source.t(), SearchViewDescription.t()) :: String.t()
   defp create_text_column(%{fields: fields, text_fields: text_fields, joins: joins} = _source, _)
@@ -521,8 +547,7 @@ defmodule FacetedSearch.SearchView do
       value =
         if range_bounds do
           table_and_column = table_and_column_string(table_name, column_name)
-          range_bounds_str = Enum.map_join(range_bounds, ", ", & &1)
-          "width_bucket(#{table_and_column}, ARRAY[#{range_bounds_str}])"
+          create_width_bucket(table_and_column, range_bounds)
         else
           table_and_column_string(table_name, column_name)
         end
@@ -686,6 +711,12 @@ defmodule FacetedSearch.SearchView do
 
   defp table_and_column_string(table_name, column_name), do: "#{table_name}.#{column_name}"
 
+  @spec create_width_bucket(String.t(), list()) :: String.t()
+  defp create_width_bucket(table_and_column, range_bounds) do
+    range_bounds_str = Enum.map_join(range_bounds, ", ", & &1)
+    "width_bucket(#{table_and_column}, ARRAY[#{range_bounds_str}])"
+  end
+
   defp get_all_fields(search_view_description) do
     get_in(search_view_description, [
       Access.key(:sources),
@@ -715,4 +746,7 @@ defmodule FacetedSearch.SearchView do
     ]
     |> Enum.filter(fn {_, v} -> not is_nil(v) end)
   end
+
+  defp line_indent(level) when level == 0, do: ""
+  defp line_indent(level), do: "  " <> line_indent(level - 1)
 end

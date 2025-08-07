@@ -290,17 +290,9 @@ defmodule FacetedSearch.Facets do
   @spec create_search_params_value_lookup(map()) :: %{String.t() => boolean()}
   defp create_search_params_value_lookup(%{filters: filters} = search_params)
        when is_list(filters) do
-    prefix = Constants.facet_search_field_prefix()
-
     search_params.filters
-    |> Enum.map(&{to_string(&1.field), &1.value})
-    |> Enum.filter(fn {field_name, _} ->
-      String.starts_with?(field_name, prefix)
-    end)
-    |> Enum.reduce(%{}, fn {field_name, param_values}, acc ->
-      original_field_name = String.trim_leading(field_name, prefix)
-      string_values = Enum.map(param_values, &to_string/1)
-      Map.update(acc, original_field_name, string_values, fn values -> values ++ values end)
+    |> Enum.reduce(%{}, fn %{field: field, value: values}, acc ->
+      Map.put(acc, field, values)
     end)
   end
 
@@ -342,7 +334,7 @@ defmodule FacetedSearch.Facets do
     has_option_label_callback =
       Kernel.function_exported?(module, Constants.option_label_callback(), 3)
 
-    Enum.map(facet_results, fn {name, raw_value, label, count} ->
+    Enum.map(facet_results, fn {_name, raw_value, label, count} ->
       value = cast_value(raw_value, facet_config)
 
       # Callback option_label/3 may override the label found in the database through facet_fields->label.
@@ -354,12 +346,15 @@ defmodule FacetedSearch.Facets do
           apply(module, Constants.option_label_callback(), [field, value, label])
         end
 
+      mapped_name = facet_config.field_reference
+
       %Option{
         value: value,
         label: option_label || label || to_string(value),
         count: count,
         selected:
-          !!search_params_value_lookup[name] and raw_value in search_params_value_lookup[name]
+          !!search_params_value_lookup[mapped_name] and
+            value in search_params_value_lookup[mapped_name]
       }
     end)
   end
