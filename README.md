@@ -391,7 +391,7 @@ The `label` field contains the string value of the `value` field, unless configu
 
 #### Option: count
 
-The `count` field corresponds to the the number of rows with the column value with search filters applied. The count is frequently used in faceted search UI's, but many applications choose not to.
+The `count` field corresponds to the the number of rows with the column value with current search filters applied. The count is frequently used in faceted search UI's, but also often left out to reduce clutter.
 
 #### Option: selected
 
@@ -503,23 +503,46 @@ defmodule MyApp.FacetSchema do
 
 ## Ranges
 
-Ranges divide numerical entries into distinct categories (buckets), for example: movies created between 2000 and 2010, prices from EUR 0 to 10, etc.
+Ranges divide numerical and date entries into distinct categories (buckets), for example: movies created between 2000 and 2010, prices from EUR 0 to 10, items modified since last week, etc.
 
 ### Configuration
 
-In the schema configuration for `facet_fields`, use option `range_bounds` to define the bounds of the buckets.
+In the schema configuration for `facet_fields`, use range bound options to define the bounds of the buckets.
+
+-  `number_range_bounds` - for numerical data
+-  `date_range_bounds` - for dates, timestamps, and intervals
+
+When using date ranges, refresh the search view at least as often as the smallest configured interval to avoid outdated values.
+
+#### Example with numerical data
 
 ```elixir
 facet_fields: [
   publication_year: [
-    range_bounds: [1980, 2000, 2020]
+    number_range_bounds: [1980, 2000, 2020]
   ]
 ]
 ```
 
 Note that the `publication_year` value in the facet results now contains the bucket number instead of the year.
 
-See [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields) for details.
+#### Example with dates
+
+```
+facet_fields: [
+  updated_at: [
+    date_range_bounds: [
+      "2025-01-01",
+      "now() - interval '1 month'",
+      "now() - interval '1 week'",
+      "now() - interval '1 day'"
+    ]
+  ]
+]
+```
+
+- See [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields) for details.
+- See [Postgres Date/Time Functions and Operators ⤴](https://www.postgresql.org/docs/current/functions-datetime.html) to get further ideas for date range values.
 
 ### Filtering range facets
 
@@ -533,13 +556,13 @@ For a range facet, the option value in the facet results contains the bucket num
 
 ### Range labels
 
-Use [custom labels](#custom-labels) to create readable option labels for the ranges.
+Use the callback function `option_label/3` described at [custom labels](#custom-labels) to create readable option labels for ranges.
 
-The value passed to callback `option_label/3` contains a tuple containing:
+The value passed to the callback contains a tuple containing:
 - The lower and upper bound:
   - The bound value
-  - `:lower` indicates "lower than the first bound"
-  - `:upper` indicates "higher than the last bound"
+  - `:lower` indicates: lower than (or before) the first bound
+  - `:upper` indicates: higher than (or after) the last bound
 - The bucket number
 
 With the range bounds in the example above, the values are:
@@ -551,7 +574,7 @@ With the range bounds in the example above, the values are:
 {[2020, :upper], 3}
 ```
 
-Example of `option_label` callback for ranges:
+Example of `option_label` callback for ranges configured with `number_range_bounds`:
 
 ```elixir
 def option_label(:publication_year, value, _) do
@@ -561,6 +584,22 @@ def option_label(:publication_year, value, _) do
     [:lower, to] -> "before #{to}"
     [from, :upper] -> "after #{from}"
     [from, to] -> "#{from}-#{to}"
+  end
+end
+```
+
+Example of `option_label` callback for ranges configured with `date_range_bounds` - with the configuration described above:
+
+```elixir
+def option_label(:updated_at, value, _) do
+  {bounds, _bucket} = value
+
+  case bounds do
+    [:lower, "2025-01-01"] -> "before 1 Jan 2025"
+    ["2025-01-01", "now() - interval '1 month'"] -> "between 1 Jan 2025 and last month"
+    ["now() - interval '1 month'", "now() - interval '1 week'"] -> "last month"
+    ["now() - interval '1 week'", "now() - interval '1 day'"] -> "last week"
+    ["now() - interval '1 day'", :upper] -> "today"
   end
 end
 ```

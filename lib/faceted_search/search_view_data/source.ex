@@ -61,10 +61,19 @@ defmodule FacetedSearch.Source do
   defp collect_joins(_joins), do: nil
 
   defp collect_fields(fields, table_name) when is_list(fields) and fields != [] do
-    Enum.map(fields, fn {name, field_options} -> Field.new(name, field_options, table_name) end)
+    fields
+    |> Enum.concat(default_fields())
+    |> Enum.map(fn {name, field_options} -> Field.new(name, field_options, table_name) end)
   end
 
   defp collect_fields(_fields, _table_name), do: nil
+
+  defp default_fields do
+    [
+      inserted_at: [ecto_type: :utc_datetime],
+      updated_at: [ecto_type: :utc_datetime]
+    ]
+  end
 
   defp collect_data_fields(fields) when is_list(fields) and fields != [] do
     Enum.map(fields, fn

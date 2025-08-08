@@ -368,6 +368,12 @@ defmodule FacetedSearch.Facets do
 
   defp maybe_get_range_bucket_value(value, _), do: value
 
+  defp cast_value(raw_value, %{range_buckets: range_buckets} = _facet_config)
+       when is_list(range_buckets) do
+    # Get bucket number
+    String.to_integer(raw_value)
+  end
+
   defp cast_value(raw_value, facet_config) when not is_nil(facet_config) do
     case Ecto.Type.cast(facet_config.ecto_type, raw_value) do
       {:ok, value} -> value

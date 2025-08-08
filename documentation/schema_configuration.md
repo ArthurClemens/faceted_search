@@ -408,9 +408,12 @@ Either:
     - To reference a label from a database table/column:
       - Key: `label` 
       - Value: a field name from option `fields`
-    - To create a range:
-      - Key: `range_bounds`
+    - To create a range of numerical entries:
+      - Key: `number_range_bounds`
       - Value: a list of numbers
+    - To create a range of date entries:
+      - Key: `date_range_bounds`
+      - Value: a list of dates, timestamps, and/or intervals
 
 
 ### Examples
@@ -462,11 +465,14 @@ sources: [
 ]
 ```
 
-#### With a range
+#### With ranges
 
-Range buckets are categories for numerical values. Use option `range_bounds` to define the bounds of the buckets.
+Range buckets are categories for numerical or date values. Use a range option to define the bounds of the buckets:
 
-Given the example list `[1980, 2000, 2020]`, the following buckets are created:
+-  `number_range_bounds` - for numerical data
+-  `date_range_bounds` - for dates, timestamps, and intervals
+
+Given the example list or numerical values `[1980, 2000, 2020]`, the following buckets are created:
 
 - 0: items before 1980
 - 1: items from 1980 up to (but not including) 2000
@@ -475,19 +481,42 @@ Given the example list `[1980, 2000, 2020]`, the following buckets are created:
 
 Note: Lower bounds are inclusive, upper bounds are exclusive.
 
+**Example with numerical entries**
+
 ```
 sources: [
   books: [
     ...
     facet_fields: [
       publication_year: [
-        range_bounds: [1980, 2000, 2020]
-      ],
-      :genres
+        number_range_bounds: [1980, 2000, 2020]
+      ]
     ]
   ]
 ]
 ```
+
+**Example with date entries**
+
+```
+sources: [
+  books: [
+    ...
+    facet_fields: [
+      updated_at: [
+        date_range_bounds: [
+          "2025-01-01",
+          "now() - interval '1 month'",
+          "now() - interval '1 week'",
+          "now() - interval '1 day'"
+        ]
+      ]
+    ]
+  ]
+]
+```
+
+See [Range labels](README.md#range-labels) for creating option labels for ranges.
 
 ## sort_fields
 
