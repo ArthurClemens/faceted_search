@@ -135,11 +135,11 @@ defmodule FacetedSearch.Facets do
 
     opts = Keyword.put(facet_search_options, :for, module)
 
-    search_params_for_all_facets =
-      create_search_params_for_all_facets(search_params, facet_configs)
+    search_params_without_facets =
+      create_search_params_without_facets(search_params, facet_configs)
 
     with {:ok, all_facet_rows} <-
-           get_facet_results(repo, ecto_schema, search_params_for_all_facets, opts),
+           get_facet_results(repo, ecto_schema, search_params_without_facets, opts),
          {:ok, filtered_facet_rows} <-
            get_facet_results(repo, ecto_schema, search_params, opts) do
       facet_results =
@@ -157,8 +157,8 @@ defmodule FacetedSearch.Facets do
     end
   end
 
-  @spec create_search_params_for_all_facets(map(), %{atom() => FacetConfig.t()}) :: map()
-  defp create_search_params_for_all_facets(%{filters: filters} = search_params, facet_configs)
+  @spec create_search_params_without_facets(map(), %{atom() => FacetConfig.t()}) :: map()
+  defp create_search_params_without_facets(%{filters: filters} = search_params, facet_configs)
        when is_list(filters) do
     prefix = Constants.facet_search_field_prefix()
 
@@ -170,7 +170,7 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  defp create_search_params_for_all_facets(search_params, _facet_configs), do: search_params
+  defp create_search_params_without_facets(search_params, _facet_configs), do: search_params
 
   @spec get_facet_results(Ecto.Repo.t(), Ecto.Queryable.t(), map(), Keyword.t()) ::
           {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}

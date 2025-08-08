@@ -88,8 +88,7 @@ defmodule FacetedSearch.FlopSchema do
       {field_reference, ecto_type} =
         if is_range_facet do
           # Atoms are generated at compile time
-          suffix = Constants.range_facet_search_field_suffix()
-          range_facet_column_name = :"#{column_name}#{suffix}"
+          range_facet_column_name = :"#{column_name}"
           {range_facet_column_name, :integer}
         else
           ecto_type = Keyword.get(field_options, :ecto_type, :integer)
@@ -108,7 +107,8 @@ defmodule FacetedSearch.FlopSchema do
                 ecto_type: facet_ecto_type,
                 source_is_array: source_is_array,
                 field_reference: field_reference,
-                is_facet_search: true
+                is_facet_search: true,
+                is_range_facet: is_range_facet
               ]},
            ecto_type: facet_ecto_type
          ]}

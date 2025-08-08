@@ -64,6 +64,7 @@ The search view contains these base columns:
 - `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
 - `text` - A `text` column that contains a "bag of words" per row, used for text searches.
 - `tsv` - A `tsvector` column used for generating facets (internal use).
+- `buckets` - A `jsonb` column that stores range bucket data (internal use).
 - `inserted_at` - Source timestamp
 - `updated_at` - Source timestamp
 

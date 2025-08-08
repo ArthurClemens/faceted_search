@@ -22,12 +22,17 @@ defmodule FacetedSearch.Filter do
 
     case cast_value do
       {:ok, query_value} ->
-        source_is_array_value = is_list(value)
-
         name = Keyword.get(opts, :field_reference) |> to_string()
+        source_is_array_value = is_list(value)
         is_facet_search = Keyword.get(opts, :is_facet_search, false)
+        is_range_facet = Keyword.get(opts, :is_range_facet, false)
 
-        expr = dynamic_expr(name, ecto_type, source_is_array, is_facet_search)
+        expr =
+          dynamic_expr(name, ecto_type, %{
+            source_is_array: source_is_array,
+            is_facet_search: is_facet_search,
+            is_range_facet: is_range_facet
+          })
 
         conditions =
           cond do
@@ -115,7 +120,7 @@ defmodule FacetedSearch.Filter do
     expr
   end
 
-  def dynamic_expr(name, :integer, _source_is_array, _is_facet_search) do
+  def dynamic_expr(name, :integer, _props) do
     dynamic(
       [r],
       fragment(
@@ -126,7 +131,7 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, :boolean, _source_is_array, _is_facet_search) do
+  def dynamic_expr(name, :boolean, _props) do
     dynamic(
       [r],
       fragment(
@@ -137,7 +142,7 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, {:array, _}, source_is_array, _is_facet_search) when source_is_array do
+  def dynamic_expr(name, {:array, _}, %{source_is_array: source_is_array}) when source_is_array do
     dynamic(
       [r],
       fragment(
@@ -148,7 +153,24 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, {:array, :integer}, _source_is_array, is_facet_search)
+  def dynamic_expr(name, {:array, :integer}, %{
+        is_facet_search: is_facet_search,
+        is_range_facet: is_range_facet
+      })
+      when is_facet_search and is_range_facet do
+    dynamic(
+      [r],
+      fragment(
+        "ARRAY[CAST((?->>?) AS int)]",
+        field(r, :buckets),
+        ^name
+      )
+    )
+  end
+
+  def dynamic_expr(name, {:array, :integer}, %{
+        is_facet_search: is_facet_search
+      })
       when is_facet_search do
     dynamic(
       [r],
@@ -160,7 +182,7 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, {:array, :boolean}, _source_is_array, is_facet_search)
+  def dynamic_expr(name, {:array, :boolean}, %{is_facet_search: is_facet_search})
       when is_facet_search do
     dynamic(
       [r],
@@ -172,7 +194,7 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, {:array, :string}, _source_is_array, is_facet_search)
+  def dynamic_expr(name, {:array, :string}, %{is_facet_search: is_facet_search})
       when is_facet_search do
     dynamic(
       [r],
@@ -184,7 +206,7 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, {:array, _}, _source_is_array, _is_facet_search) do
+  def dynamic_expr(name, {:array, _}, _props) do
     dynamic(
       [r],
       fragment(
@@ -195,7 +217,7 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, _ecto_type, _source_is_array, _is_facet_search) do
+  def dynamic_expr(name, _ecto_type, _props) do
     dynamic(
       [r],
       fragment(
