@@ -800,7 +800,11 @@ FacetedSearch.create_search_view(
 
 ## Multiple sources
 
-TODO
+When multiple resources share common attributes, a unified search interface allows users to search across all of them and use the resource type itself as a facet. For example, in a media library containing books, movies, and music, each item has a title, author or creator, publishing date, and genre. The media type can then serve as one of the filters in the search.
+
+To create such a unified interface for resources with similar attributes, add a configuration for each resource under `sources`, using the resource’s table name as the key.
+
+See [schema configuration: sources](documentation/schema_configuration.md#sources) for details.
 
 ## Joining tables
 
