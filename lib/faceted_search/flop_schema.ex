@@ -8,27 +8,45 @@ defmodule FacetedSearch.FlopSchema do
 
   @default_filterable_fields [:source, :text]
 
-  @spec create_custom_fields_option(schema_options()) :: Keyword.t()
-  def create_custom_fields_option(options) do
-    source_options =
+  @spec create_flop_custom_fields_option(schema_options()) :: Keyword.t()
+  def create_flop_custom_fields_option(options) do
+    %{fields: fields, facet_fields: facet_fields} =
       options
       |> Keyword.get_values(:sources)
       |> List.flatten()
-      |> Enum.reduce([], fn {_source, source_options}, acc ->
-        fields = Keyword.get_values(source_options, :fields)
-        Enum.concat(acc, fields)
+      |> Enum.reduce(%{fields: [], facet_fields: []}, fn {_source, source_options}, acc ->
+        fields = Keyword.get_values(source_options, :fields) |> List.flatten()
+
+        facet_fields =
+          Keyword.get_values(source_options, :facet_fields)
+          |> List.flatten()
+          |> Enum.map(fn
+            {name, options} -> {name, options}
+            name -> {name, []}
+          end)
+
+        %{
+          fields: Enum.concat(acc.fields, fields),
+          facet_fields: Enum.concat(acc.facet_fields, facet_fields)
+        }
       end)
-      |> List.flatten()
-      |> Enum.uniq()
+      |> Map.update(:fields, [], fn existing -> clean_up_fields(existing) end)
+      |> Map.update(:facet_fields, [], fn existing -> clean_up_fields(existing) end)
 
     Enum.concat(
-      create_filter_field_options(source_options),
-      create_facet_search_field_options(source_options)
+      create_filter_field_options(fields),
+      create_facet_search_field_options(facet_fields, fields)
     )
   end
 
-  defp create_filter_field_options(source_options) do
-    source_options
+  defp clean_up_fields(fields),
+    do:
+      fields
+      |> List.flatten()
+      |> Enum.uniq()
+
+  defp create_filter_field_options(fields) do
+    fields
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
       ecto_type = Keyword.get(column_options, :ecto_type)
       filter = Keyword.get(column_options, :filter)
@@ -49,13 +67,29 @@ defmodule FacetedSearch.FlopSchema do
 
   # Skip warning: Atoms are generated at compile time.
   # sobelow_skip ["DOS.BinToAtom"]
-  defp create_facet_search_field_options(source_options) do
-    source_options
+  defp create_facet_search_field_options(facet_fields, fields) do
+    facet_fields
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
-      ecto_type = Keyword.get(column_options, :ecto_type)
+      field_options = Keyword.get(fields, column_name)
 
       # Atoms are generated at compile time
-      facet_column_name = :"#{Constants.facet_search_field_prefix()}#{column_name}"
+      prefix = Constants.facet_search_field_prefix()
+      facet_column_name = :"#{prefix}#{column_name}"
+
+      ecto_type = Keyword.get(field_options, :ecto_type)
+
+      # field_reference is used in Filter to get the field name in the JSON data
+      # For ranges/buckets, we use the facet_ prefix; for other facet fields the original field name
+      {field_reference, ecto_type} =
+        if Keyword.has_key?(column_options, :range_bounds) do
+          # Atoms are generated at compile time
+          suffix = Constants.range_facet_search_field_suffix()
+          range_facet_column_name = :"#{column_name}#{suffix}"
+          {range_facet_column_name, :integer}
+        else
+          {column_name, ecto_type}
+        end
+
       # source_is_array: data is stored in JSON as array
       {facet_ecto_type, source_is_array} = normalize_facet_field_ecto_type(ecto_type)
 
@@ -63,7 +97,13 @@ defmodule FacetedSearch.FlopSchema do
         {facet_column_name,
          [
            filter:
-             {Filter, :filter, [ecto_type: facet_ecto_type, source_is_array: source_is_array]},
+             {Filter, :filter,
+              [
+                ecto_type: facet_ecto_type,
+                source_is_array: source_is_array,
+                field_reference: field_reference,
+                is_facet_search: true
+              ]},
            ecto_type: facet_ecto_type
          ]}
 

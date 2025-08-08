@@ -34,7 +34,7 @@ defmodule FacetedSearch do
         )
 
       custom_fields_option =
-        FlopSchema.create_custom_fields_option(options)
+        FlopSchema.create_flop_custom_fields_option(options)
 
       filterable_fields_option =
         FlopSchema.create_filterable_fields_option(custom_fields_option)

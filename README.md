@@ -517,7 +517,19 @@ facet_fields: [
 ]
 ```
 
+Note that the `publication_year` value in the facet results now contains the bucket number instead of the year.
+
 See [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields) for details.
+
+### Filtering range facets
+
+For a range facet, the option value in the facet results contains the bucket number. Pass this value as you normally would to filter by range buckets.
+
+```elixir
+%{filters: [
+  %{field: :facet_publication_year, op: :==, value: [2, 3]},
+]}
+```
 
 ### Range labels
 

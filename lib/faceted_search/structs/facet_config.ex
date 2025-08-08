@@ -6,17 +6,20 @@ defmodule FacetedSearch.FacetConfig do
   use FacetedSearch.Types,
     include: [:range_types]
 
+  alias FacetedSearch.Constants
   alias FacetedSearch.FacetConfig
   alias FacetedSearch.SearchViewDescription
 
   @enforce_keys [
+    :field_reference,
     :ecto_type
   ]
 
-  defstruct ecto_type: nil, range_bounds: nil, range_buckets: nil
+  defstruct field_reference: nil, ecto_type: nil, range_bounds: nil, range_buckets: nil
 
   @type t() :: %__MODULE__{
           # required
+          field_reference: atom(),
           ecto_type: Ecto.Type.t(),
           # optional
           range_bounds: list(range_bound()) | nil,
@@ -42,7 +45,15 @@ defmodule FacetedSearch.FacetConfig do
     |> List.flatten()
     |> Enum.filter(& &1)
     |> Enum.reduce(%{}, fn facet_field, acc ->
+      prefix = Constants.facet_search_field_prefix()
+
+      field_reference =
+        if facet_field.range_bounds,
+          do: "#{prefix}#{facet_field.name}" |> String.to_existing_atom(),
+          else: facet_field.name
+
       Map.put(acc, facet_field.name, %FacetConfig{
+        field_reference: field_reference,
         ecto_type: ecto_types_by_field[facet_field.name],
         range_bounds: facet_field.range_bounds,
         range_buckets: facet_field.range_buckets
