@@ -10,7 +10,10 @@ defmodule FacetedSearch.FacetField do
     :name
   ]
 
-  defstruct name: nil, label_field: nil, range_bounds: nil, range_buckets: nil
+  defstruct name: nil,
+            label_field: nil,
+            range_bounds: nil,
+            range_buckets: nil
 
   @type t() :: %__MODULE__{
           # required
@@ -30,12 +33,21 @@ defmodule FacetedSearch.FacetField do
 
     label_field = Keyword.get(field_opts, :label)
 
-    range_bounds =
-      if Keyword.has_key?(field_opts, :range_bounds) do
-        Keyword.get(field_opts, :range_bounds) |> Enum.sort()
-      end
+    {range_bounds, range_buckets} =
+      cond do
+        Keyword.has_key?(field_opts, :number_range_bounds) ->
+          range_bounds = Keyword.get(field_opts, :number_range_bounds) |> Enum.sort()
+          range_buckets = create_range_buckets(range_bounds)
+          {range_bounds, range_buckets}
 
-    range_buckets = create_range_buckets(range_bounds)
+        Keyword.has_key?(field_opts, :date_range_bounds) ->
+          range_bounds = Keyword.get(field_opts, :date_range_bounds)
+          range_buckets = create_range_buckets(range_bounds)
+          {Enum.map(range_bounds, &maybe_type_range_bound_entry/1), range_buckets}
+
+        true ->
+          {nil, nil}
+      end
 
     struct(
       __MODULE__,
@@ -50,19 +62,30 @@ defmodule FacetedSearch.FacetField do
 
   @spec create_range_buckets(list(range_bound())) :: list(range_bucket())
   defp create_range_buckets(range_bounds) when is_list(range_bounds) and range_bounds != [] do
-    lower = List.first(range_bounds) - 1
-    upper = List.last(range_bounds) + 1
-
-    [[:lower], range_bounds, range_bounds, [:upper]]
-    |> List.flatten()
-    |> Enum.sort_by(fn
-      :lower -> lower
-      :upper -> upper
-      value -> value
-    end)
-    |> Enum.chunk_every(2)
+    Enum.zip([:lower] ++ range_bounds, range_bounds ++ [:upper])
+    |> Enum.map(fn {a, b} -> [a, b] end)
     |> Enum.with_index()
   end
 
   defp create_range_buckets(_range_bounds), do: nil
+
+  defp maybe_type_range_bound_entry(entry) when is_binary(entry) do
+    if date_string?(entry) do
+      "'#{entry}'::date"
+    else
+      entry
+    end
+  end
+
+  defp maybe_type_range_bound_entry(entry), do: entry
+
+  defp date_string?(entry) do
+    entry
+    |> String.slice(0, 10)
+    |> Date.from_iso8601()
+    |> case do
+      {:ok, _} -> true
+      _ -> false
+    end
+  end
 end

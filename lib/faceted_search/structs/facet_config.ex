@@ -15,7 +15,10 @@ defmodule FacetedSearch.FacetConfig do
     :ecto_type
   ]
 
-  defstruct field_reference: nil, ecto_type: nil, range_bounds: nil, range_buckets: nil
+  defstruct field_reference: nil,
+            ecto_type: nil,
+            range_bounds: nil,
+            range_buckets: nil
 
   @type t() :: %__MODULE__{
           # required

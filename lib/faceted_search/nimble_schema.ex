@@ -107,7 +107,8 @@ defmodule FacetedSearch.NimbleSchema do
           |> validate_options(module, opts, :facet_fields,
             supported_keyword_list_options: %{
               label: :atom,
-              range_bounds: {:array, :number}
+              number_range_bounds: {:array, :number},
+              date_range_bounds: {:array, :string}
             }
           )
           |> validate_options(module, opts, :sort_fields,
@@ -365,6 +366,10 @@ defmodule FacetedSearch.NimbleSchema do
 
   defp valid_type?(value, type) when type == {:array, :number} do
     is_list(value) and value != [] and Enum.all?(value, &is_number(&1))
+  end
+
+  defp valid_type?(value, type) when type == {:array, :string} do
+    is_list(value) and value != [] and Enum.all?(value, &is_binary(&1))
   end
 
   defp valid_type?(_, _), do: false
