@@ -607,9 +607,16 @@ end
 
 ## Performance
 
-Even though FacetedSearch adds indexes to all columns in the search view, when the search view grows to a substantial number of rows, additional performance tweaking will be needed. At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
+When the search view grows to a substantial number of rows, additional performance tweaking will be needed. At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
 
-When using facets, retrieving facet data takes up the bulk of the query time: it involves an extra database query where all rows are filtered and grouped. When querying more than 100,000 rows, this adds up.
+When using facets, retrieving facet data takes up the bulk of the query time: it involves two extra database queries on the `tsv` column where all rows are filtered and grouped. When querying more than 100,000 rows, this adds up.
+
+### Built-in optimizations
+
+FacetedSearch contains two optimizations:
+
+- All columns in the search view are indexed.
+- If no facet filters are applied, the second query on the `tsv` column for retrieving filtered facet results is skipped. This should make the initial search page load slightly faster when no facets are selected.
 
 ### Measuring query time
 

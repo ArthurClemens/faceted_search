@@ -20,6 +20,22 @@ defmodule FacetedSearch.Facets do
   @typep result_label :: String.t()
   @typep result_count :: integer()
   @typep result_row :: {result_value(), result_label(), result_count()}
+  @typep facet_configs :: %{
+           atom() => FacetConfig.t()
+         }
+
+  @typep facet_result_state :: %{
+           field: atom(),
+           name: String.t(),
+           value: term(),
+           range_bucket_value: {list(), integer()} | nil,
+           database_label: String.t() | nil,
+           count: integer(),
+           selected: boolean()
+         }
+  @typep facet_result_states :: %{
+           atom() => facet_result_state()
+         }
 
   @spec search(Ecto.Queryable.t(), map() | nil, [facet_search_option()]) ::
           {:ok, list(Facet.t())}
@@ -141,7 +157,7 @@ defmodule FacetedSearch.Facets do
     with {:ok, all_facet_rows} <-
            get_facet_results(repo, ecto_schema, search_params_without_facets, opts),
          {:ok, filtered_facet_rows} <-
-           get_facet_results(repo, ecto_schema, search_params, opts) do
+           maybe_get_facet_results(repo, ecto_schema, search_params, opts) do
       facet_results =
         consolidate_facet_results(
           module,
@@ -157,7 +173,7 @@ defmodule FacetedSearch.Facets do
     end
   end
 
-  @spec create_search_params_without_facets(map(), %{atom() => FacetConfig.t()}) :: map()
+  @spec create_search_params_without_facets(map(), facet_configs()) :: map()
   defp create_search_params_without_facets(%{filters: filters} = search_params, facet_configs)
        when is_list(filters) do
     prefix = Constants.facet_search_field_prefix()
@@ -171,6 +187,21 @@ defmodule FacetedSearch.Facets do
   end
 
   defp create_search_params_without_facets(search_params, _facet_configs), do: search_params
+
+  @spec maybe_get_facet_results(Ecto.Repo.t(), Ecto.Queryable.t(), map(), Keyword.t()) ::
+          {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}
+  defp maybe_get_facet_results(repo, ecto_schema, %{filters: filters} = search_params, opts) do
+    facet_filters =
+      Enum.filter(filters, fn %{field: field} ->
+        String.starts_with?(field |> to_string(), Constants.facet_search_field_prefix())
+      end)
+
+    if facet_filters == [] do
+      {:ok, []}
+    else
+      get_facet_results(repo, ecto_schema, search_params, opts)
+    end
+  end
 
   @spec get_facet_results(Ecto.Repo.t(), Ecto.Queryable.t(), map(), Keyword.t()) ::
           {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}
@@ -259,11 +290,9 @@ defmodule FacetedSearch.Facets do
           list(result_row()),
           list(result_row()),
           map(),
-          %{
-            atom() => FacetConfig.t()
-          }
+          facet_configs()
         ) ::
-          list(result_row())
+          list(Facet.t())
   defp consolidate_facet_results(
          module,
          all_facet_rows,
@@ -271,92 +300,133 @@ defmodule FacetedSearch.Facets do
          search_params,
          facet_configs
        ) do
-    filtered_facet_groups =
-      filtered_facet_rows
-      |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
+    prefix = Constants.facet_search_field_prefix()
 
-    filtered_facet_keys = Map.keys(filtered_facet_groups)
-    search_params_value_lookup = create_search_params_value_lookup(search_params)
+    search_params_value_lookup =
+      (search_params.filters || [])
+      |> Enum.reduce(%{}, fn %{field: field, value: values}, acc ->
+        Map.put(acc, field |> to_string() |> String.trim_leading(prefix), values)
+      end)
 
-    all_facet_rows
-    |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
-    |> Enum.filter(fn {key, _} -> key in filtered_facet_keys end)
-    |> Enum.map(fn {_key, result_rows} ->
-      cast_to_facet_list(module, result_rows, facet_configs, search_params_value_lookup)
-    end)
-    |> List.flatten()
+    all_facet_result_states =
+      create_facet_result_states(all_facet_rows, facet_configs, search_params_value_lookup)
+
+    filtered_facet_result_states =
+      create_facet_result_states(filtered_facet_rows, facet_configs, search_params_value_lookup)
+
+    combined_facet_result_states =
+      combine_facet_result_states(all_facet_result_states, filtered_facet_result_states)
+
+    create_facets(module, combined_facet_result_states)
   end
 
-  @spec create_search_params_value_lookup(map()) :: %{String.t() => boolean()}
-  defp create_search_params_value_lookup(%{filters: filters} = search_params)
-       when is_list(filters) do
-    search_params.filters
-    |> Enum.reduce(%{}, fn %{field: field, value: values}, acc ->
-      Map.put(acc, field, values)
+  @spec combine_facet_result_states(
+          facet_result_states(),
+          facet_result_states()
+        ) :: facet_result_states()
+  defp combine_facet_result_states(all_facet_result_states, filtered_facet_result_states)
+       when filtered_facet_result_states == %{},
+       do: all_facet_result_states
+
+  defp combine_facet_result_states(all_facet_result_states, filtered_facet_result_states) do
+    merge_states = fn filtered_result_states, all_result_states ->
+      # Take all entries from all_result_states, but copy the counts of filtered_result_states
+      count_by_value_lookup =
+        Enum.reduce(filtered_result_states, %{}, fn state, acc ->
+          Map.put(acc, state.value, state.count)
+        end)
+
+      Enum.map(all_result_states, fn state ->
+        count = count_by_value_lookup[state.value] || state.count
+        Map.put(state, :count, count)
+      end)
+    end
+
+    # If any option in a group is selected, take all other options from all_facet_result_states
+    filtered_facet_result_states
+    |> Enum.reduce(%{}, fn {name, states}, acc ->
+      states =
+        if Enum.any?(states, & &1.selected),
+          do: merge_states.(states, all_facet_result_states[name]),
+          else: states
+
+      Map.put(acc, name, states)
     end)
   end
 
-  defp create_search_params_value_lookup(_search_params), do: %{}
-
-  @spec cast_to_facet_list(
+  @spec create_facets(
           module(),
-          list(result_row()),
-          %{
-            atom() => FacetConfig.t()
-          },
-          map()
+          facet_result_states()
         ) :: list(Facet.t())
-  defp cast_to_facet_list(module, result_rows, facet_configs, search_params_value_lookup) do
-    result_rows
-    |> Enum.group_by(fn {name, _value, _label, _count} -> name end)
-    |> Enum.reduce([], fn {name, result_rows}, acc ->
-      field = String.to_existing_atom(name)
-
-      facet = %Facet{
+  defp create_facets(module, facet_result_states) do
+    facet_result_states
+    |> Enum.map(fn {field, states} ->
+      %Facet{
         field: field,
-        options:
-          create_option(
-            module,
-            field,
-            result_rows,
-            get_in(facet_configs, [Access.key(String.to_existing_atom(name))]),
-            search_params_value_lookup
-          )
+        options: Enum.map(states, &create_option(module, &1))
       }
-
-      [facet | acc]
     end)
   end
 
-  @spec create_option(module(), atom(), list(result_row()), FacetConfig.t() | nil, map()) ::
-          list(Facet.t())
-  defp create_option(module, field, facet_results, facet_config, search_params_value_lookup) do
+  @spec create_option(module(), facet_result_state()) :: Option.t()
+  defp create_option(module, facet_result_state) do
+    %{
+      field: field,
+      value: value,
+      range_bucket_value: range_bucket_value,
+      database_label: database_label,
+      count: count,
+      selected: selected
+    } = facet_result_state
+
     has_option_label_callback =
       Kernel.function_exported?(module, Constants.option_label_callback(), 3)
 
-    Enum.map(facet_results, fn {_name, raw_value, label, count} ->
+    option_label =
+      if has_option_label_callback do
+        apply(module, Constants.option_label_callback(), [
+          field,
+          range_bucket_value || value,
+          database_label
+        ])
+      end
+
+    %Option{
+      value: value,
+      label: option_label || database_label || to_string(value),
+      count: count,
+      selected: selected
+    }
+  end
+
+  @spec create_facet_result_states(list(result_row()), facet_configs(), map()) ::
+          facet_result_states()
+  defp create_facet_result_states(facet_rows, facet_configs, search_params_value_lookup) do
+    facet_rows
+    |> Enum.map(fn {name, raw_value, database_label, count} ->
+      facet_config = get_in(facet_configs, [Access.key(String.to_existing_atom(name))])
+
+      if is_nil(facet_config) do
+        Logger.error("FacetedSearch: facet_field '#{name}' is not configured.")
+      end
+
       value = cast_value(raw_value, facet_config)
 
-      # Callback option_label/3 may override the label found in the database through facet_fields->label.
-      # In case it returns nil, the label from the database is used instead.
-      # If that is not available either, the value is converted to a string and used as the label.
-      option_label =
-        if has_option_label_callback do
-          value = maybe_get_range_bucket_value(value, facet_config)
-          apply(module, Constants.option_label_callback(), [field, value, label])
-        end
+      selected =
+        !!search_params_value_lookup[name] and
+          value in search_params_value_lookup[name]
 
-      mapped_name = facet_config.field_reference
-
-      %Option{
+      %{
+        field: facet_config.field,
+        name: name,
         value: value,
-        label: option_label || label || to_string(value),
+        range_bucket_value: maybe_get_range_bucket_value(value, facet_config),
+        database_label: database_label,
         count: count,
-        selected:
-          !!search_params_value_lookup[mapped_name] and
-            value in search_params_value_lookup[mapped_name]
+        selected: selected
       }
     end)
+    |> Enum.group_by(& &1.field)
   end
 
   # If range_buckets contains valid entries, return the bucket for the given value
@@ -366,7 +436,7 @@ defmodule FacetedSearch.Facets do
     Enum.find(range_buckets, fn {_bounds, bucket} -> bucket == value end)
   end
 
-  defp maybe_get_range_bucket_value(value, _), do: value
+  defp maybe_get_range_bucket_value(_, _), do: nil
 
   defp cast_value(raw_value, %{range_buckets: range_buckets} = _facet_config)
        when is_list(range_buckets) do

@@ -167,7 +167,7 @@ defmodule FacetedSearch.SearchView do
     create_pg_trgm_sql = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
     drop_indexes_sql = [
-      (["id", "source", "data", "text", "tsv", "inserted_at", "updated_at"] ++
+      (["id", "source", "data", "text", "tsv", "buckets", "inserted_at", "updated_at"] ++
          get_sort_column_names(search_view_description))
       |> Enum.map(fn name ->
         """
@@ -196,6 +196,7 @@ defmodule FacetedSearch.SearchView do
          %{name: "data", using: "gin(data)"},
          %{name: "text", using: "gin(text gin_trgm_ops)"},
          %{name: "tsv", using: "gin(tsv)"},
+         %{name: "buckets", using: "gin(data)"},
          %{name: "inserted_at"},
          %{name: "updated_at"}
        ] ++
