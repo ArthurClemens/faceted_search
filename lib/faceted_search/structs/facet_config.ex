@@ -11,17 +11,20 @@ defmodule FacetedSearch.FacetConfig do
   alias FacetedSearch.SearchViewDescription
 
   @enforce_keys [
+    :field,
     :field_reference,
     :ecto_type
   ]
 
-  defstruct field_reference: nil,
+  defstruct field: nil,
+            field_reference: nil,
             ecto_type: nil,
             range_bounds: nil,
             range_buckets: nil
 
   @type t() :: %__MODULE__{
           # required
+          field: atom(),
           field_reference: atom(),
           ecto_type: Ecto.Type.t(),
           # optional
@@ -56,6 +59,7 @@ defmodule FacetedSearch.FacetConfig do
           else: facet_field.name
 
       Map.put(acc, facet_field.name, %FacetConfig{
+        field: facet_field.name,
         field_reference: field_reference,
         ecto_type: ecto_types_by_field[facet_field.name],
         range_bounds: facet_field.range_bounds,

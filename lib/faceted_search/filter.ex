@@ -22,7 +22,8 @@ defmodule FacetedSearch.Filter do
 
     case cast_value do
       {:ok, query_value} ->
-        name = Keyword.get(opts, :field_reference) |> to_string()
+        name = Keyword.get(opts, :field_reference, field) |> to_string()
+
         source_is_array_value = is_list(value)
         is_facet_search = Keyword.get(opts, :is_facet_search, false)
         is_range_facet = Keyword.get(opts, :is_range_facet, false)
