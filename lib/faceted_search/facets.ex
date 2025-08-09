@@ -436,7 +436,7 @@ defmodule FacetedSearch.Facets do
     Enum.find(range_buckets, fn {_bounds, bucket} -> bucket == value end)
   end
 
-  defp maybe_get_range_bucket_value(value, _), do: value
+  defp maybe_get_range_bucket_value(_, _), do: nil
 
   defp cast_value(raw_value, %{range_buckets: range_buckets} = _facet_config)
        when is_list(range_buckets) do
