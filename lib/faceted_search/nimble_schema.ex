@@ -128,6 +128,17 @@ defmodule FacetedSearch.NimbleSchema do
           |> validate_options(module, opts, :text_fields)
           |> validate_options(module, opts, :facet_fields,
             get_supported_keyword_list_options: fn
+              %{path: [_, _, :facet_fields], key: key}, _ when key == :hierarchies ->
+                :any
+
+              %{path: [_, _, :facet_fields, :hierarchies]}, _ ->
+                :any
+
+              %{path: [_, _, :facet_fields, :hierarchies, _]}, _field_keys ->
+                %{
+                  path: {:array, :atom}
+                }
+
               %{path: [_, _, :facet_fields], key: key, values: values}, field_keys ->
                 if Keyword.keyword?(values.raw) and key in field_keys do
                   :any
@@ -429,10 +440,15 @@ defmodule FacetedSearch.NimbleSchema do
     is_list(value) and value != [] and Enum.all?(value, &is_binary(&1))
   end
 
+  defp valid_type?(value, type) when type == {:array, :atom} do
+    is_list(value) and value != [] and Enum.all?(value, &is_atom(&1))
+  end
+
   defp valid_type?(_, _), do: false
 
   defp error_message_type(:atom), do: "atom"
   defp error_message_type({:array, :number}), do: "list of numbers"
+  defp error_message_type({:array, :atom}), do: "list of atoms"
   defp error_message_type(type), do: type
 
   defp to_error_entry(entry, module) do
