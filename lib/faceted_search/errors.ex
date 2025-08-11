@@ -47,7 +47,7 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
                 Valid entries are:
                 - Names that are listed in `fields`.
                 - A keyword list with a name that is listed in `fields` and nested key "cast".
-                - A self-named keyword list with nested keys "binding" and "field".
+                - A self-named keyword list with nested keys "binding" and "field", or "cast".
                 """
 
               error[:supported_keys] ->
