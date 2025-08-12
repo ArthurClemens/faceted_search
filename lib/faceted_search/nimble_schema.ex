@@ -136,7 +136,8 @@ defmodule FacetedSearch.NimbleSchema do
 
               %{path: [_, _, :facet_fields, :hierarchies, _]}, _field_keys ->
                 %{
-                  path: {:array, :atom}
+                  path: {:array, :atom},
+                  label: :atom
                 }
 
               %{path: [_, _, :facet_fields], key: key, values: values}, field_keys ->

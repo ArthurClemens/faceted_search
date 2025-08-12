@@ -167,7 +167,17 @@ defmodule FacetedSearch.SearchView do
     create_pg_trgm_sql = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
     drop_indexes_sql = [
-      (["id", "source", "data", "text", "tsv", "buckets", "inserted_at", "updated_at"] ++
+      ([
+         "id",
+         "source",
+         "data",
+         "text",
+         "tsv",
+         "hierarchies",
+         "buckets",
+         "inserted_at",
+         "updated_at"
+       ] ++
          get_sort_column_names(search_view_description))
       |> Enum.map(fn name ->
         """
@@ -196,6 +206,7 @@ defmodule FacetedSearch.SearchView do
          %{name: "data", using: "gin(data)"},
          %{name: "text", using: "gin(text gin_trgm_ops)"},
          %{name: "tsv", using: "gin(tsv)"},
+         %{name: "hierarchies", using: "gin(data)"},
          %{name: "buckets", using: "gin(data)"},
          %{name: "inserted_at"},
          %{name: "updated_at"}
@@ -265,6 +276,7 @@ defmodule FacetedSearch.SearchView do
         &create_data_column/2,
         &create_text_column/2,
         &create_tsv_column/2,
+        &create_hierarchies_column/2,
         &create_bucket_column/2,
         &create_date_columns/2,
         &create_sort_columns/2
@@ -508,25 +520,43 @@ defmodule FacetedSearch.SearchView do
   # TSV column
 
   @spec create_tsv_column(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_tsv_column(%{fields: fields, facet_fields: facet_fields, joins: joins} = _source, _)
+  defp create_tsv_column(%{facet_fields: facet_fields} = source, _)
        when is_list(facet_fields) and facet_fields != [] do
+    facet_field_entries =
+      facet_fields
+      |> Enum.filter(&is_nil(&1.hierarchy))
+      |> facet_field_entries(source)
+
+    hierarchy_entries =
+      facet_fields
+      |> Enum.filter(&(not is_nil(&1.hierarchy)))
+      |> hierarchy_entries(source)
+
+    Enum.concat(facet_field_entries, hierarchy_entries)
+    |> Enum.join(", ")
+    |> tsv_column_wrap()
+  end
+
+  defp create_tsv_column(_, _), do: "NULL::tsvector AS tsv"
+
+  defp facet_field_entries(facet_fields, %{fields: fields, joins: joins} = _source) do
     facet_fields
     |> Enum.reduce([], fn %{name: name, label_field: label_field, range_bounds: range_bounds},
                           acc ->
       field = Enum.find(fields, &(&1.name == name))
-      label_field = Enum.find(fields, &(&1.name == label_field))
 
       if field do
+        label_field = Enum.find(fields, &(&1.name == label_field))
         [%{field: field, label_field: label_field, range_bounds: range_bounds} | acc]
       else
         acc
       end
     end)
-    |> Enum.map_join(", ", fn %{
-                                field: field,
-                                label_field: label_field,
-                                range_bounds: range_bounds
-                              } ->
+    |> Enum.map(fn %{
+                     field: field,
+                     label_field: label_field,
+                     range_bounds: range_bounds
+                   } ->
       %{name: name} = field
 
       {table_name, column_name} = get_table_and_column(field, joins)
@@ -551,10 +581,17 @@ defmodule FacetedSearch.SearchView do
 
       "'#{name}' || '#{separator}' || #{value} || '#{separator}' || #{label}"
     end)
-    |> tsv_column_wrap()
   end
 
-  defp create_tsv_column(_, _), do: "NULL::tsvector AS tsv"
+  defp hierarchy_entries(facet_fields, source) do
+    facet_fields
+    |> Enum.map(fn facet_field ->
+      %{name: name, value: value, label: label} = create_hierarchy_entry(facet_field, source)
+      separator = Constants.tsv_separator()
+
+      "'#{name}' || '#{separator}' || #{value} || '#{separator}' || #{label}"
+    end)
+  end
 
   defp tsv_column_wrap(key_values) do
     """
@@ -562,6 +599,82 @@ defmodule FacetedSearch.SearchView do
       array_agg(array_remove(ARRAY[#{key_values}], NULL)) FILTER (WHERE array_remove(ARRAY[#{key_values}], NULL) <> '{}')
     ) AS tsv
     """
+  end
+
+  # Hierarchies column
+  @spec create_hierarchies_column(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_hierarchies_column(%{fields: fields, data_fields: data_fields} = source, _)
+       when is_list(fields) and fields != [] and is_list(data_fields) and data_fields != [] do
+    hierarchy_entries = create_hierarchy_entries(source)
+
+    object_string =
+      hierarchy_entries
+      |> Enum.filter(&(&1 != []))
+      |> Enum.join(",\n#{line_indent(1)}")
+
+    """
+    jsonb_build_object(
+    #{line_indent(1)}#{object_string}
+    ) AS hierarchies
+    """
+  end
+
+  @spec create_hierarchy_entries(Source.t()) :: list(String.t())
+  defp create_hierarchy_entries(source) do
+    source.facet_fields
+    |> Enum.filter(& &1.hierarchy)
+    |> Enum.map(&create_hierarchy_entry(&1, source, aggregate_values: true))
+    |> Enum.map(fn %{name: name, value: value} -> "'#{name}', #{value}" end)
+  end
+
+  @spec create_hierarchy_entry(FacetField.t(), Source.t(), Keyword.t()) :: map()
+  defp create_hierarchy_entry(
+         %{name: name, path: path, label_field: label_field},
+         %{table_name: current_source_table_name, fields: fields, joins: joins} = _source,
+         opts \\ []
+       ) do
+    is_aggregate_values = Keyword.get(opts, :aggregate_values, false)
+
+    %{label_field: label_field, values: values} =
+      path
+      |> Enum.map(fn name ->
+        Enum.find(fields, &(&1.name == name))
+      end)
+      |> Enum.filter(fn field -> not is_nil(field) end)
+      |> Enum.reduce(%{label_field: nil, values: []}, fn field, acc ->
+        label_field =
+          if field do
+            Enum.find(fields, &(&1.name == label_field))
+          else
+            nil
+          end
+
+        {table_name, column_name} = get_table_and_column(field, joins)
+        table_and_column = table_and_column_string(table_name, column_name)
+
+        value =
+          if is_aggregate_values do
+            maybe_aggregate(table_and_column, current_source_table_name, table_name, :string)
+          else
+            table_and_column
+          end
+
+        acc
+        |> Map.update(:values, [], fn existing -> [value | existing] |> Enum.reverse() end)
+        |> Map.update(:label_field, nil, fn existing -> existing || label_field end)
+      end)
+
+    value = ~s(#{Enum.join(values, " || '>' || ")}::text)
+
+    label =
+      if label_field do
+        {label_table_name, label_column_name} = get_table_and_column(label_field, joins)
+        table_and_column_string(label_table_name, label_column_name)
+      else
+        "''"
+      end
+
+    %{name: name, value: value, label: label}
   end
 
   # Bucket column
@@ -684,26 +797,7 @@ defmodule FacetedSearch.SearchView do
 
     {table_name, column_name} = get_table_and_column(field, joins)
     table_and_column = table_and_column_string(table_name, column_name)
-
-    needs_aggregate = current_source_table_name != table_name
-
-    ref =
-      cond do
-        is_tuple(ecto_type) and elem(ecto_type, 0) == :array ->
-          "array_agg(DISTINCT #{table_and_column})"
-
-        ecto_type == :string and needs_aggregate ->
-          "COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
-
-        ecto_type == :boolean and needs_aggregate ->
-          "every(#{table_and_column}.inactive)"
-
-        needs_aggregate ->
-          "any_value(#{table_and_column}.inactive)"
-
-        true ->
-          "#{table_and_column}"
-      end
+    ref = maybe_aggregate(table_and_column, current_source_table_name, table_name, ecto_type)
 
     "#{ref |> maybe_cast(cast)} AS #{sort_column_name}"
   end
@@ -721,6 +815,27 @@ defmodule FacetedSearch.SearchView do
 
   defp maybe_cast(value, cast) when not is_nil(cast), do: "CAST(#{value} AS #{cast})"
   defp maybe_cast(value, _cast), do: value
+
+  defp maybe_aggregate(table_and_column, current_source_table_name, table_name, ecto_type) do
+    needs_aggregate = current_source_table_name != table_name
+
+    cond do
+      is_tuple(ecto_type) and elem(ecto_type, 0) == :array ->
+        "array_agg(DISTINCT #{table_and_column})"
+
+      ecto_type == :string and needs_aggregate ->
+        "COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
+
+      ecto_type == :boolean and needs_aggregate ->
+        "every(#{table_and_column}.inactive)"
+
+      needs_aggregate ->
+        "any_value(#{table_and_column}.inactive)"
+
+      true ->
+        table_and_column
+    end
+  end
 
   @spec get_table_and_column(Field.t(), list(Join.t()) | nil) :: {atom(), atom()} | nil
   defp get_table_and_column(%Field{binding: binding} = field, joins)

@@ -97,7 +97,25 @@ defmodule FacetedSearch.Source do
   defp collect_sort_fields(_sort_fields), do: nil
 
   defp collect_facet_fields(facet_fields) when is_list(facet_fields) and facet_fields != [] do
-    Enum.map(facet_fields, fn field_options -> FacetField.new(field_options) end)
+    {hierarchy_options, regular_options} =
+      facet_fields
+      |> Enum.split_with(fn
+        {:hierarchies, _} -> true
+        _ -> false
+      end)
+
+    regular_fields =
+      Enum.map(regular_options, fn field_options -> FacetField.new(field_options) end)
+
+    hierarchy_fields =
+      Enum.reduce(hierarchy_options, [], fn {:hierarchies, hierarchy_options}, acc ->
+        Enum.reduce(hierarchy_options, acc, fn {name, opts}, acc_1 ->
+          opts = opts ++ [hierarchy: true]
+          [FacetField.new({name, opts}) | acc_1]
+        end)
+      end)
+
+    Enum.concat(regular_fields, hierarchy_fields)
   end
 
   defp collect_facet_fields(_facet_fields), do: nil

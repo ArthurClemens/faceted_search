@@ -20,7 +20,8 @@ defmodule FacetedSearch.FacetConfig do
             field_reference: nil,
             ecto_type: nil,
             range_bounds: nil,
-            range_buckets: nil
+            range_buckets: nil,
+            hierarchy: nil
 
   @type t() :: %__MODULE__{
           # required
@@ -29,7 +30,8 @@ defmodule FacetedSearch.FacetConfig do
           ecto_type: Ecto.Type.t(),
           # optional
           range_bounds: list(range_bound()) | nil,
-          range_buckets: list(range_bucket()) | nil
+          range_buckets: list(range_bucket()) | nil,
+          hierarchy: boolean() | nil
         }
 
   @doc """
@@ -58,12 +60,16 @@ defmodule FacetedSearch.FacetConfig do
           do: "#{prefix}#{facet_field.name}" |> String.to_existing_atom(),
           else: facet_field.name
 
+      ecto_type =
+        if facet_field.hierarchy, do: :string, else: ecto_types_by_field[facet_field.name]
+
       Map.put(acc, facet_field.name, %FacetConfig{
         field: facet_field.name,
         field_reference: field_reference,
-        ecto_type: ecto_types_by_field[facet_field.name],
+        ecto_type: ecto_type,
         range_bounds: facet_field.range_bounds,
-        range_buckets: facet_field.range_buckets
+        range_buckets: facet_field.range_buckets,
+        hierarchy: facet_field.hierarchy
       })
     end)
   end

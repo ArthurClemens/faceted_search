@@ -9,6 +9,7 @@ defmodule FacetedSearch.Filter do
   require Logger
 
   def filter(query, %Flop.Filter{field: field, value: value, op: op}, opts) do
+    is_hierarchy_facet = Keyword.get(opts, :is_hierarchy_facet)
     ecto_type = Keyword.get(opts, :ecto_type)
     source_is_array = Keyword.get(opts, :source_is_array, false)
 
@@ -32,7 +33,8 @@ defmodule FacetedSearch.Filter do
           dynamic_expr(name, ecto_type, %{
             source_is_array: source_is_array,
             is_facet_search: is_facet_search,
-            is_range_facet: is_range_facet
+            is_range_facet: is_range_facet,
+            is_hierarchy_facet: is_hierarchy_facet
           })
 
         conditions =
@@ -170,38 +172,51 @@ defmodule FacetedSearch.Filter do
   end
 
   def dynamic_expr(name, {:array, :integer}, %{
-        is_facet_search: is_facet_search
+        is_facet_search: is_facet_search,
+        is_hierarchy_facet: is_hierarchy_facet
       })
       when is_facet_search do
+    column = if is_hierarchy_facet, do: :hierarchies, else: :data
+
     dynamic(
       [r],
       fragment(
         "ARRAY[CAST((?->>?) AS int)]",
-        field(r, :data),
+        field(r, ^column),
         ^name
       )
     )
   end
 
-  def dynamic_expr(name, {:array, :boolean}, %{is_facet_search: is_facet_search})
+  def dynamic_expr(name, {:array, :boolean}, %{
+        is_facet_search: is_facet_search,
+        is_hierarchy_facet: is_hierarchy_facet
+      })
       when is_facet_search do
+    column = if is_hierarchy_facet, do: :hierarchies, else: :data
+
     dynamic(
       [r],
       fragment(
         "ARRAY[CAST((?->>?) AS boolean)]",
-        field(r, :data),
+        field(r, ^column),
         ^name
       )
     )
   end
 
-  def dynamic_expr(name, {:array, :string}, %{is_facet_search: is_facet_search})
+  def dynamic_expr(name, {:array, :string}, %{
+        is_facet_search: is_facet_search,
+        is_hierarchy_facet: is_hierarchy_facet
+      })
       when is_facet_search do
+    column = if is_hierarchy_facet, do: :hierarchies, else: :data
+
     dynamic(
       [r],
       fragment(
         "ARRAY[(?->>?)]",
-        field(r, :data),
+        field(r, ^column),
         ^name
       )
     )

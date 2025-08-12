@@ -13,7 +13,9 @@ defmodule FacetedSearch.FacetField do
   defstruct name: nil,
             label_field: nil,
             range_bounds: nil,
-            range_buckets: nil
+            range_buckets: nil,
+            hierarchy: nil,
+            path: nil
 
   @type t() :: %__MODULE__{
           # required
@@ -21,7 +23,9 @@ defmodule FacetedSearch.FacetField do
           # optional
           label_field: atom() | nil,
           range_bounds: list(range_bound()) | nil,
-          range_buckets: list(range_bucket()) | nil
+          range_buckets: list(range_bucket()) | nil,
+          hierarchy: boolean() | nil,
+          path: list(atom()) | nil
         }
 
   def new(field_options) do
@@ -30,8 +34,6 @@ defmodule FacetedSearch.FacetField do
         {name, opts} -> {name, opts}
         name -> {name, []}
       end
-
-    label_field = Keyword.get(field_opts, :label)
 
     {range_bounds, range_buckets} =
       cond do
@@ -53,9 +55,11 @@ defmodule FacetedSearch.FacetField do
       __MODULE__,
       %{
         name: name,
-        label_field: label_field,
+        label_field: Keyword.get(field_opts, :label),
         range_bounds: range_bounds,
-        range_buckets: range_buckets
+        range_buckets: range_buckets,
+        hierarchy: Keyword.get(field_opts, :hierarchy),
+        path: Keyword.get(field_opts, :path)
       }
     )
   end
