@@ -7,24 +7,29 @@ defmodule FacetedSearch.FacetField do
     include: [:range_types]
 
   @enforce_keys [
-    :name
+    :name,
+    :hide_when_selected
   ]
 
   defstruct name: nil,
+            hide_when_selected: false,
             label_field: nil,
             range_bounds: nil,
             range_buckets: nil,
             hierarchy: nil,
+            parent: nil,
             path: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
+          hide_when_selected: boolean(),
           # optional
           label_field: atom() | nil,
           range_bounds: list(range_bound()) | nil,
           range_buckets: list(range_bucket()) | nil,
           hierarchy: boolean() | nil,
+          parent: atom() | nil,
           path: list(atom()) | nil
         }
 
@@ -59,7 +64,9 @@ defmodule FacetedSearch.FacetField do
         range_bounds: range_bounds,
         range_buckets: range_buckets,
         hierarchy: Keyword.get(field_opts, :hierarchy),
-        path: Keyword.get(field_opts, :path)
+        parent: Keyword.get(field_opts, :parent),
+        path: Keyword.get(field_opts, :path),
+        hide_when_selected: !!Keyword.get(field_opts, :hide_when_selected)
       }
     )
   end

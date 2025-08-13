@@ -137,7 +137,9 @@ defmodule FacetedSearch.NimbleSchema do
               %{path: [_, _, :facet_fields, :hierarchies, _]}, _field_keys ->
                 %{
                   path: {:array, :atom},
-                  label: :atom
+                  label: :atom,
+                  parent: :atom,
+                  hide_when_selected: :boolean
                 }
 
               %{path: [_, _, :facet_fields], key: key, values: values}, field_keys ->
@@ -429,9 +431,8 @@ defmodule FacetedSearch.NimbleSchema do
     Enum.map(list, &Map.put(&1, :error_type, error_type))
   end
 
-  defp valid_type?(value, type) when type == :atom do
-    is_atom(value)
-  end
+  defp valid_type?(value, type) when type == :atom, do: is_atom(value)
+  defp valid_type?(value, type) when type == :boolean, do: is_boolean(value)
 
   defp valid_type?(value, type) when type == {:array, :number} do
     is_list(value) and value != [] and Enum.all?(value, &is_number(&1))

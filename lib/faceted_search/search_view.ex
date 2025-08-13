@@ -660,11 +660,12 @@ defmodule FacetedSearch.SearchView do
           end
 
         acc
-        |> Map.update(:values, [], fn existing -> [value | existing] |> Enum.reverse() end)
+        |> Map.update(:values, [], fn existing -> [value | existing] end)
         |> Map.update(:label_field, nil, fn existing -> existing || label_field end)
       end)
 
-    value = ~s(#{Enum.join(values, " || '>' || ")}::text)
+    hierarchy_separator = Constants.hierarchy_separator()
+    value = ~s(#{Enum.join(values |> Enum.reverse(), " || '#{hierarchy_separator}' || ")}::text)
 
     label =
       if label_field do

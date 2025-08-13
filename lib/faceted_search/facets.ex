@@ -23,15 +23,16 @@ defmodule FacetedSearch.Facets do
   @typep facet_configs :: %{
            atom() => FacetConfig.t()
          }
-
   @typep facet_result_state :: %{
-           field: atom(),
-           name: String.t(),
-           value: term(),
-           range_bucket_value: {list(), integer()} | nil,
-           database_label: String.t() | nil,
            count: integer(),
-           selected: boolean()
+           database_label: String.t() | nil,
+           field: atom(),
+           hierarchy: boolean(),
+           name: String.t(),
+           parent: atom() | nil,
+           range_bucket_value: {list(), integer()} | nil,
+           selected: boolean(),
+           value: term()
          }
   @typep facet_result_states :: %{
            atom() => facet_result_state()
@@ -314,10 +315,31 @@ defmodule FacetedSearch.Facets do
     filtered_facet_result_states =
       create_facet_result_states(filtered_facet_rows, facet_configs, search_params_value_lookup)
 
+    selected_hierarchies_lookup =
+      all_facet_result_states
+      |> Enum.reduce(%{}, fn {_facet_name, states}, acc ->
+        Enum.reduce(states, acc, fn state, acc_1 ->
+          if state.hierarchy && state.selected do
+            Map.put(acc_1, state.name, state.value)
+          else
+            acc_1
+          end
+        end)
+      end)
+
     combined_facet_result_states =
       combine_facet_result_states(all_facet_result_states, filtered_facet_result_states)
+      |> Enum.reduce([], fn {facet_name, states}, acc ->
+        valid_states =
+          Enum.filter(
+            states,
+            &filter_hierarchy_children_of_selected_parent(&1, selected_hierarchies_lookup)
+          )
 
-    create_facets(module, combined_facet_result_states)
+        [{facet_name, valid_states} | acc]
+      end)
+
+    create_facets(module, combined_facet_result_states, facet_configs)
   end
 
   @spec combine_facet_result_states(
@@ -329,54 +351,99 @@ defmodule FacetedSearch.Facets do
        do: all_facet_result_states
 
   defp combine_facet_result_states(all_facet_result_states, filtered_facet_result_states) do
-    merge_states = fn filtered_result_states, all_result_states ->
-      # Take all entries from all_result_states, but copy the counts of filtered_result_states
-      count_by_value_lookup =
-        Enum.reduce(filtered_result_states, %{}, fn state, acc ->
-          Map.put(acc, state.value, state.count)
-        end)
-
-      Enum.map(all_result_states, fn state ->
-        count = count_by_value_lookup[state.value] || state.count
-        Map.put(state, :count, count)
-      end)
-    end
-
     # If any option in a group is selected, take all other options from all_facet_result_states
     filtered_facet_result_states
     |> Enum.reduce(%{}, fn {name, states}, acc ->
       states =
-        if Enum.any?(states, & &1.selected),
-          do: merge_states.(states, all_facet_result_states[name]),
+        if Enum.any?(states, &(&1.selected || &1.hierarchy)),
+          do: merge_states(states, all_facet_result_states[name]),
           else: states
 
       Map.put(acc, name, states)
     end)
   end
 
+  defp merge_states(filtered_result_states, all_result_states) do
+    # Take all entries from all_result_states, but copy the counts of filtered_result_states
+    count_by_value_lookup =
+      Enum.reduce(filtered_result_states, %{}, fn state, acc ->
+        Map.put(acc, state.value, state.count)
+      end)
+
+    all_result_states
+    |> Enum.map(fn state ->
+      count = count_by_value_lookup[state.value] || state.count
+      Map.put(state, :count, count)
+    end)
+  end
+
+  defp filter_hierarchy_children_of_selected_parent(
+         %{hierarchy: hierarchy, parent: parent} = state,
+         selected_hierarchies_lookup
+       )
+       when hierarchy == true and not is_nil(parent) do
+    parent_value = selected_hierarchies_lookup[parent |> to_string()]
+    separator = Constants.hierarchy_separator()
+
+    if parent_value do
+      # Allow if the "parent" part of the value matches the selected parent
+      parent_value_to_match =
+        state.value
+        |> String.split(separator)
+        |> Enum.reverse()
+        |> tl()
+        |> Enum.reverse()
+        |> Enum.join(separator)
+
+      parent_value_to_match == parent_value
+    else
+      false
+    end
+  end
+
+  defp filter_hierarchy_children_of_selected_parent(state, _selected_hierarchies_lookup),
+    do: state
+
   @spec create_facets(
           module(),
-          facet_result_states()
+          facet_result_states(),
+          facet_configs()
         ) :: list(Facet.t())
-  defp create_facets(module, facet_result_states) do
+  defp create_facets(module, facet_result_states, facet_configs) do
     facet_result_states
-    |> Enum.map(fn {field, states} ->
-      %Facet{
-        field: field,
-        options: Enum.map(states, &create_option(module, &1))
-      }
+    |> Enum.reduce([], fn
+      {_field, states}, acc when states == [] ->
+        acc
+
+      {field, states}, acc ->
+        facet_config = get_in(facet_configs, [Access.key(field)])
+        options = Enum.map(states, &create_option(module, &1))
+
+        if facet_config.hide_when_selected and Enum.any?(options, & &1.selected) do
+          acc
+        else
+          [
+            %Facet{
+              field: field,
+              parent: facet_config.parent,
+              options: options
+            }
+            | acc
+          ]
+        end
     end)
+    |> Enum.reverse()
   end
 
   @spec create_option(module(), facet_result_state()) :: Option.t()
   defp create_option(module, facet_result_state) do
     %{
-      field: field,
-      value: value,
-      range_bucket_value: range_bucket_value,
-      database_label: database_label,
       count: count,
-      selected: selected
+      database_label: database_label,
+      field: field,
+      range_bucket_value: range_bucket_value,
+      selected: selected,
+      value: value
     } = facet_result_state
 
     has_option_label_callback =
@@ -417,13 +484,15 @@ defmodule FacetedSearch.Facets do
           value in search_params_value_lookup[name]
 
       %{
-        field: facet_config.field,
-        name: name,
-        value: value,
-        range_bucket_value: maybe_get_range_bucket_value(value, facet_config),
-        database_label: database_label,
         count: count,
-        selected: selected
+        database_label: database_label,
+        field: facet_config.field,
+        hierarchy: !!facet_config.hierarchy,
+        name: name,
+        parent: facet_config.parent,
+        range_bucket_value: maybe_get_range_bucket_value(value, facet_config),
+        selected: selected,
+        value: value
       }
     end)
     |> Enum.group_by(& &1.field)
