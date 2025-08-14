@@ -4,10 +4,11 @@ defmodule FacetedSearch.Facet do
   """
 
   @enforce_keys [:field, :options]
-  defstruct field: nil, options: nil
+  defstruct field: nil, options: nil, parent: nil
 
   @type t() :: %__MODULE__{
           field: atom(),
-          options: list(FacetedSearch.Option)
+          options: list(FacetedSearch.Option),
+          parent: atom() | nil
         }
 end

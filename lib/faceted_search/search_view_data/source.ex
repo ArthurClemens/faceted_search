@@ -97,8 +97,55 @@ defmodule FacetedSearch.Source do
   defp collect_sort_fields(_sort_fields), do: nil
 
   defp collect_facet_fields(facet_fields) when is_list(facet_fields) and facet_fields != [] do
-    Enum.map(facet_fields, fn field_options -> FacetField.new(field_options) end)
+    {hierarchy_options, regular_options} =
+      facet_fields
+      |> Enum.split_with(fn
+        {:hierarchies, _} -> true
+        _ -> false
+      end)
+
+    regular_fields =
+      Enum.map(regular_options, fn field_options -> FacetField.new(field_options) end)
+
+    hierarchy_fields = create_hierarchy_fields(hierarchy_options)
+
+    Enum.concat(regular_fields, hierarchy_fields)
   end
 
   defp collect_facet_fields(_facet_fields), do: nil
+
+  defp create_hierarchy_fields(hierarchy_options) do
+    Enum.reduce(hierarchy_options, [], fn {:hierarchies, hierarchies}, acc ->
+      path_lookup =
+        Enum.reduce(hierarchies, %{}, fn {name, opts}, acc ->
+          Map.put(acc, Keyword.get(opts, :path), name)
+        end)
+
+      Enum.reduce(hierarchies, acc, fn {name, hierarchy_opts}, acc_1 ->
+        opts =
+          hierarchy_opts
+          |> Keyword.put(:hierarchy, true)
+          |> maybe_set_hierarchy_parent(path_lookup)
+
+        [FacetField.new({name, opts}) | acc_1]
+      end)
+    end)
+  end
+
+  defp maybe_set_hierarchy_parent(opts, path_lookup) do
+    if Keyword.get(opts, :parent) do
+      opts
+    else
+      path = Keyword.get(opts, :path)
+
+      parent_path_to_match =
+        path
+        |> Enum.reverse()
+        |> tl()
+        |> Enum.reverse()
+
+      parent = path_lookup[parent_path_to_match]
+      Keyword.put(opts, :parent, parent)
+    end
+  end
 end

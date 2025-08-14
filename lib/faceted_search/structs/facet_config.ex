@@ -13,23 +13,30 @@ defmodule FacetedSearch.FacetConfig do
   @enforce_keys [
     :field,
     :field_reference,
-    :ecto_type
+    :ecto_type,
+    :hide_when_selected
   ]
 
   defstruct field: nil,
             field_reference: nil,
             ecto_type: nil,
+            hide_when_selected: false,
             range_bounds: nil,
-            range_buckets: nil
+            range_buckets: nil,
+            hierarchy: nil,
+            parent: nil
 
   @type t() :: %__MODULE__{
           # required
           field: atom(),
           field_reference: atom(),
           ecto_type: Ecto.Type.t(),
+          hide_when_selected: boolean(),
           # optional
           range_bounds: list(range_bound()) | nil,
-          range_buckets: list(range_bucket()) | nil
+          range_buckets: list(range_bucket()) | nil,
+          hierarchy: boolean() | nil,
+          parent: atom() | nil
         }
 
   @doc """
@@ -58,12 +65,18 @@ defmodule FacetedSearch.FacetConfig do
           do: "#{prefix}#{facet_field.name}" |> String.to_existing_atom(),
           else: facet_field.name
 
+      ecto_type =
+        if facet_field.hierarchy, do: :string, else: ecto_types_by_field[facet_field.name]
+
       Map.put(acc, facet_field.name, %FacetConfig{
         field: facet_field.name,
         field_reference: field_reference,
-        ecto_type: ecto_types_by_field[facet_field.name],
+        ecto_type: ecto_type,
         range_bounds: facet_field.range_bounds,
-        range_buckets: facet_field.range_buckets
+        range_buckets: facet_field.range_buckets,
+        hierarchy: facet_field.hierarchy,
+        parent: facet_field.parent,
+        hide_when_selected: facet_field.hide_when_selected
       })
     end)
   end

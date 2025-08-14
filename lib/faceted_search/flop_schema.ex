@@ -20,9 +20,19 @@ defmodule FacetedSearch.FlopSchema do
         facet_fields =
           Keyword.get_values(source_options, :facet_fields)
           |> List.flatten()
-          |> Enum.map(fn
-            {name, options} -> {name, options}
-            name -> {name, []}
+          |> Enum.reduce([], fn
+            {name, options}, acc when name == :hierarchies ->
+              Enum.reduce(options, acc, fn {level_name, level_options}, acc_1 ->
+                level_options = level_options ++ [hierarchy: true]
+
+                [{level_name, level_options} | acc_1]
+              end)
+
+            {name, options}, acc ->
+              [{name, options} | acc]
+
+            name, acc ->
+              [{name, []} | acc]
           end)
 
         %{
@@ -95,8 +105,11 @@ defmodule FacetedSearch.FlopSchema do
           {column_name, ecto_type}
         end
 
+      is_hierarchy_facet = Keyword.get(column_options, :hierarchy, false)
+
       # source_is_array: data is stored in JSON as array
-      {facet_ecto_type, source_is_array} = normalize_facet_field_ecto_type(ecto_type)
+      {facet_ecto_type, source_is_array} =
+        normalize_facet_field_ecto_type(ecto_type, is_hierarchy_facet)
 
       facet_field =
         {facet_column_name,
@@ -108,7 +121,8 @@ defmodule FacetedSearch.FlopSchema do
                 source_is_array: source_is_array,
                 field_reference: field_reference,
                 is_facet_search: true,
-                is_range_facet: is_range_facet
+                is_range_facet: is_range_facet,
+                is_hierarchy_facet: is_hierarchy_facet
               ]},
            ecto_type: facet_ecto_type
          ]}
@@ -159,6 +173,15 @@ defmodule FacetedSearch.FlopSchema do
     end)
   end
 
-  defp normalize_facet_field_ecto_type({:array, type} = _ecto_type), do: {{:array, type}, true}
-  defp normalize_facet_field_ecto_type(type), do: {{:array, type}, false}
+  defp normalize_facet_field_ecto_type({:array, _type} = _ecto_type, is_hierarchy_facet)
+       when is_hierarchy_facet,
+       do: {{:array, :string}, true}
+
+  defp normalize_facet_field_ecto_type({:array, type} = _ecto_type, _is_hierarchy_facet),
+    do: {{:array, type}, true}
+
+  defp normalize_facet_field_ecto_type(_type, is_hierarchy_facet) when is_hierarchy_facet,
+    do: {{:array, :string}, false}
+
+  defp normalize_facet_field_ecto_type(type, _is_hierarchy_facet), do: {{:array, type}, false}
 end
