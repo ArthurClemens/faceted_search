@@ -64,7 +64,8 @@ The search view contains these base columns:
 - `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
 - `text` - A `text` column that contains a "bag of words" per row, used for text searches.
 - `tsv` - A `tsvector` column used for generating facets (internal use).
-- `buckets` - A `jsonb` column that stores range bucket data (internal use).
+- `hierarchies` - A `jsonb` column that stores hierarchical data (internal use; only when hierarcies are specified).
+- `buckets` - A `jsonb` column that stores range bucket data (internal use; only when ranges are specified).
 - `inserted_at` - Source timestamp
 - `updated_at` - Source timestamp
 
@@ -356,7 +357,8 @@ The returned facet results will look like this:
       %FacetedSearch.Option{value: 1967, label: "1967", count: 1, selected: false},
       %FacetedSearch.Option{value: 1968, label: "1968", count: 1, selected: false},
       ...
-    ]
+    ],
+    ...
   }
 ]
 ```
@@ -376,7 +378,8 @@ UI controls are outside of the scope of this library; this section describes the
     options: [
       %FacetedSearch.Option{value: 1964, label: "1964", count: 2, selected: false},
       ...
-    ]
+    ],
+    ...
   },
   ...
 ]
@@ -419,7 +422,7 @@ To achieve this behavior using Flop, we need to create filters using the followi
 
 #### Example search
 
-If we provide a checkbox group to the search page to select the publication year (not the best UI - just an example), and the user has typed "Le Guin" in the search box, and selected the years 1964 and 1966, the Flop search parameters will look like this:
+If we provide a checkbox group to the search page to select the publication year (not the best UI - see [Ranges](#ranges) for a better alternative), and the user has typed "Le Guin" in the search box, and selected the years 1964 and 1966, the Flop search parameters will look like this:
 
 ```elixir
 %{filters: [
@@ -440,7 +443,8 @@ The returned facet results will look like this:
       %FacetedSearch.Option{value: 1967, label: "1967", count: 1, selected: false},
       %FacetedSearch.Option{value: 1968, label: "1968", count: 1, selected: false},
       ...
-    ]
+    ],
+    ...
   }
 ]
 ```
@@ -529,7 +533,7 @@ Note that the `publication_year` value in the facet results now contains the buc
 
 #### Example with dates
 
-```
+```elixir
 facet_fields: [
   updated_at: [
     date_range_bounds: [
@@ -547,7 +551,7 @@ facet_fields: [
 
 ### Filtering range facets
 
-For a range facet, the option value in the facet results contains the bucket number. Pass this value as you normally would to filter by range buckets.
+For a range facet, the option value in the facet results contains the bucket number. Bucket numbers starts at 0, so values 2 and 3 correspond to the range bounds "1 week" and "1 day" above. 
 
 ```elixir
 %{filters: [
@@ -601,6 +605,98 @@ def option_label(:updated_at, value, _) do
     ["now() - interval '1 month'", "now() - interval '1 week'"] -> "last month"
     ["now() - interval '1 week'", "now() - interval '1 day'"] -> "last week"
     ["now() - interval '1 day'", :upper] -> "today"
+  end
+end
+```
+
+## Hierarchies / categories
+
+Hierarchical facets allow users to refine their search step-by-step by navigating a tree-based data structure such as a product catalog.
+
+An art catalog might have the categorization: `Art periods → Modern art → Pop art`. When using hierarchical facets, option "Pop art" becomes available only after selecting "Modern art".
+  
+Hierarchical facets are generated in the same way as regular facets, with these differences:
+- A parent relation is added automatically based on the paths (unless option `parent` is used to point to a specific field).
+- Option values are strings, containing the path values separated by ">", for example: "modern_art>pop_art".
+ 
+### Configuration
+
+Hierarchical facets are configured under a special entry `hierarchies` - below this, the settings are the same as for regular facets, with these differences:
+- The entry name is custom, and does not need to reference a existing field.
+- Key `path` contains the list of fields that creates the hierarchy.
+
+Taking the art catalog example from above (assuming fields `art_periods` and `art_movements` exist), the configuration could look like this:
+
+```elixir
+facet_fields: [
+  ...
+  hierarchies: [
+    periods: [
+      path: [:art_periods]
+    ],
+    movements: [
+      path: [:art_periods, :art_movements]
+    ]
+  ]
+]
+```
+
+Hierarchy paths can be created in any order. For example:
+- `Art form → Medium → Artist`
+- `Artist → Medium → Art form`
+
+Translated to the schema configuration:
+
+```elixir
+facet_fields: [
+  hierarchies: [
+    by_art_form: [
+      path: [:art_forms, :art_media, :artists]
+    ],
+    by_artist: [
+      path: [:artists, :art_media, :art_forms]
+    ]
+  ]
+]
+```
+
+### Filtering hierarchical facets
+
+To get modern artworks, filter on facet `periods`:
+
+```elixir
+%{filters: [
+  %{field: :facet_periods, op: :==, value: ["modern_art"]}
+]}
+```
+
+To get pop art works, filter on facet `movements` and its option value - in this case "modern_art>pop_art". The parent facet `periods` with value "modern_art" will be selected automatically.
+
+```elixir
+%{filters: [
+  %{field: :facet_movements, op: :==, value: ["modern_art>pop_art"]},
+]}
+```
+
+To remove parent facet `periods` from the facet results, set its option `hide_when_selected` to `true`
+
+### Hierarchy labels
+
+See [Option labels](#option-labels)
+
+To create a custom text (which cannot be read from the database), use the callback function `option_label/3` described at [custom labels](#custom-labels) to create readable option labels for hierarchies.
+
+The received value will contains the path values separated by ">", for example: "modern_art>pop_art".
+
+Example:
+
+```elixir
+def option_label(:movements, value, label) do
+  movements_value = value |> String.split(">") |> List.last()
+  
+  case movements_value do
+    "pop_art" -> gettext("Pop art")
+    _ -> label
   end
 end
 ```

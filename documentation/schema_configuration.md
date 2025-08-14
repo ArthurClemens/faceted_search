@@ -390,9 +390,12 @@ sources: [
 
 ## facet_fields
 
-A list of fields used to create facets, with options for labels from a database table, and ranges.
+A list of fields used to create facets, with options for labels from a database table, ranges, and hierarchies.
 
-The referenced fields populate the `tsv` column in the search view. 
+The referenced fields populate these columns in the search view:
+- regular facets: `tsv`
+- range facets: `buckets`
+- hierarchical facets: `hierarchies`
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > facet_fields`
@@ -404,7 +407,7 @@ Either:
 - A field name from option `fields`.
 - A keyword list:
   - Key: a field name from option `fields`
-  - Value (either or both):
+  - Values:
     - To reference a label from a database table/column:
       - Key: `label` 
       - Value: a field name from option `fields`
@@ -414,7 +417,22 @@ Either:
     - To create a range of date entries:
       - Key: `date_range_bounds`
       - Value: a list of dates, timestamps, and/or intervals
-
+- A keyword list with key `hierarchies`:
+  - Values: a keyword list
+    - Key: custom name of the hierarchy
+    - Values:
+      - To define the hierarchy path:
+        - Key: `path` (required)
+        - Value: a list of field names from option `fields`
+      - To reference a label from a database table/column:
+        - Key: `label` 
+        - Value: a field name from option `fields`
+      - To set a custom parent for a path:
+        - Key: `parent` 
+        - Value: one of the listed custom hierarchy names
+      - To hide facet data from a field once one of the options has been selected (by default, the facet along with the non-selected options will be returned):
+        - Key: `hide_when_selected`
+        - Value: boolean
 
 ### Examples
 
@@ -517,6 +535,29 @@ sources: [
 ```
 
 See [Range labels](README.md#range-labels) for creating option labels for ranges.
+
+#### With hierarchies
+
+```
+sources: [
+  books: [
+    ...
+    facet_fields: [
+      hierarchies: [
+        level_1: [
+          path: [:genres]
+        ],
+        level_2: [
+          path: [:genres, :regions]
+        ],
+        level_3: [
+          path: [:genres, :regions, :periods]
+        ]
+      ]
+    ]
+  ]
+]
+```
 
 ## sort_fields
 
