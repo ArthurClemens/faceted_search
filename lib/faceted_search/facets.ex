@@ -315,29 +315,10 @@ defmodule FacetedSearch.Facets do
     filtered_facet_result_states =
       create_facet_result_states(filtered_facet_rows, facet_configs, search_params_value_lookup)
 
-    selected_hierarchies_lookup =
-      all_facet_result_states
-      |> Enum.reduce(%{}, fn {_facet_name, states}, acc ->
-        Enum.reduce(states, acc, fn state, acc_1 ->
-          if state.hierarchy && state.selected do
-            Map.put(acc_1, state.name, state.value)
-          else
-            acc_1
-          end
-        end)
-      end)
-
     combined_facet_result_states =
-      combine_facet_result_states(all_facet_result_states, filtered_facet_result_states)
-      |> Enum.reduce([], fn {facet_name, states}, acc ->
-        valid_states =
-          Enum.filter(
-            states,
-            &filter_hierarchy_children_of_selected_parent(&1, selected_hierarchies_lookup)
-          )
-
-        [{facet_name, valid_states} | acc]
-      end)
+      all_facet_result_states
+      |> combine_facet_result_states(filtered_facet_result_states)
+      |> process_hierarchies(search_params_value_lookup, facet_configs)
 
     create_facets(module, combined_facet_result_states, facet_configs)
   end
@@ -377,16 +358,142 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  defp filter_hierarchy_children_of_selected_parent(
-         %{hierarchy: hierarchy, parent: parent} = state,
-         selected_hierarchies_lookup
-       )
-       when hierarchy == true and not is_nil(parent) do
-    parent_value = selected_hierarchies_lookup[parent |> to_string()]
+  defp process_hierarchies(
+         combined_facet_result_states,
+         search_params_value_lookup,
+         facet_configs
+       ) do
+    derived_parent_values = derive_parent_values(search_params_value_lookup, facet_configs)
+
+    combined_facet_result_states
+    |> auto_select_parent_values(derived_parent_values)
+    |> only_keep_children_of_selected_parents(derived_parent_values)
+  end
+
+  defp derive_parent_values(search_params_value_lookup, facet_configs) do
+    hierarchy_facet_configs =
+      Enum.filter(facet_configs, fn {_name, config} -> !!config.hierarchy end)
+
+    parent_lookup =
+      hierarchy_facet_configs
+      |> Enum.reduce(%{}, fn {name, config}, acc ->
+        Map.put(acc, name, config.parent)
+      end)
+
+    hierarchy_facet_config_name_lookup =
+      Enum.reduce(hierarchy_facet_configs, %{}, fn {name, _config}, acc ->
+        Map.put(acc, to_string(name), true)
+      end)
+
+    hierarchy_search_params_value_lookup =
+      Enum.reduce(search_params_value_lookup, %{}, fn {name, value}, acc ->
+        if hierarchy_facet_config_name_lookup[name] do
+          Map.put(acc, name, value)
+        else
+          acc
+        end
+      end)
+
+    facet_value_list =
+      Enum.reduce(hierarchy_search_params_value_lookup, [], fn {name, values}, acc ->
+        Enum.concat(
+          Enum.reduce(values, [], fn value, acc_1 ->
+            Enum.concat(
+              Map.new([{name |> String.to_existing_atom(), value}]),
+              acc_1
+            )
+          end),
+          acc
+        )
+      end)
+
     separator = Constants.hierarchy_separator()
 
-    if parent_value do
-      # Allow if the "parent" part of the value matches the selected parent
+    Enum.reduce(facet_value_list, [], fn {facet_name, value}, acc ->
+      Enum.concat(
+        collect_parent_values(facet_name, value |> String.split(separator), parent_lookup, []),
+        acc
+      )
+    end)
+    |> Enum.uniq()
+    |> Enum.reduce(%{}, fn {facet_name, parent_value}, acc ->
+      Map.update(acc, facet_name, [parent_value], fn existing -> [parent_value | existing] end)
+    end)
+  end
+
+  defp collect_parent_values(_facet_name, value_parts, _parent_lookup, collected)
+       when value_parts == [],
+       do: collected
+
+  defp collect_parent_values(facet_name, value_parts, parent_lookup, collected) do
+    parent_facet_name = parent_lookup[facet_name]
+
+    if parent_facet_name == nil do
+      collected
+    else
+      parent_value_parts =
+        value_parts
+        |> Enum.reverse()
+        |> tl()
+        |> Enum.reverse()
+
+      parent_value = Enum.join(parent_value_parts, Constants.hierarchy_separator())
+
+      collected =
+        Enum.concat(
+          Map.new([{parent_facet_name, parent_value}]),
+          collected
+        )
+
+      collect_parent_values(parent_facet_name, parent_value_parts, parent_lookup, collected)
+    end
+  end
+
+  # Auto-select parent values based on value path
+  defp auto_select_parent_values(facet_result_states, derived_parent_values) do
+    facet_result_states
+    |> Enum.reduce([], fn {facet_name, states} = kv, acc ->
+      parent_values_to_select = derived_parent_values[facet_name]
+
+      if parent_values_to_select do
+        updated_states =
+          Enum.map(states, &Map.put(&1, :selected, &1.value in parent_values_to_select))
+
+        [{facet_name, updated_states} | acc]
+      else
+        [kv | acc]
+      end
+    end)
+  end
+
+  defp only_keep_children_of_selected_parents(facet_result_states, derived_parent_values)
+       when derived_parent_values != %{} do
+    facet_result_states
+    |> Enum.reduce([], fn {facet_name, states}, acc ->
+      valid_states =
+        Enum.filter(
+          states,
+          &filter_children_of_selected_parent(&1, derived_parent_values)
+        )
+
+      [{facet_name, valid_states} | acc]
+    end)
+  end
+
+  defp only_keep_children_of_selected_parents(facet_result_states, _derived_parent_values),
+    do: facet_result_states
+
+  # Filter options where the "parent" part of the value matches one of the selected parents
+  defp filter_children_of_selected_parent(
+         %{hierarchy: hierarchy, parent: parent} = state,
+         derived_parent_values
+       )
+       when hierarchy == true and not is_nil(parent) do
+    parent_values = derived_parent_values[parent]
+
+    if parent_values do
+      separator = Constants.hierarchy_separator()
+
       parent_value_to_match =
         state.value
         |> String.split(separator)
@@ -395,14 +502,13 @@ defmodule FacetedSearch.Facets do
         |> Enum.reverse()
         |> Enum.join(separator)
 
-      parent_value_to_match == parent_value
+      parent_value_to_match in parent_values
     else
       false
     end
   end
 
-  defp filter_hierarchy_children_of_selected_parent(state, _selected_hierarchies_lookup),
-    do: state
+  defp filter_children_of_selected_parent(state, _), do: state
 
   @spec create_facets(
           module(),
@@ -474,7 +580,7 @@ defmodule FacetedSearch.Facets do
       facet_config = get_in(facet_configs, [Access.key(String.to_existing_atom(name))])
 
       if is_nil(facet_config) do
-        Logger.error("FacetedSearch: facet_field '#{name}' is not configured.")
+        raise "FacetedSearch: facet_field '#{name}' is not configured."
       end
 
       value = cast_value(raw_value, facet_config)
