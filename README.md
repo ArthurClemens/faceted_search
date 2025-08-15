@@ -181,7 +181,7 @@ the generated column names are prefixed with `sort_`. For example, a field `titl
 ```elixir
 params = %{
   filters: [...],
-  order_by: [:publication_year, :sort_title],
+  order_by: [:sort_publication_year, :sort_title],
   order_directions: [:desc, :asc]
 }
 ```

@@ -355,6 +355,13 @@ defmodule FacetedSearch do
   def create_search_view(module, view_id, opts \\ []),
     do: module.create_search_view(view_id, opts)
 
+  @doc """
+  Returns true if the search view exists.
+
+  Options:
+  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
+  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
+  """
   @spec search_view_exists?(module(), String.t(), [create_search_view_option()]) ::
           boolean()
   def search_view_exists?(module, view_id, opts \\ []),
@@ -362,6 +369,10 @@ defmodule FacetedSearch do
 
   @doc """
   Creates the search view if it does not exist.
+
+  Options:
+  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
+  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
   """
   @spec create_search_view_if_not_exists(module(), String.t(), [
           create_search_view_option()
@@ -390,6 +401,10 @@ defmodule FacetedSearch do
 
   @doc """
   Drops the search view.
+
+  Options:
+  - concurrently `boolean()`
+  - [Postgrex query options](https://hexdocs.pm/postgrex/Postgrex.html#query/4-options)
 
   ## Examples
 
