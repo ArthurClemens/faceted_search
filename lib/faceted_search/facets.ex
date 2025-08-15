@@ -409,7 +409,7 @@ defmodule FacetedSearch.Facets do
 
     separator = Constants.hierarchy_separator()
 
-    Enum.reduce(facet_value_list, [], fn {facet_name, value}, acc ->
+    Enum.reduce(facet_value_list, facet_value_list, fn {facet_name, value}, acc ->
       Enum.concat(
         collect_parent_values(facet_name, value |> String.split(separator), parent_lookup, []),
         acc
