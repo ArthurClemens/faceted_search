@@ -676,11 +676,11 @@ defmodule FacetedSearch.SearchView do
   @spec create_hierarchies_column(Source.t(), SearchViewDescription.t()) ::
           String.t()
   defp create_hierarchies_column(
-         %{fields: fields, data_fields: data_fields} = source,
+         %{fields: fields, facet_fields: facet_fields} = source,
          _
        )
-       when is_list(fields) and fields != [] and is_list(data_fields) and
-              data_fields != [] do
+       when is_list(fields) and fields != [] and is_list(facet_fields) and
+              facet_fields != [] do
     hierarchy_entries = create_hierarchy_entries(source)
 
     object_string =
@@ -698,6 +698,8 @@ defmodule FacetedSearch.SearchView do
       """
     end
   end
+
+  defp create_hierarchies_column(_, _), do: "NULL::jsonb AS hierarchies"
 
   @spec create_hierarchy_entries(Source.t()) :: list(String.t())
   defp create_hierarchy_entries(source) do
@@ -775,11 +777,11 @@ defmodule FacetedSearch.SearchView do
   @spec create_bucket_column(Source.t(), SearchViewDescription.t()) ::
           String.t()
   defp create_bucket_column(
-         %{fields: fields, data_fields: data_fields} = source,
+         %{fields: fields, facet_fields: facet_fields} = source,
          _
        )
-       when is_list(fields) and fields != [] and is_list(data_fields) and
-              data_fields != [] do
+       when is_list(fields) and fields != [] and is_list(facet_fields) and
+              facet_fields != [] do
     bucket_entries = create_bucket_entries(source)
 
     object_string =
@@ -797,6 +799,8 @@ defmodule FacetedSearch.SearchView do
       """
     end
   end
+
+  defp create_bucket_column(_, _), do: "NULL::jsonb AS buckets"
 
   @spec create_bucket_entries(Source.t()) :: list(String.t())
   defp create_bucket_entries(source) do
