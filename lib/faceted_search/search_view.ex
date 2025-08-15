@@ -195,7 +195,10 @@ defmodule FacetedSearch.SearchView do
 
     create_pg_trgm_sql = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
-    concurrent_index_cmd = if Application.fetch_env!(:faceted_search, :mode) == :test, do: "", else: "CONCURRENTLY"
+    concurrent_index_cmd =
+      if Application.get_env(:faceted_search, :mode) == :test,
+        do: "",
+        else: "CONCURRENTLY"
 
     drop_indexes_sql = [
       ([
@@ -205,9 +208,7 @@ defmodule FacetedSearch.SearchView do
          "text",
          "tsv",
          "hierarchies",
-         "buckets",
-         "inserted_at",
-         "updated_at"
+         "buckets"
        ] ++
          get_sort_column_names(search_view_description))
       |> Enum.map(fn name ->
@@ -238,9 +239,7 @@ defmodule FacetedSearch.SearchView do
          %{name: "text", using: "gin(text gin_trgm_ops)"},
          %{name: "tsv", using: "gin(tsv)"},
          %{name: "hierarchies", using: "gin(data)"},
-         %{name: "buckets", using: "gin(data)"},
-         %{name: "inserted_at"},
-         %{name: "updated_at"}
+         %{name: "buckets", using: "gin(data)"}
        ] ++
          (get_sort_column_names(search_view_description)
           |> Enum.map(&%{name: &1})))
@@ -309,7 +308,6 @@ defmodule FacetedSearch.SearchView do
         &create_tsv_column/2,
         &create_hierarchies_column/2,
         &create_bucket_column/2,
-        &create_date_columns/2,
         &create_sort_columns/2
       ]
       |> Enum.filter(&(not is_nil(&1) and &1 != ""))
@@ -690,11 +688,15 @@ defmodule FacetedSearch.SearchView do
       |> Enum.filter(&(&1 != []))
       |> Enum.join(",\n#{line_indent(1)}")
 
-    """
-    jsonb_build_object(
-    #{line_indent(1)}#{object_string}
-    ) AS hierarchies
-    """
+    if object_string == "" do
+      "NULL::jsonb AS hierarchies"
+    else
+      """
+      jsonb_build_object(
+      #{line_indent(1)}#{object_string}
+      ) AS hierarchies
+      """
+    end
   end
 
   @spec create_hierarchy_entries(Source.t()) :: list(String.t())
@@ -785,11 +787,15 @@ defmodule FacetedSearch.SearchView do
       |> Enum.filter(&(&1 != []))
       |> Enum.join(",\n#{line_indent(1)}")
 
-    """
-    jsonb_build_object(
-    #{line_indent(1)}#{object_string}
-    ) AS buckets
-    """
+    if object_string == "" do
+      "NULL::jsonb AS buckets"
+    else
+      """
+      jsonb_build_object(
+      #{line_indent(1)}#{object_string}
+      ) AS buckets
+      """
+    end
   end
 
   @spec create_bucket_entries(Source.t()) :: list(String.t())
@@ -816,16 +822,6 @@ defmodule FacetedSearch.SearchView do
     end
   end
 
-  # Date columns
-
-  @spec create_date_columns(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_date_columns(%{table_name: table_name} = _source, _) do
-    """
-    #{table_name}.inserted_at AS inserted_at,
-    #{table_name}.updated_at AS updated_at
-    """
-  end
-
   # Sort columns
 
   @spec create_sort_columns(Source.t(), SearchViewDescription.t()) :: String.t()
@@ -838,7 +834,8 @@ defmodule FacetedSearch.SearchView do
          },
          search_view_description
        )
-       when is_list(fields) and fields != [] and is_list(sort_fields) and sort_fields != [] do
+       when is_list(fields) and fields != [] and is_list(sort_fields) and
+              sort_fields != [] do
     all_fields = get_all_fields(search_view_description)
 
     # We need to generate the same sort columns for every source:
@@ -848,7 +845,7 @@ defmodule FacetedSearch.SearchView do
       Enum.concat(sort_fields, get_all_sort_fields(search_view_description))
       |> Enum.uniq()
 
-    current_source_sort_field_names = (sort_fields || []) |> Enum.map(& &1.name)
+    current_source_sort_field_names = sort_fields |> Enum.map(& &1.name)
 
     combined_sort_fields
     |> Enum.map(

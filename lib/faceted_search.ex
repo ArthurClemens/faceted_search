@@ -42,11 +42,7 @@ defmodule FacetedSearch do
       sortable_fields =
         FlopSchema.create_sortable_fields(options, custom_fields_option)
 
-      sortable_option =
-        Enum.concat(sortable_fields |> Enum.map(& &1.name), [
-          :updated_at,
-          :inserted_at
-        ])
+      sortable_option = Enum.map(sortable_fields, & &1.name)
 
       use Ecto.Schema
 
@@ -76,8 +72,6 @@ defmodule FacetedSearch do
         field(:source, :string)
         field(:data, :map)
         field(:text, :string)
-        field(:inserted_at, :utc_datetime)
-        field(:updated_at, :utc_datetime)
 
         Enum.each(sortable_fields, fn %{name: name, ecto_type: ecto_type} ->
           field(name, ecto_type)

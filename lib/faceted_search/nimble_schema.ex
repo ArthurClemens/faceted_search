@@ -10,9 +10,7 @@ defmodule FacetedSearch.NimbleSchema do
     :source,
     :data,
     :text,
-    :tsv,
-    :inserted_at,
-    :updated_at
+    :tsv
   ]
   @faceted_search_option_schema [
     module: [

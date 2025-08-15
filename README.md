@@ -64,10 +64,8 @@ The search view contains these base columns:
 - `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
 - `text` - A `text` column that contains a "bag of words" per row, used for text searches.
 - `tsv` - A `tsvector` column used for generating facets (internal use).
-- `hierarchies` - A `jsonb` column that stores hierarchical data (internal use; only when hierarcies are specified).
-- `buckets` - A `jsonb` column that stores range bucket data (internal use; only when ranges are specified).
-- `inserted_at` - Source timestamp
-- `updated_at` - Source timestamp
+- `hierarchies` - A `jsonb` column that stores hierarchical data (internal use).
+- `buckets` - A `jsonb` column that stores range bucket data (internal use).
 
 Additional sort columns are added when option `sort_fields` is used - see [Sorting ↓](#sorting).
 
@@ -130,9 +128,7 @@ Example result:
         "publication_year" => 1968,
         "title" => "A Wizard of Earthsea"
       },
-      text: "A Wizard of Earthsea Ursula K. Le Guin",
-      inserted_at: # source timestamp
-      updated_at: # source timestamp
+      text: "A Wizard of Earthsea Ursula K. Le Guin"
     },
     ...
   ], %Flop.Meta{}}
@@ -172,8 +168,8 @@ use FacetedSearch,
     books: [
       ...
       sort_fields: [
-        :title,
-        :publication_year
+        :publication_year,
+        :title
       ]
     ]
   ]
@@ -185,8 +181,8 @@ the generated column names are prefixed with `sort_`. For example, a field `titl
 ```elixir
 params = %{
   filters: [...],
-  order_by: [:sort_title],
-  order_directions: [:asc]
+  order_by: [:publication_year, :sort_title],
+  order_directions: [:desc, :asc]
 }
 ```
 
@@ -532,6 +528,8 @@ facet_fields: [
 Note that the `publication_year` value in the facet results now contains the bucket number instead of the year.
 
 #### Example with dates
+
+This example assumes `updated_at` is defined in `fields`.
 
 ```elixir
 facet_fields: [
