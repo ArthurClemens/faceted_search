@@ -466,8 +466,7 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  defp only_keep_children_of_selected_parents(facet_result_states, derived_parent_values)
-       when derived_parent_values != %{} do
+  defp only_keep_children_of_selected_parents(facet_result_states, derived_parent_values) do
     facet_result_states
     |> Enum.reduce([], fn {facet_name, states}, acc ->
       valid_states =
@@ -479,9 +478,6 @@ defmodule FacetedSearch.Facets do
       [{facet_name, valid_states} | acc]
     end)
   end
-
-  defp only_keep_children_of_selected_parents(facet_result_states, _derived_parent_values),
-    do: facet_result_states
 
   # Filter options where the "parent" part of the value matches one of the selected parents
   defp filter_children_of_selected_parent(
