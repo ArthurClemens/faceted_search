@@ -195,6 +195,8 @@ defmodule FacetedSearch.SearchView do
 
     create_pg_trgm_sql = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
+    concurrent_index_cmd = if Application.fetch_env!(:faceted_search, :mode) == :test, do: "", else: "CONCURRENTLY"
+
     drop_indexes_sql = [
       ([
          "id",
@@ -210,7 +212,7 @@ defmodule FacetedSearch.SearchView do
          get_sort_column_names(search_view_description))
       |> Enum.map(fn name ->
         """
-        DROP INDEX CONCURRENTLY IF EXISTS #{view_name_with_prefix}_#{name}_idx
+        DROP INDEX #{concurrent_index_cmd} IF EXISTS #{view_name_with_prefix}_#{name}_idx
         """
       end)
     ]
@@ -255,7 +257,7 @@ defmodule FacetedSearch.SearchView do
           end
 
         """
-        #{command} INDEX CONCURRENTLY #{view_name}_#{name}_idx
+        #{command} INDEX #{concurrent_index_cmd} #{view_name}_#{name}_idx
         #{on}
         """
       end)
