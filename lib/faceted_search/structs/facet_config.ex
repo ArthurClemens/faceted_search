@@ -66,7 +66,9 @@ defmodule FacetedSearch.FacetConfig do
           else: facet_field.name
 
       ecto_type =
-        if facet_field.hierarchy, do: :string, else: ecto_types_by_field[facet_field.name]
+        if facet_field.hierarchy,
+          do: :string,
+          else: ecto_types_by_field[facet_field.name]
 
       Map.put(acc, facet_field.name, %FacetConfig{
         field: facet_field.name,

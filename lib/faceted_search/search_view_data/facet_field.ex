@@ -43,14 +43,18 @@ defmodule FacetedSearch.FacetField do
     {range_bounds, range_buckets} =
       cond do
         Keyword.has_key?(field_opts, :number_range_bounds) ->
-          range_bounds = Keyword.get(field_opts, :number_range_bounds) |> Enum.sort()
+          range_bounds =
+            Keyword.get(field_opts, :number_range_bounds) |> Enum.sort()
+
           range_buckets = create_range_buckets(range_bounds)
           {range_bounds, range_buckets}
 
         Keyword.has_key?(field_opts, :date_range_bounds) ->
           range_bounds = Keyword.get(field_opts, :date_range_bounds)
           range_buckets = create_range_buckets(range_bounds)
-          {Enum.map(range_bounds, &maybe_type_range_bound_entry/1), range_buckets}
+
+          {Enum.map(range_bounds, &maybe_type_range_bound_entry/1),
+           range_buckets}
 
         true ->
           {nil, nil}
@@ -72,7 +76,8 @@ defmodule FacetedSearch.FacetField do
   end
 
   @spec create_range_buckets(list(range_bound())) :: list(range_bucket())
-  defp create_range_buckets(range_bounds) when is_list(range_bounds) and range_bounds != [] do
+  defp create_range_buckets(range_bounds)
+       when is_list(range_bounds) and range_bounds != [] do
     Enum.zip([:lower] ++ range_bounds, range_bounds ++ [:upper])
     |> Enum.map(fn {a, b} -> [a, b] end)
     |> Enum.with_index()

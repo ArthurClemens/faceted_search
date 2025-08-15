@@ -49,7 +49,8 @@ defmodule FacetedSearch.Source do
       fields: Keyword.get(options, :fields) |> collect_fields(table_name),
       data_fields: Keyword.get(options, :data_fields) |> collect_data_fields(),
       text_fields: Keyword.get(options, :text_fields),
-      facet_fields: Keyword.get(options, :facet_fields) |> collect_facet_fields(),
+      facet_fields:
+        Keyword.get(options, :facet_fields) |> collect_facet_fields(),
       sort_fields: Keyword.get(options, :sort_fields) |> collect_sort_fields()
     }
   end
@@ -60,10 +61,13 @@ defmodule FacetedSearch.Source do
 
   defp collect_joins(_joins), do: nil
 
-  defp collect_fields(fields, table_name) when is_list(fields) and fields != [] do
+  defp collect_fields(fields, table_name)
+       when is_list(fields) and fields != [] do
     fields
     |> Enum.concat(default_fields())
-    |> Enum.map(fn {name, field_options} -> Field.new(name, field_options, table_name) end)
+    |> Enum.map(fn {name, field_options} ->
+      Field.new(name, field_options, table_name)
+    end)
   end
 
   defp collect_fields(_fields, _table_name), do: nil
@@ -84,19 +88,22 @@ defmodule FacetedSearch.Source do
 
   defp collect_data_fields(_fields), do: nil
 
-  defp collect_scopes(scope_keys, module) when is_list(scope_keys) and scope_keys != [] do
+  defp collect_scopes(scope_keys, module)
+       when is_list(scope_keys) and scope_keys != [] do
     Enum.map(scope_keys, fn scope_key -> Scope.new(module, scope_key) end)
   end
 
   defp collect_scopes(_scope_keys, _module), do: nil
 
-  defp collect_sort_fields(sort_fields) when is_list(sort_fields) and sort_fields != [] do
+  defp collect_sort_fields(sort_fields)
+       when is_list(sort_fields) and sort_fields != [] do
     Enum.map(sort_fields, fn field_options -> SortField.new(field_options) end)
   end
 
   defp collect_sort_fields(_sort_fields), do: nil
 
-  defp collect_facet_fields(facet_fields) when is_list(facet_fields) and facet_fields != [] do
+  defp collect_facet_fields(facet_fields)
+       when is_list(facet_fields) and facet_fields != [] do
     {hierarchy_options, regular_options} =
       facet_fields
       |> Enum.split_with(fn
@@ -105,7 +112,9 @@ defmodule FacetedSearch.Source do
       end)
 
     regular_fields =
-      Enum.map(regular_options, fn field_options -> FacetField.new(field_options) end)
+      Enum.map(regular_options, fn field_options ->
+        FacetField.new(field_options)
+      end)
 
     hierarchy_fields = create_hierarchy_fields(hierarchy_options)
 

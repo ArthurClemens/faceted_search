@@ -88,7 +88,10 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
           }
         )
       )
-      |> Enum.map_join("\n", &"#{String.duplicate(@indent, &1.indent)}#{&1.text}")
+      |> Enum.map_join(
+        "\n",
+        &"#{String.duplicate(@indent, &1.indent)}#{&1.text}"
+      )
     end)
   end
 end

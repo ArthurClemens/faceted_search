@@ -5,11 +5,20 @@ defmodule FacetedSearch.NimbleSchema do
   alias FacetedSearch.Errors.InvalidOptionsError
   alias FacetedSearch.Errors.MissingCallbackError
 
-  @default_schema_fields [:id, :source, :data, :text, :tsv, :inserted_at, :updated_at]
+  @default_schema_fields [
+    :id,
+    :source,
+    :data,
+    :text,
+    :tsv,
+    :inserted_at,
+    :updated_at
+  ]
   @faceted_search_option_schema [
     module: [
       type: :atom,
-      doc: "The schema module that calls `use FacetedSearch`. This is inserted automatically."
+      doc:
+        "The schema module that calls `use FacetedSearch`. This is inserted automatically."
     ],
     sources: [
       type: :keyword_list,
@@ -100,7 +109,8 @@ defmodule FacetedSearch.NimbleSchema do
               %{path: [_, _, :data_fields]}, _field_keys ->
                 :any
 
-              %{path: [_, _, :data_fields, _], key: key, values: values}, field_keys ->
+              %{path: [_, _, :data_fields, _], key: key, values: values},
+              field_keys ->
                 if Keyword.keyword?(values.raw) and key in field_keys do
                   :any
                 else
@@ -128,7 +138,8 @@ defmodule FacetedSearch.NimbleSchema do
           |> validate_options(module, opts, :text_fields)
           |> validate_options(module, opts, :facet_fields,
             get_supported_keyword_list_options: fn
-              %{path: [_, _, :facet_fields], key: key}, _ when key == :hierarchies ->
+              %{path: [_, _, :facet_fields], key: key}, _
+              when key == :hierarchies ->
                 :any
 
               %{path: [_, _, :facet_fields, :hierarchies]}, _ ->
@@ -142,7 +153,8 @@ defmodule FacetedSearch.NimbleSchema do
                   hide_when_selected: :boolean
                 }
 
-              %{path: [_, _, :facet_fields], key: key, values: values}, field_keys ->
+              %{path: [_, _, :facet_fields], key: key, values: values},
+              field_keys ->
                 if Keyword.keyword?(values.raw) and key in field_keys do
                   :any
                 else
@@ -186,10 +198,21 @@ defmodule FacetedSearch.NimbleSchema do
     end
   end
 
-  defp validate_options(collected_errors, module, opts, option, validation_opts \\ []) do
+  defp validate_options(
+         collected_errors,
+         module,
+         opts,
+         option,
+         validation_opts \\ []
+       ) do
     get_source_entries(opts, option)
-    |> Enum.reduce(collected_errors, fn %{processed: processed, field_keys: field_keys}, acc ->
-      validation_opts = Keyword.put_new(validation_opts, :field_keys, field_keys)
+    |> Enum.reduce(collected_errors, fn %{
+                                          processed: processed,
+                                          field_keys: field_keys
+                                        },
+                                        acc ->
+      validation_opts =
+        Keyword.put_new(validation_opts, :field_keys, field_keys)
 
       Enum.reduce(processed, acc, fn {type, entries}, acc_1 ->
         list_errored_entries(type, entries, validation_opts)
@@ -205,7 +228,10 @@ defmodule FacetedSearch.NimbleSchema do
     |> Keyword.get_values(:sources)
     |> List.flatten()
     |> Enum.reduce([], fn {source, source_options}, acc ->
-      field_keys = Keyword.get_values(source_options, :fields) |> List.flatten() |> Keyword.keys()
+      field_keys =
+        Keyword.get_values(source_options, :fields)
+        |> List.flatten()
+        |> Keyword.keys()
 
       entries =
         source_options
@@ -231,7 +257,9 @@ defmodule FacetedSearch.NimbleSchema do
     merge_entries = fn entries, acc ->
       Enum.reduce(entries, acc, fn
         {key, value}, acc ->
-          Map.update(acc, key, [], fn existing -> [value | existing] |> List.flatten() end)
+          Map.update(acc, key, [], fn existing ->
+            [value | existing] |> List.flatten()
+          end)
 
         _, acc ->
           acc
@@ -369,7 +397,8 @@ defmodule FacetedSearch.NimbleSchema do
       end)
       |> insert_error_type(:invalid_value)
 
-    Enum.concat(unsupported_options, invalid_values) |> Enum.uniq_by(&[&1.key | &1.path])
+    Enum.concat(unsupported_options, invalid_values)
+    |> Enum.uniq_by(&[&1.key | &1.path])
   end
 
   defp supported_keys?(entry, validation_opts, value_keys \\ nil) do
@@ -464,7 +493,8 @@ defmodule FacetedSearch.NimbleSchema do
       Keyword.get_values(opts, :sources)
       |> List.flatten()
       |> Enum.map(fn {_, sublist} ->
-        Keyword.has_key?(sublist, :scope_keys) and Keyword.get(sublist, :scope_keys) != []
+        Keyword.has_key?(sublist, :scope_keys) and
+          Keyword.get(sublist, :scope_keys) != []
       end)
       |> List.flatten()
       |> Enum.any?()
@@ -472,7 +502,8 @@ defmodule FacetedSearch.NimbleSchema do
     require_scope_by_callback(module, has_scopes_option)
   end
 
-  defp require_scope_by_callback(module, has_scopes_option) when has_scopes_option do
+  defp require_scope_by_callback(module, has_scopes_option)
+       when has_scopes_option do
     if not Module.defines?(module, {Constants.scope_callback(), 2}) do
       raise MissingCallbackError.message(%{
               callback: "scope_by/2",

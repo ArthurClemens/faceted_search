@@ -7,7 +7,11 @@ defmodule FacetedSearch.Types do
     quote do
       if :schema_options in unquote(includes) do
         @type schema_options() :: [
-                unquote(NimbleOptions.option_typespec(FacetedSearch.NimbleSchema.option_schema()))
+                unquote(
+                  NimbleOptions.option_typespec(
+                    FacetedSearch.NimbleSchema.option_schema()
+                  )
+                )
               ]
       end
 
@@ -42,7 +46,9 @@ defmodule FacetedSearch.Types do
         @type range_bucket_middle :: list(range_bound())
         @type range_bucket_upper :: list(range_bound() | :upper)
         @type range_bucket ::
-                {range_bucket_lower() | range_bucket_middle() | range_bucket_upper(), integer()}
+                {range_bucket_lower()
+                 | range_bucket_middle()
+                 | range_bucket_upper(), integer()}
       end
     end
   end

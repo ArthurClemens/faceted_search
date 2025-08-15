@@ -40,7 +40,13 @@ defmodule FacetedSearch.Filter do
         conditions =
           cond do
             is_facet_search ->
-              get_facet_conditions(op, value_type, expr, query_value, source_is_array)
+              get_facet_conditions(
+                op,
+                value_type,
+                expr,
+                query_value,
+                source_is_array
+              )
 
             source_is_array_value ->
               get_array_conditions(op, value_type, expr, query_value)
@@ -57,12 +63,23 @@ defmodule FacetedSearch.Filter do
     end
   end
 
-  defp get_conditions(:==, expr, query_value), do: dynamic([r], ^expr == ^query_value)
-  defp get_conditions(:!=, expr, query_value), do: dynamic([r], ^expr != ^query_value)
-  defp get_conditions(:>, expr, query_value), do: dynamic([r], ^expr > ^query_value)
-  defp get_conditions(:<, expr, query_value), do: dynamic([r], ^expr < ^query_value)
-  defp get_conditions(:>=, expr, query_value), do: dynamic([r], ^expr >= ^query_value)
-  defp get_conditions(:<=, expr, query_value), do: dynamic([r], ^expr <= ^query_value)
+  defp get_conditions(:==, expr, query_value),
+    do: dynamic([r], ^expr == ^query_value)
+
+  defp get_conditions(:!=, expr, query_value),
+    do: dynamic([r], ^expr != ^query_value)
+
+  defp get_conditions(:>, expr, query_value),
+    do: dynamic([r], ^expr > ^query_value)
+
+  defp get_conditions(:<, expr, query_value),
+    do: dynamic([r], ^expr < ^query_value)
+
+  defp get_conditions(:>=, expr, query_value),
+    do: dynamic([r], ^expr >= ^query_value)
+
+  defp get_conditions(:<=, expr, query_value),
+    do: dynamic([r], ^expr <= ^query_value)
 
   defp get_conditions(op, expr, query_value)
        when op in [
@@ -78,14 +95,21 @@ defmodule FacetedSearch.Filter do
        do: collect_string_conditions(op, expr, query_value)
 
   defp get_conditions(op, expr, query_value) do
-    Logger.error("Operator #{op} for query value '#{query_value}' is not supported")
+    Logger.error(
+      "Operator #{op} for query value '#{query_value}' is not supported"
+    )
+
     expr
   end
 
   defp get_array_conditions(:==, :string, expr, query_value) do
     dynamic(
       [r],
-      fragment("? \\?& STRING_TO_ARRAY(?, ',')", ^expr, ^(query_value |> Enum.join(",")))
+      fragment(
+        "? \\?& STRING_TO_ARRAY(?, ',')",
+        ^expr,
+        ^(query_value |> Enum.join(","))
+      )
     )
   end
 
@@ -93,33 +117,58 @@ defmodule FacetedSearch.Filter do
        when source_is_array do
     dynamic(
       [r],
-      fragment("? \\?| STRING_TO_ARRAY(?, ',')", ^expr, ^(query_value |> Enum.join(",")))
+      fragment(
+        "? \\?| STRING_TO_ARRAY(?, ',')",
+        ^expr,
+        ^(query_value |> Enum.join(","))
+      )
     )
   end
 
   defp get_facet_conditions(:==, :string, expr, query_value, _source_is_array) do
     dynamic(
       [r],
-      fragment("? <@ STRING_TO_ARRAY(?, ',')::text[]", ^expr, ^(query_value |> Enum.join(",")))
+      fragment(
+        "? <@ STRING_TO_ARRAY(?, ',')::text[]",
+        ^expr,
+        ^(query_value |> Enum.join(","))
+      )
     )
   end
 
   defp get_facet_conditions(:==, :boolean, expr, query_value, _source_is_array) do
     dynamic(
       [r],
-      fragment("? <@ STRING_TO_ARRAY(?, ',')::boolean[]", ^expr, ^(query_value |> Enum.join(",")))
+      fragment(
+        "? <@ STRING_TO_ARRAY(?, ',')::boolean[]",
+        ^expr,
+        ^(query_value |> Enum.join(","))
+      )
     )
   end
 
   defp get_facet_conditions(:==, :integer, expr, query_value, _source_is_array) do
     dynamic(
       [r],
-      fragment("? <@ STRING_TO_ARRAY(?, ',')::int[]", ^expr, ^(query_value |> Enum.join(",")))
+      fragment(
+        "? <@ STRING_TO_ARRAY(?, ',')::int[]",
+        ^expr,
+        ^(query_value |> Enum.join(","))
+      )
     )
   end
 
-  defp get_facet_conditions(op, _value_type, expr, query_value, _source_is_array) do
-    Logger.error("Operator #{op} for query value '#{query_value}' is not supported")
+  defp get_facet_conditions(
+         op,
+         _value_type,
+         expr,
+         query_value,
+         _source_is_array
+       ) do
+    Logger.error(
+      "Operator #{op} for query value '#{query_value}' is not supported"
+    )
+
     expr
   end
 
@@ -145,7 +194,8 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  def dynamic_expr(name, {:array, _}, %{source_is_array: source_is_array}) when source_is_array do
+  def dynamic_expr(name, {:array, _}, %{source_is_array: source_is_array})
+      when source_is_array do
     dynamic(
       [r],
       fragment(
@@ -258,20 +308,27 @@ defmodule FacetedSearch.Filter do
   defp combinator(:ilike_or), do: :or
   defp combinator(_), do: :and
 
-  defp operator_query_fn(op) when op in [:like, :like_or, :like_and], do: &like_operator_query/2
+  defp operator_query_fn(op) when op in [:like, :like_or, :like_and],
+    do: &like_operator_query/2
 
   defp operator_query_fn(op) when op in [:ilike, :ilike_or, :ilike_and],
     do: &ilike_operator_query/2
 
-  defp operator_query_fn(op) when op in [:not_like], do: &not_like_operator_query/2
-  defp operator_query_fn(op) when op in [:not_ilike], do: &not_ilike_operator_query/2
+  defp operator_query_fn(op) when op in [:not_like],
+    do: &not_like_operator_query/2
+
+  defp operator_query_fn(op) when op in [:not_ilike],
+    do: &not_ilike_operator_query/2
 
   defp operator_query_fn(op) do
     Logger.error("Operator query #{op} is not supported")
   end
 
-  defp like_operator_query(term, expr), do: dynamic([r], fragment("? LIKE ?", ^expr, ^term))
-  defp ilike_operator_query(term, expr), do: dynamic([r], fragment("? ILIKE ?", ^expr, ^term))
+  defp like_operator_query(term, expr),
+    do: dynamic([r], fragment("? LIKE ?", ^expr, ^term))
+
+  defp ilike_operator_query(term, expr),
+    do: dynamic([r], fragment("? ILIKE ?", ^expr, ^term))
 
   defp not_like_operator_query(term, expr),
     do: dynamic([r], fragment("? NOT LIKE ?", ^expr, ^term))

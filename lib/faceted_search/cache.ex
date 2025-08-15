@@ -42,8 +42,11 @@ defmodule FacetedSearch.Cache do
     result =
       ets_lookup(table, view_name, data_key)
       |> tap(fn
-        {:ok, _} -> Logger.debug("FacetedSearch.Cache.get/3: data read from cache")
-        {:error, :no_cache} -> Logger.debug("FacetedSearch.Cache.get/3: no cache")
+        {:ok, _} ->
+          Logger.debug("FacetedSearch.Cache.get/3: data read from cache")
+
+        {:error, :no_cache} ->
+          Logger.debug("FacetedSearch.Cache.get/3: no cache")
       end)
 
     {:reply, result, table}
@@ -62,7 +65,9 @@ defmodule FacetedSearch.Cache do
   def handle_cast({:clear, view_name}, table) do
     ets_delete(table, view_name)
     |> tap(fn _ ->
-      Logger.debug("FacetedSearch.Cache.clear/2: cache cleared for view: #{view_name}")
+      Logger.debug(
+        "FacetedSearch.Cache.clear/2: cache cleared for view: #{view_name}"
+      )
     end)
 
     {:noreply, table}
