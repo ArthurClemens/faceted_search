@@ -276,6 +276,10 @@ facet_fields: [
 ]
 ```
 
+**Facet field keys reference data fields**
+
+Filtering on regular facets is done using the `data` column - this allows for more advanced filtering options than would be possible using the `tsv` column. Therefore, all keys listed in `facet_fields` (except for keys using range bounds or hierarchies) must be present in `data_fields`.
+
 ### 2. Performing a facet search
 
 `FacetedSearch.search/3` takes a reference to the schema and search parameters:

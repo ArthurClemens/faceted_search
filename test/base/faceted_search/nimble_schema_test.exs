@@ -33,7 +33,10 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
               :content
             ],
             facet_fields: [
-              :draft
+              :draft,
+              publish_date: [
+                number_range_bounds: [1990, 2000, 2010, 2020]
+              ]
             ]
           ]
         ]
@@ -66,6 +69,35 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
 
       assert_raise FacetedSearch.Errors.InvalidOptionsError,
                    "invalid value for :fields option: expected keyword list, got: [:title] (in options [:sources, :articles])",
+                   fn ->
+                     validate_options(options)
+                   end
+    end
+
+    test "invalid schema raises (facet_fields: not listed in data_fields)" do
+      options = [
+        sources: [
+          articles: [
+            fields: [
+              title: [
+                ecto_type: :string
+              ],
+              content: [
+                ecto_type: :string
+              ]
+            ],
+            data_fields: [
+              :title
+            ],
+            facet_fields: [
+              :draft
+            ]
+          ]
+        ]
+      ]
+
+      assert_raise RuntimeError,
+                   "    \n    Module: Elixir.FacetedSearch.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.facet_fields\n        Option \"draft\" is not supported.\n        Expected a key that is listed in `data_fields`.",
                    fn ->
                      validate_options(options)
                    end

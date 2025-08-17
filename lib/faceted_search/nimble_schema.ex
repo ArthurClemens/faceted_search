@@ -12,6 +12,7 @@ defmodule FacetedSearch.NimbleSchema do
     :text,
     :tsv
   ]
+
   @faceted_search_option_schema [
     module: [
       type: :atom,
@@ -102,27 +103,32 @@ defmodule FacetedSearch.NimbleSchema do
       {:ok, opts} ->
         collected_errors =
           []
+          # data_fields
           |> validate_options(module, opts, :data_fields,
             get_supported_keyword_list_options: fn
-              %{path: [_, _, :data_fields]}, _field_keys ->
+              %{path: [_, _, :data_fields]}, _keys_map ->
                 :any
 
               %{path: [_, _, :data_fields, _], key: key, values: values},
-              field_keys ->
-                if Keyword.keyword?(values.raw) and key in field_keys do
-                  :any
-                else
-                  if MapSet.equal?(
-                       MapSet.new([:binding, :field]),
-                       MapSet.new(Keyword.keys(values.raw))
-                     ) do
+              %{field_keys: field_keys} ->
+                cond do
+                  Keyword.keyword?(values.raw) and key in field_keys ->
                     :any
-                  else
-                    field_keys
-                  end
+
+                  MapSet.equal?(
+                    MapSet.new([:binding, :field]),
+                    MapSet.new(Keyword.keys(values.raw))
+                  ) ->
+                    :any
+
+                  key in [:cast] ->
+                    :any
+
+                  true ->
+                    {:field_keys, field_keys}
                 end
 
-              %{path: [_, _, :data_fields, _, _]}, _field_keys ->
+              %{path: [_, _, :data_fields, _, _]}, _keys_map ->
                 %{
                   binding: :atom,
                   field: :atom,
@@ -133,7 +139,11 @@ defmodule FacetedSearch.NimbleSchema do
                 nil
             end
           )
+
+          # text_fields
           |> validate_options(module, opts, :text_fields)
+
+          # facet_fields
           |> validate_options(module, opts, :facet_fields,
             get_supported_keyword_list_options: fn
               %{path: [_, _, :facet_fields], key: key}, _
@@ -143,7 +153,7 @@ defmodule FacetedSearch.NimbleSchema do
               %{path: [_, _, :facet_fields, :hierarchies]}, _ ->
                 :any
 
-              %{path: [_, _, :facet_fields, :hierarchies, _]}, _field_keys ->
+              %{path: [_, _, :facet_fields, :hierarchies, _]}, _keys_map ->
                 %{
                   path: {:array, :atom},
                   label: :atom,
@@ -152,14 +162,28 @@ defmodule FacetedSearch.NimbleSchema do
                 }
 
               %{path: [_, _, :facet_fields], key: key, values: values},
-              field_keys ->
-                if Keyword.keyword?(values.raw) and key in field_keys do
-                  :any
-                else
-                  field_keys
+              %{field_keys: field_keys, data_field_keys: data_field_keys} ->
+                is_range_bounds =
+                  Keyword.keyword?(values.raw) and
+                    (Keyword.has_key?(values.raw, :number_range_bounds) or
+                       Keyword.has_key?(values.raw, :date_range_bounds))
+
+                cond do
+                  is_range_bounds and key in field_keys -> :any
+                  is_range_bounds -> {:field_keys, field_keys}
+                  key in data_field_keys -> :any
+                  true -> {:data_field_keys, data_field_keys}
                 end
 
-              %{path: [_, _, :facet_fields, _]}, _field_keys ->
+              %{path: [_, _, :facet_fields], key: key},
+              %{data_field_keys: data_field_keys} ->
+                if key in data_field_keys do
+                  :any
+                else
+                  {:data_field_keys, data_field_keys}
+                end
+
+              %{path: [_, _, :facet_fields, _]}, _keys_map ->
                 %{
                   label: :atom,
                   number_range_bounds: {:array, :number},
@@ -170,11 +194,14 @@ defmodule FacetedSearch.NimbleSchema do
                 nil
             end
           )
+
+          # sort_fields
           |> validate_options(module, opts, :sort_fields,
             get_supported_keyword_list_options: fn
               _, _ -> %{cast: :atom}
             end
           )
+
           # Place items with same error type together
           |> Enum.group_by(& &1.error_type)
           |> Map.values()
@@ -206,11 +233,15 @@ defmodule FacetedSearch.NimbleSchema do
     get_source_entries(opts, option)
     |> Enum.reduce(collected_errors, fn %{
                                           processed: processed,
-                                          field_keys: field_keys
+                                          field_keys: field_keys,
+                                          data_field_keys: data_field_keys
                                         },
                                         acc ->
       validation_opts =
-        Keyword.put_new(validation_opts, :field_keys, field_keys)
+        Keyword.merge(validation_opts,
+          field_keys: field_keys,
+          data_field_keys: data_field_keys
+        )
 
       Enum.reduce(processed, acc, fn {type, entries}, acc_1 ->
         list_errored_entries(type, entries, validation_opts)
@@ -231,6 +262,14 @@ defmodule FacetedSearch.NimbleSchema do
         |> List.flatten()
         |> Keyword.keys()
 
+      data_field_keys =
+        Keyword.get_values(source_options, :data_fields)
+        |> List.flatten()
+        |> Enum.reduce([], fn
+          field, acc when is_atom(field) -> [field | acc]
+          {field, _}, acc -> [field | acc]
+        end)
+
       entries =
         source_options
         |> Keyword.get_values(option)
@@ -243,7 +282,8 @@ defmodule FacetedSearch.NimbleSchema do
           entries: entries,
           processed: processed_entries,
           source: source,
-          field_keys: field_keys
+          field_keys: field_keys,
+          data_field_keys: data_field_keys
         }
         | acc
       ]
@@ -325,9 +365,35 @@ defmodule FacetedSearch.NimbleSchema do
       |> Enum.concat(Keyword.get(validation_opts, :field_keys, []))
       |> Enum.uniq()
 
-    entries
-    |> Enum.filter(&(&1.key not in field_keys))
-    |> insert_error_type(:invalid_reference)
+    if Keyword.has_key?(validation_opts, :get_supported_keyword_list_options) do
+      entries
+      |> Enum.reduce([], fn entry, acc ->
+        %{
+          has_supported_keys: has_supported_keys,
+          supported_keyword_list_option_keys:
+            supported_keyword_list_option_keys,
+          supported_keys_field_name: supported_keys_field_name
+        } =
+          supported_keys?(entry, validation_opts)
+
+        if has_supported_keys do
+          acc
+        else
+          entry =
+            entry
+            |> Map.put(:supported_keys, supported_keyword_list_option_keys)
+            |> Map.put(:supported_keys_field_name, supported_keys_field_name)
+
+          [entry | acc]
+        end
+      end)
+      |> insert_error_type(:invalid_reference)
+    else
+      # Simple cases such as text_fields
+      entries
+      |> Enum.filter(&(&1.key not in field_keys))
+      |> insert_error_type(:invalid_reference)
+    end
   end
 
   defp list_errored_entries(:keyword_lists, entries, validation_opts) do
@@ -408,12 +474,18 @@ defmodule FacetedSearch.NimbleSchema do
     get_supported_keyword_list_options =
       Keyword.get(validation_opts, :get_supported_keyword_list_options)
 
-    case get_supported_keyword_list_options.(entry, field_keys) do
+    data_field_keys = Keyword.get(validation_opts, :data_field_keys, [])
+
+    case get_supported_keyword_list_options.(entry, %{
+           field_keys: field_keys,
+           data_field_keys: data_field_keys
+         }) do
       :any ->
         %{
           has_supported_keys: true,
           supported_keyword_list_options: [],
-          supported_keyword_list_option_keys: []
+          supported_keyword_list_option_keys: [],
+          supported_keys_field_name: nil
         }
 
       options when is_map(options) and is_list(value_keys) ->
@@ -428,7 +500,8 @@ defmodule FacetedSearch.NimbleSchema do
         %{
           has_supported_keys: has_supported_keys,
           supported_keyword_list_options: options,
-          supported_keyword_list_option_keys: option_keys
+          supported_keyword_list_option_keys: option_keys,
+          supported_keys_field_name: nil
         }
 
       options when is_map(options) ->
@@ -442,14 +515,30 @@ defmodule FacetedSearch.NimbleSchema do
         %{
           has_supported_keys: entry.key in supported_keys,
           supported_keyword_list_options: options,
-          supported_keyword_list_option_keys: option_keys
+          supported_keyword_list_option_keys: option_keys,
+          supported_keys_field_name: nil
+        }
+
+      {type, options} when is_list(options) ->
+        supported_keys_field_name =
+          case type do
+            :data_field_keys -> :data_fields
+            _ -> :fields
+          end
+
+        %{
+          has_supported_keys: false,
+          supported_keyword_list_options: [],
+          supported_keyword_list_option_keys: options,
+          supported_keys_field_name: supported_keys_field_name
         }
 
       _ ->
         %{
           has_supported_keys: false,
           supported_keyword_list_options: [],
-          supported_keyword_list_option_keys: field_keys
+          supported_keyword_list_option_keys: field_keys,
+          supported_keys_field_name: nil
         }
     end
   end

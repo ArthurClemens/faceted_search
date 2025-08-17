@@ -28,9 +28,11 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
             """
 
           :invalid_reference ->
+            field_name = error.supported_keys_field_name || "fields"
+
             """
             Option "#{error.key}" is not supported.
-            Expected a name that is listed in `fields`.
+            Expected a key that is listed in `#{field_name}`.
             """
 
           :invalid_value ->
@@ -45,7 +47,7 @@ defmodule FacetedSearch.Errors.InvalidOptionsError do
                 """
                 Key "#{error.key}" is not supported or it is misconfigured.
                 Valid entries are:
-                - Names that are listed in `fields`.
+                - Keys that are listed in `fields`.
                 - A keyword list with a name that is listed in `fields` and nested key "cast".
                 - A self-named keyword list with nested keys "binding" and "field", or "cast".
                 """

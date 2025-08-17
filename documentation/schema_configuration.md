@@ -392,10 +392,12 @@ sources: [
 
 A list of fields used to create facets, with options for labels from a database table, ranges, and hierarchies.
 
-The referenced fields populate these columns in the search view:
+The referenced fields in `facet_fields` populate the following columns in the search view:
 - regular facets: `tsv`
 - range facets: `buckets`
 - hierarchical facets: `hierarchies`
+
+Filtering on regular facets is done using the `data` column - this allows for more advanced filtering options than would be possible using the `tsv` column. Therefore, all keys listed in `facet_fields` (except for keys using range bounds or hierarchies) must be present in `data_fields`.
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > facet_fields`
@@ -404,13 +406,13 @@ The referenced fields populate these columns in the search view:
 
 Either:
 
-- A field name from option `fields`.
+- A field name from option `data_fields`
 - A keyword list:
-  - Key: a field name from option `fields`
+  - Key: a field name from option `data_fields` (or from option `fields` if a range bound is used)
   - Values:
     - To reference a label from a database table/column:
       - Key: `label` 
-      - Value: a field name from option `fields`
+      - Value: a field name from option `data_fields`
     - To create a range of numerical entries:
       - Key: `number_range_bounds`
       - Value: a list of numbers
@@ -444,6 +446,10 @@ By default, the field value will be returned as label.
 sources: [
   books: [
     ...
+    data_fields: [
+      :publication_year,
+      :genres
+    ],
     facet_fields: [
       :publication_year,
       :genres
@@ -472,7 +478,11 @@ sources: [
         field: :title,
         ecto_type: :string
       ],
-    ]
+    ],
+    data_fields: [
+      :publication_year, 
+      :genres
+    ],
     facet_fields: [
       :publication_year,
       genres: [
