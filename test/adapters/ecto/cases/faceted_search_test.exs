@@ -7,10 +7,9 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
   import FacetedSearch.Test.Factory
 
   alias FacetedSearch.Test.MyApp.ExpandedFacetSchema
-  alias FacetedSearch.Test.MyApp.SimpleFacetSchema
   alias FacetedSearch.Test.Repo
 
-  describe "search view tests" do
+  describe "search view" do
     setup do
       init_resources(article_count: 2)
 
@@ -20,99 +19,98 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     test "the create_search_view/3 function" do
       expected = {:ok, "articles"}
 
-      assert FacetedSearch.create_search_view(SimpleFacetSchema, "articles") ==
+      assert FacetedSearch.create_search_view(ExpandedFacetSchema, "articles") ==
                expected
     end
 
     test "the search_view_exists?/3 function" do
       expected = false
 
-      assert FacetedSearch.search_view_exists?(SimpleFacetSchema, "articles") ==
+      assert FacetedSearch.search_view_exists?(ExpandedFacetSchema, "articles") ==
                expected
 
-      FacetedSearch.create_search_view(SimpleFacetSchema, "articles")
+      FacetedSearch.create_search_view(ExpandedFacetSchema, "articles")
 
       expected = true
 
-      assert FacetedSearch.search_view_exists?(SimpleFacetSchema, "articles") ==
+      assert FacetedSearch.search_view_exists?(ExpandedFacetSchema, "articles") ==
                expected
     end
 
     test "the create_search_view_if_not_exists/3 function" do
       expected = false
 
-      assert FacetedSearch.search_view_exists?(SimpleFacetSchema, "articles") ==
+      assert FacetedSearch.search_view_exists?(ExpandedFacetSchema, "articles") ==
                expected
 
       FacetedSearch.create_search_view_if_not_exists(
-        SimpleFacetSchema,
+        ExpandedFacetSchema,
         "articles"
       )
 
       expected = true
 
-      assert FacetedSearch.search_view_exists?(SimpleFacetSchema, "articles") ==
+      assert FacetedSearch.search_view_exists?(ExpandedFacetSchema, "articles") ==
                expected
     end
 
     test "the refresh_search_view/3 function" do
       # Initial view has 2 items
-      FacetedSearch.create_search_view(SimpleFacetSchema, "articles")
+      FacetedSearch.create_search_view(ExpandedFacetSchema, "articles")
 
-      results = search_all("articles", SimpleFacetSchema)
+      results = search_all("articles", ExpandedFacetSchema)
       expected = 2
       assert Enum.count(results) == expected
 
       # Add 3 more items and refresh the view
       build_list(3, :insert_article)
-      FacetedSearch.refresh_search_view(SimpleFacetSchema, "articles")
-      results = search_all("articles", SimpleFacetSchema)
+      FacetedSearch.refresh_search_view(ExpandedFacetSchema, "articles")
+      results = search_all("articles", ExpandedFacetSchema)
       expected = 5
       assert Enum.count(results) == expected
     end
 
     test "the drop_search_view/3 function" do
       # Initial view has 2 items
-      FacetedSearch.create_search_view(SimpleFacetSchema, "articles")
+      FacetedSearch.create_search_view(ExpandedFacetSchema, "articles")
 
       expected = true
 
-      assert FacetedSearch.search_view_exists?(SimpleFacetSchema, "articles") ==
+      assert FacetedSearch.search_view_exists?(ExpandedFacetSchema, "articles") ==
                expected
 
-      FacetedSearch.drop_search_view(SimpleFacetSchema, "articles")
-
+      FacetedSearch.drop_search_view(ExpandedFacetSchema, "articles")
       expected = false
 
-      assert FacetedSearch.search_view_exists?(SimpleFacetSchema, "articles") ==
+      assert FacetedSearch.search_view_exists?(ExpandedFacetSchema, "articles") ==
                expected
     end
   end
 
-  describe "filtering" do
+  describe "filtering: text search" do
     setup do
       init_resources(article_count: 10)
 
-      FacetedSearch.create_search_view(SimpleFacetSchema, "articles")
+      FacetedSearch.create_search_view(ExpandedFacetSchema, "articles")
       :ok
     end
 
-    test "text search returns a text field" do
+    test "text field result" do
       search_params = %{
         filters: [%{field: :text, op: :ilike, value: "metaphors"}]
       }
 
       expected = [
-        "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood."
+        "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood. Helena van Dijk"
       ]
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       assert results |> Enum.map(& &1.text) == expected
     end
 
-    test "text search, single term" do
+    test "single term" do
       search_params = %{
         filters: [%{field: :text, op: :ilike, value: "political"}]
       }
@@ -120,12 +118,12 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 2
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
 
-    test "text search, multiple terms" do
+    test "multiple terms" do
       search_params = %{
         filters: [
           %{field: :text, op: :ilike, value: "political"},
@@ -136,29 +134,55 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 1
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
 
-    test "data search returns data maps" do
+    test "multiple terms using ilike_and" do
+      search_params = %{
+        filters: [
+          %{field: :text, op: :ilike_and, value: "political treatises"}
+        ]
+      }
+
+      expected = 1
+
+      {:ok, {_results, meta}} =
+        filtered_search("articles", ExpandedFacetSchema, search_params)
+
+      assert meta.total_count == expected
+    end
+  end
+
+  describe "filtering: data search" do
+    setup do
+      init_resources(article_count: 10)
+
+      FacetedSearch.create_search_view(ExpandedFacetSchema, "articles")
+      :ok
+    end
+
+    test "data field result" do
       search_params = %{
         filters: [
           %{field: :title, op: :ilike, value: "political"}
         ]
       }
 
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ExpandedFacetSchema, search_params)
+
       expected = [
         %{
           "publish_date" => "datetime",
           "title" =>
             "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+          "tags" => ["history", "language", "politics"],
+          "tag_titles" => ["History", "Language", "Politics"],
           "author" => "Helena van Dijk"
         }
       ]
-
-      {:ok, {results, _meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
 
       assert results
              |> Enum.map(fn %{data: data} ->
@@ -168,7 +192,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
              end) == expected
     end
 
-    test "data search, data field :title" do
+    test "search subfield: title (ilike)" do
       search_params = %{
         filters: [
           %{field: :title, op: :ilike, value: "political"}
@@ -178,12 +202,12 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 1
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
 
-    test "data search, data field :author" do
+    test "search subfield: author" do
       search_params = %{
         filters: [
           %{field: :author, op: :==, value: "Mateo Alvarez"}
@@ -193,16 +217,53 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 2
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       assert meta.total_count == expected
+    end
+
+    test "search subfield: tag_titles" do
+      search_params = %{
+        filters: [
+          %{field: :tag_titles, op: :==, value: ["History"]}
+        ]
+      }
+
+      expected = [
+        ["History", "Language", "Politics"],
+        ["History", "Manuscripts", "Semiotics"],
+        ["Books", "History", "Materiality"],
+        ["History", "Music", "Religion"]
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ExpandedFacetSchema, search_params)
+
+      assert get_in(results, [Access.all(), Access.key(:data), "tag_titles"]) ==
+               expected
+    end
+
+    test "search subfield: tag_titles (multiple)" do
+      search_params = %{
+        filters: [
+          %{field: :tag_titles, op: :==, value: ["Literature", "Language"]}
+        ]
+      }
+
+      expected = [["Language", "Literature", "Politics"]]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ExpandedFacetSchema, search_params)
+
+      assert get_in(results, [Access.all(), Access.key(:data), "tag_titles"]) ==
+               expected
     end
   end
 
   describe "sorting" do
     setup do
       init_resources(article_count: 10)
-      FacetedSearch.create_search_view(SimpleFacetSchema, "articles")
+      FacetedSearch.create_search_view(ExpandedFacetSchema, "articles")
       :ok
     end
 
@@ -213,7 +274,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       entries = Enum.map(results, & &1.sort_publish_date)
       expected = Enum.sort(entries, {:desc, DateTime})
@@ -227,7 +288,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       entries = Enum.map(results, & &1.sort_author)
       expected = Enum.sort(entries, :asc)
@@ -241,7 +302,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", SimpleFacetSchema, search_params)
+        filtered_search("articles", ExpandedFacetSchema, search_params)
 
       entries = Enum.map(results, &{&1.sort_author, &1.sort_publish_date})
 
@@ -264,13 +325,13 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     test "facet results" do
       search_params = %{}
 
-      {:ok, _search_results, facets} =
+      {:ok, {_results, meta}, facets} =
         facets_search("articles", ExpandedFacetSchema, search_params)
 
-      expected = [
-        %FacetedSearch.Facet{
-          field: :author,
-          options: [
+      expected = %{
+        author: %{
+          count: 5,
+          first_2_options: [
             %FacetedSearch.Option{
               count: 2,
               label: "Aisha Rahman",
@@ -282,31 +343,145 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               label: "Helena van Dijk",
               selected: false,
               value: "Helena van Dijk"
-            },
-            %FacetedSearch.Option{
-              count: 2,
-              label: "Jean-Marie Leclerc",
-              selected: false,
-              value: "Jean-Marie Leclerc"
-            },
-            %FacetedSearch.Option{
-              count: 2,
-              label: "Mateo Alvarez",
-              selected: false,
-              value: "Mateo Alvarez"
-            },
-            %FacetedSearch.Option{
-              count: 2,
-              label: "Sven Olsson",
-              selected: false,
-              value: "Sven Olsson"
             }
-          ],
-          parent: nil
+          ]
+        },
+        tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              count: 1,
+              label: "Archives",
+              value: "archives",
+              selected: false
+            },
+            %FacetedSearch.Option{
+              count: 1,
+              label: "Books",
+              value: "books",
+              selected: false
+            }
+          ]
         }
-      ]
+      }
 
-      assert facets == expected
+      assert meta.total_count == 10
+      assert facet_result_subset(facets) == expected
+    end
+
+    test "search facets (author)" do
+      search_params = %{
+        filters: [
+          %{
+            value: ["Aisha Rahman", "Jean-Marie Leclerc"],
+            op: :==,
+            field: :facet_author
+          }
+        ]
+      }
+
+      {:ok, {_results, meta}, facets} =
+        facets_search("articles", ExpandedFacetSchema, search_params)
+
+      expected = %{
+        author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 2,
+              selected: true
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        tags: %{
+          count: 11,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "Archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "Books",
+              count: 1,
+              selected: false
+            }
+          ]
+        }
+      }
+
+      assert meta.total_count == 4
+      assert facet_result_subset(facets) == expected
+    end
+
+    test "search facets (author and tags)" do
+      search_params = %{
+        filters: [
+          %{
+            value: ["Aisha Rahman"],
+            op: :==,
+            field: :facet_author
+          },
+          %{
+            value: ["history"],
+            op: :==,
+            field: :facet_tags
+          }
+        ]
+      }
+
+      {:ok, {_results, meta}, facets} =
+        facets_search("articles", ExpandedFacetSchema, search_params)
+
+      expected = %{
+        author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 1,
+              selected: true
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "Archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "Books",
+              count: 1,
+              selected: false
+            }
+          ]
+        }
+      }
+
+      assert meta.total_count == 1
+      assert facet_result_subset(facets) == expected
     end
   end
 
@@ -339,5 +514,18 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       error ->
         error
     end
+  end
+
+  defp facet_result_subset(facet_results) do
+    facet_results
+    |> Enum.group_by(& &1.field)
+    |> Enum.reduce(%{}, fn {group, results}, acc ->
+      result = hd(results)
+
+      Map.put(acc, group, %{
+        count: Enum.count(result.options),
+        first_2_options: Enum.take(result.options, 2)
+      })
+    end)
   end
 end

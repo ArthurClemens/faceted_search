@@ -30,5 +30,10 @@ defmodule FacetedSearch.Test.Repo.Postgres.Migration do
       add(:article_id, references(:articles))
       add(:tag_id, references(:tags))
     end
+
+    create table(:tag_texts) do
+      add(:title, :string)
+      add(:tag_id, references(:tags))
+    end
   end
 end

@@ -9,30 +9,54 @@ defmodule FacetedSearch.Test.Factory do
   alias FacetedSearch.Test.MyApp.AuthorArticle
   alias FacetedSearch.Test.MyApp.Role
   alias FacetedSearch.Test.MyApp.Tag
+  alias FacetedSearch.Test.MyApp.TagText
   alias FacetedSearch.Test.Repo
 
   @tags [
-    "politics",
-    "history",
-    "language",
-    "memory",
-    "oral-history",
-    "interdisciplinary",
-    "semiotics",
-    "manuscripts",
-    "literature",
-    "emotion",
-    "travel-writing",
+    "archives",
     "books",
-    "materiality",
     "culture",
-    "modernism",
-    "theory",
-    "music",
-    "religion",
     "digital-humanities",
-    "archives"
+    "emotion",
+    "history",
+    "interdisciplinary",
+    "language",
+    "literature",
+    "manuscripts",
+    "materiality",
+    "memory",
+    "modernism",
+    "music",
+    "oral-history",
+    "politics",
+    "religion",
+    "semiotics",
+    "theory",
+    "travel-writing"
   ]
+
+  @tag_titles %{
+    "archives" => "Archives",
+    "books" => "Books",
+    "culture" => "Culture",
+    "digital-humanities" => "Digital humanities",
+    "emotion" => "Emotion",
+    "history" => "History",
+    "interdisciplinary" => "Interdisciplinary",
+    "language" => "Language",
+    "literature" => "Literature",
+    "manuscripts" => "Manuscripts",
+    "materiality" => "Materiality",
+    "memory" => "Memory",
+    "modernism" => "Modernism",
+    "music" => "Music",
+    "oral-history" => "Oral history",
+    "politics" => "Politics",
+    "religion" => "Religion",
+    "semiotics" => "Semiotics",
+    "theory" => "Theory",
+    "travel-writing" => "Travel writing"
+  }
 
   @articles [
     %{
@@ -131,10 +155,17 @@ defmodule FacetedSearch.Test.Factory do
   ]
 
   def init_resources(opts) do
+    ExMachina.Sequence.reset()
+
     article_count = Keyword.get(opts, :article_count)
 
     Enum.each(@tags, fn name ->
-      insert(%Tag{name: name})
+      tag = insert(%Tag{name: name})
+
+      insert(%TagText{
+        title: @tag_titles[name],
+        tag_id: tag.id
+      })
     end)
 
     Enum.each(@authors, fn name ->
@@ -182,13 +213,6 @@ defmodule FacetedSearch.Test.Factory do
 
     article
   end
-
-  # def with_author_role(%Author{id: author_id} = author) when not is_nil(author_id) do
-  #   insert(%Role{
-  #     name: sequence(:role_name, @roles),
-  #     author: author
-  #   })
-  # end
 
   def article_data_factory do
     sequence(:article_data, @articles)
