@@ -161,6 +161,9 @@ defmodule FacetedSearch.NimbleSchema do
                   hide_when_selected: :boolean
                 }
 
+              %{path: [_, _, :facet_fields, :hierarchies, _, _]}, _ ->
+                :any
+
               %{path: [_, _, :facet_fields], key: key, values: values},
               %{field_keys: field_keys, data_field_keys: data_field_keys} ->
                 is_range_bounds =
