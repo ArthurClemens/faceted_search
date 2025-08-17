@@ -16,6 +16,15 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           ],
           authors: [
             on: "authors.id = author_articles.author_id"
+          ],
+          article_tags: [
+            on: "article_tags.article_id = articles.id"
+          ],
+          tags: [
+            on: "tags.id = article_tags.tag_id"
+          ],
+          tag_texts: [
+            on: "tag_texts.tag_id = tags.id"
           ]
         ],
         fields: [
@@ -28,6 +37,16 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           publish_date: [
             ecto_type: :utc_datetime
           ],
+          tags: [
+            binding: :tags,
+            field: :name,
+            ecto_type: {:array, :string}
+          ],
+          tag_titles: [
+            binding: :tag_texts,
+            field: :title,
+            ecto_type: {:array, :string}
+          ],
           author: [
             binding: :authors,
             field: :name,
@@ -35,8 +54,10 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           ]
         ],
         data_fields: [
-          :author,
           :title,
+          :author,
+          :tags,
+          :tag_titles,
           :publish_date
         ],
         text_fields: [
@@ -49,7 +70,10 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           :publish_date
         ],
         facet_fields: [
-          :author
+          :author,
+          tags: [
+            label: :tag_titles
+          ]
         ]
       ]
     ]

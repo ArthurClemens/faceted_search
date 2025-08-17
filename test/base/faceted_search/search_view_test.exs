@@ -98,9 +98,11 @@ defmodule FacetedSearch.Test.SearchViewTest do
         sources: [
           %FacetedSearch.Source{
             data_fields: [
-              %FacetedSearch.DataField{entries: nil, name: :author},
-              %FacetedSearch.DataField{entries: nil, name: :title},
-              %FacetedSearch.DataField{entries: nil, name: :publish_date}
+              %FacetedSearch.DataField{name: :title, entries: nil},
+              %FacetedSearch.DataField{name: :author, entries: nil},
+              %FacetedSearch.DataField{name: :tags, entries: nil},
+              %FacetedSearch.DataField{name: :tag_titles, entries: nil},
+              %FacetedSearch.DataField{name: :publish_date, entries: nil}
             ],
             facet_fields: [
               %FacetedSearch.FacetField{
@@ -108,6 +110,16 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 hierarchy: nil,
                 label_field: nil,
                 name: :author,
+                parent: nil,
+                path: nil,
+                range_bounds: nil,
+                range_buckets: nil
+              },
+              %FacetedSearch.FacetField{
+                hide_when_selected: false,
+                hierarchy: nil,
+                label_field: :tag_titles,
+                name: :tags,
                 parent: nil,
                 path: nil,
                 range_bounds: nil,
@@ -137,10 +149,24 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 table_name: :articles
               },
               %FacetedSearch.Field{
-                name: :author,
-                binding: :authors,
+                binding: :tags,
+                ecto_type: {:array, :string},
                 field: :name,
+                name: :tags,
+                table_name: :articles
+              },
+              %FacetedSearch.Field{
+                name: :tag_titles,
+                binding: :tag_texts,
+                field: :title,
+                ecto_type: {:array, :string},
+                table_name: :articles
+              },
+              %FacetedSearch.Field{
+                binding: :authors,
                 ecto_type: :string,
+                field: :name,
+                name: :author,
                 table_name: :articles
               }
             ],
@@ -156,6 +182,24 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 on: "authors.id = author_articles.author_id",
                 prefix: nil,
                 table: :authors
+              },
+              %FacetedSearch.Join{
+                as: nil,
+                on: "article_tags.article_id = articles.id",
+                prefix: nil,
+                table: :article_tags
+              },
+              %FacetedSearch.Join{
+                as: nil,
+                on: "tags.id = article_tags.tag_id",
+                prefix: nil,
+                table: :tags
+              },
+              %FacetedSearch.Join{
+                table: :tag_texts,
+                on: "tag_texts.tag_id = tags.id",
+                prefix: nil,
+                as: nil
               }
             ],
             prefix: nil,
