@@ -444,6 +444,11 @@ defmodule FacetedSearch.Facets do
   end
 
   defp derive_parent_values(search_params_value_lookup, facet_configs) do
+    name_to_field_lookup =
+      Enum.reduce(facet_configs, %{}, fn {_, facet_config}, acc ->
+        Map.put(acc, facet_config.name, facet_config.field)
+      end)
+
     hierarchy_facet_configs =
       Enum.filter(facet_configs, fn {_name, config} -> !!config.hierarchy end)
 
@@ -454,8 +459,8 @@ defmodule FacetedSearch.Facets do
       end)
 
     hierarchy_facet_config_name_lookup =
-      Enum.reduce(hierarchy_facet_configs, %{}, fn {name, _config}, acc ->
-        Map.put(acc, to_string(name), true)
+      Enum.reduce(hierarchy_facet_configs, %{}, fn {_name, config}, acc ->
+        Map.put(acc, config.name, true)
       end)
 
     hierarchy_search_params_value_lookup =
@@ -473,7 +478,7 @@ defmodule FacetedSearch.Facets do
         Enum.concat(
           Enum.reduce(values, [], fn value, acc_1 ->
             Enum.concat(
-              Map.new([{name |> String.to_existing_atom(), value}]),
+              Map.new([{name_to_field_lookup[name], value}]),
               acc_1
             )
           end),
@@ -674,10 +679,13 @@ defmodule FacetedSearch.Facets do
          facet_configs,
          search_params_value_lookup
        ) do
+    facet_config_list =
+      Enum.map(facet_configs, fn {_, facet_config} -> facet_config end)
+
     facet_rows
     |> Enum.map(fn {name, raw_value, database_label, count} ->
       facet_config =
-        get_in(facet_configs, [Access.key(String.to_existing_atom(name))])
+        Enum.find(facet_config_list, &(&1.name == name))
 
       if is_nil(facet_config) do
         raise "FacetedSearch: facet_field '#{name}' is not configured."
