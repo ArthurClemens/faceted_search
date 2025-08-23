@@ -39,10 +39,10 @@ defmodule FacetedSearch do
       filterable_fields_option =
         FlopSchema.create_filterable_fields_option(custom_fields_option)
 
-      sortable_fields = FlopSchema.create_sortable_fields(options, custom_fields_option)
+      sortable_fields =
+        FlopSchema.create_sortable_fields(options, custom_fields_option)
 
-      sortable_option =
-        Enum.concat(sortable_fields |> Enum.map(& &1.name), [:updated_at, :inserted_at])
+      sortable_option = Enum.map(sortable_fields, & &1.name)
 
       use Ecto.Schema
 
@@ -72,8 +72,6 @@ defmodule FacetedSearch do
         field(:source, :string)
         field(:data, :map)
         field(:text, :string)
-        field(:inserted_at, :utc_datetime)
-        field(:updated_at, :utc_datetime)
 
         Enum.each(sortable_fields, fn %{name: name, ecto_type: ecto_type} ->
           field(name, ecto_type)
@@ -95,24 +93,30 @@ defmodule FacetedSearch do
       def options, do: unquote(Macro.escape(options))
 
       @spec ecto_schema(String.t()) :: Ecto.Queryable.t()
-      def ecto_schema(view_id), do: {SearchView.search_view_name(view_id), __MODULE__}
+      def ecto_schema(view_id),
+        do: {SearchView.search_view_name(view_id), __MODULE__}
 
       @spec search_view_description() :: SearchViewDescription.t()
-      def search_view_description, do: SearchView.create_search_view_description(options())
+      def search_view_description,
+        do: SearchView.create_search_view_description(options())
 
       @spec create_search_view(String.t(), [create_search_view_option()]) ::
               :ok | {:error, term()}
       def create_search_view(view_id, opts \\ []),
         do: SearchView.create_search_view(options(), view_id, opts)
 
-      @spec search_view_exists?(String.t(), [create_search_view_option()]) :: boolean()
+      @spec search_view_exists?(String.t(), [create_search_view_option()]) ::
+              boolean()
       def search_view_exists?(view_id, opts \\ []),
         do: SearchView.search_view_exists?(view_id, opts)
 
-      @spec create_search_view_if_not_exists(String.t(), [create_search_view_option()]) ::
+      @spec create_search_view_if_not_exists(String.t(), [
+              create_search_view_option()
+            ]) ::
               :ok | {:error, term()}
       def create_search_view_if_not_exists(view_id, opts \\ []),
-        do: SearchView.create_search_view_if_not_exists(options(), view_id, opts)
+        do:
+          SearchView.create_search_view_if_not_exists(options(), view_id, opts)
 
       @spec refresh_search_view(String.t(), [refresh_search_view_option()]) ::
               :ok | {:error, term()}
@@ -148,9 +152,19 @@ defmodule FacetedSearch do
         Facets.search(ecto_schema, search_params, opts)
       end
 
-      @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: no_return()
-      def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []),
-        do: Facets.warm_cache(ecto_schema, search_params_list, facet_search_options)
+      @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
+              no_return()
+      def warm_cache(
+            ecto_schema,
+            search_params_list,
+            facet_search_options \\ []
+          ),
+          do:
+            Facets.warm_cache(
+              ecto_schema,
+              search_params_list,
+              facet_search_options
+            )
 
       @spec clear_facets_cache(Ecto.Queryable.t()) :: no_return()
       def clear_facets_cache(ecto_schema),
@@ -251,79 +265,12 @@ defmodule FacetedSearch do
       ...
 
   """
-  @callback option_label(facet_name(), option_value(), database_label() | nil) :: String.t() | nil
+  @callback option_label(facet_name(), option_value(), database_label() | nil) ::
+              String.t() | nil
 
   @optional_callbacks scope_by: 2, option_label: 3
 
-  @doc """
-  Creates a search view that collects data for searching.
-  If the seach view already exists, it will be dropped first.
-
-  The created materialized view is prefixed with `"fv_"`.
-
-  Options:
-  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
-  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
-
-  ## Examples
-
-      iex> FacetedSearch.create_search_view(MyApp.FacetSchema, "books")
-      :ok
-
-      iex> FacetedSearch.create_search_view(MyApp.FacetSchema, "books",
-      ...>   scopes: %{current_user: current_user})
-      :ok
-
-
-  """
-  @spec create_search_view(module(), String.t(), [create_search_view_option()]) ::
-          :ok | {:error, term()}
-  def create_search_view(module, view_id, opts \\ []),
-    do: module.create_search_view(view_id, opts)
-
-  @spec search_view_exists?(module(), String.t(), [create_search_view_option()]) :: boolean()
-  def search_view_exists?(module, view_id, opts \\ []),
-    do: module.search_view_exists?(view_id, opts)
-
-  @doc """
-  Creates the search view if it does not exist.
-  """
-  @spec create_search_view_if_not_exists(module(), String.t(), [create_search_view_option()]) ::
-          :ok | {:error, term()}
-  def create_search_view_if_not_exists(module, view_id, opts \\ []),
-    do: module.create_search_view_if_not_exists(view_id, opts)
-
-  @doc """
-  Refreshes the search view.
-
-  Options:
-  - concurrently `boolean()`
-  - [Postgrex query options](https://hexdocs.pm/postgrex/Postgrex.html#query/4-options)
-
-  ## Examples
-
-      iex> FacetedSearch.refresh_search_view(MyApp.FacetSchema, "books")
-      :ok
-
-  """
-  @spec refresh_search_view(module(), String.t(), [refresh_search_view_option()]) ::
-          :ok | {:error, term()}
-  def refresh_search_view(module, view_id, opts \\ []),
-    do: module.refresh_search_view(view_id, opts)
-
-  @doc """
-  Drops the search view.
-
-  ## Examples
-
-      iex> FacetedSearch.refresh_search_view(MyApp.FacetSchema, "books")
-      :ok
-
-  """
-  @spec drop_search_view(module(), String.t(), [create_search_view_option()]) ::
-          :ok | {:error, term()}
-  def drop_search_view(module, view_id, opts \\ []),
-    do: module.drop_search_view(view_id, opts)
+  # Schema
 
   @doc """
   Returns the provided options. Useful for debugging problems.
@@ -352,20 +299,6 @@ defmodule FacetedSearch do
     do: module.search_view_description()
 
   @doc """
-  The normalized Postgres materialized view name generated from `view_id`.
-  The view name is prefixed with `"fv_"`.
-
-  ## Examples
-
-      iex> FacetedSearch.search_view_name(MyApp.FacetSchema, "books")
-      "fv_books"
-
-  """
-  @spec search_view_name(module(), String.t()) :: String.t()
-  def search_view_name(module, view_id),
-    do: module.search_view_name(view_id)
-
-  @doc """
   Returns the Ecto schema for the search view.
 
   ## Examples
@@ -380,6 +313,111 @@ defmodule FacetedSearch do
   @spec ecto_schema(module(), String.t()) :: Ecto.Queryable.t()
   def ecto_schema(module, view_id),
     do: module.ecto_schema(view_id)
+
+  # Search view
+
+  @doc """
+  The normalized Postgres materialized view name generated from the view ID.
+  The view name is prefixed with `"fv_"`.
+
+  ## Examples
+
+      iex> FacetedSearch.search_view_name(MyApp.FacetSchema, "books")
+      "fv_books"
+
+  """
+  @spec search_view_name(module(), String.t()) :: String.t()
+  def search_view_name(module, view_id),
+    do: module.search_view_name(view_id)
+
+  @doc """
+  Creates a search view that collects data for searching.
+  If the seach view already exists, it will be dropped first.
+
+  The created materialized view is prefixed with `"fv_"`.
+
+  Options:
+  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
+  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
+
+  ## Examples
+
+      iex> FacetedSearch.create_search_view(MyApp.FacetSchema, "books")
+      :ok
+
+      iex> FacetedSearch.create_search_view(MyApp.FacetSchema, "books",
+      ...>   scopes: %{current_user: current_user})
+      :ok
+
+  """
+  @spec create_search_view(module(), String.t(), [create_search_view_option()]) ::
+          :ok | {:error, term()}
+  def create_search_view(module, view_id, opts \\ []),
+    do: module.create_search_view(view_id, opts)
+
+  @doc """
+  Returns true if the search view exists.
+
+  Options:
+  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
+  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
+  """
+  @spec search_view_exists?(module(), String.t(), [create_search_view_option()]) ::
+          boolean()
+  def search_view_exists?(module, view_id, opts \\ []),
+    do: module.search_view_exists?(view_id, opts)
+
+  @doc """
+  Creates the search view if it does not exist.
+
+  Options:
+  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
+  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
+  """
+  @spec create_search_view_if_not_exists(module(), String.t(), [
+          create_search_view_option()
+        ]) ::
+          :ok | {:error, term()}
+  def create_search_view_if_not_exists(module, view_id, opts \\ []),
+    do: module.create_search_view_if_not_exists(view_id, opts)
+
+  @doc """
+  Refreshes the search view.
+
+  Options:
+  - concurrently `boolean()`
+  - [Postgrex query options](https://hexdocs.pm/postgrex/Postgrex.html#query/4-options)
+
+  ## Examples
+
+      iex> FacetedSearch.refresh_search_view(MyApp.FacetSchema, "books")
+      :ok
+
+  """
+  @spec refresh_search_view(module(), String.t(), [refresh_search_view_option()]) ::
+          :ok | {:error, term()}
+  def refresh_search_view(module, view_id, opts \\ []),
+    do: module.refresh_search_view(view_id, opts)
+
+  @doc """
+  Drops the search view.
+
+  Options:
+  - concurrently `boolean()`
+  - [Postgrex query options](https://hexdocs.pm/postgrex/Postgrex.html#query/4-options)
+
+  ## Examples
+
+      iex> FacetedSearch.refresh_search_view(MyApp.FacetSchema, "books")
+      :ok
+
+  """
+  @spec drop_search_view(module(), String.t(), [create_search_view_option()]) ::
+          :ok | {:error, term()}
+  def drop_search_view(module, view_id, opts \\ []),
+    do: module.drop_search_view(view_id, opts)
+
+  # Search
 
   @doc """
   Performs a Flop search with search parameters and returns a list of matching facets.
@@ -413,6 +451,8 @@ defmodule FacetedSearch do
     module.search(ecto_schema, search_params, opts)
   end
 
+  # Cache
+
   @doc """
   Facet data optimization. Creates cache entries for the provided list of search parameters,
   so searches using those params will return cached facet data.
@@ -434,7 +474,8 @@ defmodule FacetedSearch do
       FacetedSearch.warm_cache(ecto_schema, search_params_to_cache)
 
   """
-  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: no_return()
+  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
+          no_return()
   def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []) do
     {_view_name, module} = ecto_schema
     module.warm_cache(ecto_schema, search_params_list, facet_search_options)
@@ -449,7 +490,8 @@ defmodule FacetedSearch do
       FacetedSearch.clear_facets_cache(ecto_schema)
 
   """
-  @spec clear_facets_cache(Ecto.Queryable.t()) :: {:ok, String.t()} | {:error, :no_table}
+  @spec clear_facets_cache(Ecto.Queryable.t()) ::
+          {:ok, String.t()} | {:error, :no_table}
   def clear_facets_cache(ecto_schema) do
     {_view_name, module} = ecto_schema
     module.clear_facets_cache(ecto_schema)

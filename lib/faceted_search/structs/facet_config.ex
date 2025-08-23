@@ -11,13 +11,15 @@ defmodule FacetedSearch.FacetConfig do
   alias FacetedSearch.SearchViewDescription
 
   @enforce_keys [
+    :name,
     :field,
     :field_reference,
     :ecto_type,
     :hide_when_selected
   ]
 
-  defstruct field: nil,
+  defstruct name: nil,
+            field: nil,
             field_reference: nil,
             ecto_type: nil,
             hide_when_selected: false,
@@ -28,6 +30,7 @@ defmodule FacetedSearch.FacetConfig do
 
   @type t() :: %__MODULE__{
           # required
+          name: String.t(),
           field: atom(),
           field_reference: atom(),
           ecto_type: Ecto.Type.t(),
@@ -66,9 +69,12 @@ defmodule FacetedSearch.FacetConfig do
           else: facet_field.name
 
       ecto_type =
-        if facet_field.hierarchy, do: :string, else: ecto_types_by_field[facet_field.name]
+        if facet_field.hierarchy,
+          do: :string,
+          else: ecto_types_by_field[facet_field.name]
 
       Map.put(acc, facet_field.name, %FacetConfig{
+        name: to_string(facet_field.name),
         field: facet_field.name,
         field_reference: field_reference,
         ecto_type: ecto_type,

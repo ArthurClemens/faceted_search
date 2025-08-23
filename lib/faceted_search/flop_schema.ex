@@ -14,7 +14,9 @@ defmodule FacetedSearch.FlopSchema do
       options
       |> Keyword.get_values(:sources)
       |> List.flatten()
-      |> Enum.reduce(%{fields: [], facet_fields: []}, fn {_source, source_options}, acc ->
+      |> Enum.reduce(%{fields: [], facet_fields: []}, fn {_source,
+                                                          source_options},
+                                                         acc ->
         fields = Keyword.get_values(source_options, :fields) |> List.flatten()
 
         facet_fields =
@@ -41,7 +43,9 @@ defmodule FacetedSearch.FlopSchema do
         }
       end)
       |> Map.update(:fields, [], fn existing -> clean_up_fields(existing) end)
-      |> Map.update(:facet_fields, [], fn existing -> clean_up_fields(existing) end)
+      |> Map.update(:facet_fields, [], fn existing ->
+        clean_up_fields(existing)
+      end)
 
     Enum.concat(
       create_filter_field_options(fields),
@@ -62,7 +66,9 @@ defmodule FacetedSearch.FlopSchema do
       filter = Keyword.get(column_options, :filter)
 
       operators = column_options[:operators]
-      allowed_operators_option = if operators, do: [operators: operators], else: []
+
+      allowed_operators_option =
+        if operators, do: [operators: operators], else: []
 
       custom_field =
         {column_name,
@@ -144,7 +150,10 @@ defmodule FacetedSearch.FlopSchema do
     |> Keyword.get_values(:sources)
     |> List.flatten()
     |> Enum.reduce([], fn {_source, source_options}, acc ->
-      Enum.concat(acc, create_sortable_field_data(source_options, custom_fields))
+      Enum.concat(
+        acc,
+        create_sortable_field_data(source_options, custom_fields)
+      )
     end)
     |> Enum.uniq()
   end
@@ -163,7 +172,9 @@ defmodule FacetedSearch.FlopSchema do
         end
 
       field_data = Keyword.get(custom_fields, name)
-      ecto_type = if field_data, do: Keyword.get(field_data, :ecto_type), else: :string
+
+      ecto_type =
+        if field_data, do: Keyword.get(field_data, :ecto_type), else: :string
 
       %{
         name: :"sort_#{name}",
@@ -173,15 +184,23 @@ defmodule FacetedSearch.FlopSchema do
     end)
   end
 
-  defp normalize_facet_field_ecto_type({:array, _type} = _ecto_type, is_hierarchy_facet)
+  defp normalize_facet_field_ecto_type(
+         {:array, _type} = _ecto_type,
+         is_hierarchy_facet
+       )
        when is_hierarchy_facet,
        do: {{:array, :string}, true}
 
-  defp normalize_facet_field_ecto_type({:array, type} = _ecto_type, _is_hierarchy_facet),
-    do: {{:array, type}, true}
+  defp normalize_facet_field_ecto_type(
+         {:array, type} = _ecto_type,
+         _is_hierarchy_facet
+       ),
+       do: {{:array, type}, true}
 
-  defp normalize_facet_field_ecto_type(_type, is_hierarchy_facet) when is_hierarchy_facet,
-    do: {{:array, :string}, false}
+  defp normalize_facet_field_ecto_type(_type, is_hierarchy_facet)
+       when is_hierarchy_facet,
+       do: {{:array, :string}, false}
 
-  defp normalize_facet_field_ecto_type(type, _is_hierarchy_facet), do: {{:array, type}, false}
+  defp normalize_facet_field_ecto_type(type, _is_hierarchy_facet),
+    do: {{:array, type}, false}
 end

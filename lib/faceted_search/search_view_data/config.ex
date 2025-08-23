@@ -14,7 +14,11 @@ defmodule FacetedSearch.Config do
     :view_name_with_prefix
   ]
 
-  defstruct view_name: nil, view_name_with_prefix: nil, prefix: nil, current_scope: nil, repo: nil
+  defstruct view_name: nil,
+            view_name_with_prefix: nil,
+            prefix: nil,
+            current_scope: nil,
+            repo: nil
 
   @type t() :: %__MODULE__{
           # required
@@ -47,14 +51,18 @@ defmodule FacetedSearch.Config do
     }
   end
 
-  @spec create_view_name(String.t(), String.t() | nil) :: {String.t(), String.t()}
+  @spec create_view_name(String.t(), String.t() | nil) ::
+          {String.t(), String.t()}
   defp create_view_name(view_id, prefix) do
     view_id |> make_safe_id() |> view_name_with_prefix(prefix)
   end
 
   defp view_name_with_prefix(id, prefix) do
     view_name = "#{@search_view_prefix}#{id}"
-    view_name_with_prefix = if(prefix, do: "#{prefix}.#{view_name}", else: view_name)
+
+    view_name_with_prefix =
+      if(prefix, do: "#{prefix}.#{view_name}", else: view_name)
+
     {view_name, view_name_with_prefix}
   end
 

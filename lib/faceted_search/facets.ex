@@ -92,7 +92,11 @@ defmodule FacetedSearch.Facets do
         {:ok, facet_results}
 
       {:error, :no_cache} ->
-        create_and_cache_facet_results(ecto_schema, search_params, facet_search_options)
+        create_and_cache_facet_results(
+          ecto_schema,
+          search_params,
+          facet_search_options
+        )
     end
   end
 
@@ -106,9 +110,17 @@ defmodule FacetedSearch.Facets do
     create_facet_results(ecto_schema, search_params, facet_search_options)
   end
 
-  @spec create_and_cache_facet_results(Ecto.Queryable.t(), map(), [facet_search_option()]) ::
-          {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}
-  defp create_and_cache_facet_results(ecto_schema, search_params, facet_search_options) do
+  @spec create_and_cache_facet_results(Ecto.Queryable.t(), map(), [
+          facet_search_option()
+        ]) ::
+          {:ok, list(result_row())}
+          | {:error, Flop.Meta.t()}
+          | {:error, Exception.t()}
+  defp create_and_cache_facet_results(
+         ecto_schema,
+         search_params,
+         facet_search_options
+       ) do
     {view_name, _module} = ecto_schema
     cache_key = search_params.filters
 
@@ -128,7 +140,8 @@ defmodule FacetedSearch.Facets do
     Cache.clear(Cache, view_name)
   end
 
-  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) :: no_return()
+  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
+          no_return()
   def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []) do
     {view_name, _module} = ecto_schema
 
@@ -137,15 +150,25 @@ defmodule FacetedSearch.Facets do
       search_params = clean_search_params(raw_search_params)
       cache_key = search_params.filters
 
-      data = create_facet_results(ecto_schema, search_params, facet_search_options)
+      data =
+        create_facet_results(ecto_schema, search_params, facet_search_options)
+
       Cache.insert(Cache, view_name, cache_key, data)
     end)
   end
 
   @spec create_facet_results(Ecto.Queryable.t(), map(), [facet_search_option()]) ::
-          {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}
+          {:ok, list(result_row())}
+          | {:error, Flop.Meta.t()}
+          | {:error, Exception.t()}
   defp create_facet_results(ecto_schema, search_params, facet_search_options) do
-    repo = Keyword.get(facet_search_options, :repo, Config.get_repo(facet_search_options))
+    repo =
+      Keyword.get(
+        facet_search_options,
+        :repo,
+        Config.get_repo(facet_search_options)
+      )
+
     {_view_name, module} = ecto_schema
     search_view_description = FacetedSearch.search_view_description(module)
     facet_configs = FacetConfig.facet_configs(search_view_description)
@@ -156,7 +179,12 @@ defmodule FacetedSearch.Facets do
       create_search_params_without_facets(search_params, facet_configs)
 
     with {:ok, all_facet_rows} <-
-           get_facet_results(repo, ecto_schema, search_params_without_facets, opts),
+           get_facet_results(
+             repo,
+             ecto_schema,
+             search_params_without_facets,
+             opts
+           ),
          {:ok, filtered_facet_rows} <-
            maybe_get_facet_results(repo, ecto_schema, search_params, opts) do
       facet_results =
@@ -175,7 +203,10 @@ defmodule FacetedSearch.Facets do
   end
 
   @spec create_search_params_without_facets(map(), facet_configs()) :: map()
-  defp create_search_params_without_facets(%{filters: filters} = search_params, facet_configs)
+  defp create_search_params_without_facets(
+         %{filters: filters} = search_params,
+         facet_configs
+       )
        when is_list(filters) do
     prefix = Constants.facet_search_field_prefix()
 
@@ -187,14 +218,30 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  defp create_search_params_without_facets(search_params, _facet_configs), do: search_params
+  defp create_search_params_without_facets(search_params, _facet_configs),
+    do: search_params
 
-  @spec maybe_get_facet_results(Ecto.Repo.t(), Ecto.Queryable.t(), map(), Keyword.t()) ::
-          {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}
-  defp maybe_get_facet_results(repo, ecto_schema, %{filters: filters} = search_params, opts) do
+  @spec maybe_get_facet_results(
+          Ecto.Repo.t(),
+          Ecto.Queryable.t(),
+          map(),
+          Keyword.t()
+        ) ::
+          {:ok, list(result_row())}
+          | {:error, Flop.Meta.t()}
+          | {:error, Exception.t()}
+  defp maybe_get_facet_results(
+         repo,
+         ecto_schema,
+         %{filters: filters} = search_params,
+         opts
+       ) do
     facet_filters =
       Enum.filter(filters, fn %{field: field} ->
-        String.starts_with?(field |> to_string(), Constants.facet_search_field_prefix())
+        String.starts_with?(
+          field |> to_string(),
+          Constants.facet_search_field_prefix()
+        )
       end)
 
     if facet_filters == [] do
@@ -205,7 +252,9 @@ defmodule FacetedSearch.Facets do
   end
 
   @spec get_facet_results(Ecto.Repo.t(), Ecto.Queryable.t(), map(), Keyword.t()) ::
-          {:ok, list(result_row())} | {:error, Flop.Meta.t()} | {:error, Exception.t()}
+          {:ok, list(result_row())}
+          | {:error, Flop.Meta.t()}
+          | {:error, Exception.t()}
   defp get_facet_results(repo, ecto_schema, search_params, opts) do
     case Flop.validate(search_params, opts) do
       {:ok, flop} ->
@@ -218,7 +267,12 @@ defmodule FacetedSearch.Facets do
     end
   end
 
-  @spec create_facets_query(Ecto.Queryable.t(), Ecto.Repo.t(), Flop.t(), Keyword.t()) ::
+  @spec create_facets_query(
+          Ecto.Queryable.t(),
+          Ecto.Repo.t(),
+          Flop.t(),
+          Keyword.t()
+        ) ::
           String.t()
   defp create_facets_query(ecto_schema, repo, flop, opts) do
     query_opts = Keyword.get(opts, :query_opts, [])
@@ -306,14 +360,26 @@ defmodule FacetedSearch.Facets do
     search_params_value_lookup =
       (search_params.filters || [])
       |> Enum.reduce(%{}, fn %{field: field, value: values}, acc ->
-        Map.put(acc, field |> to_string() |> String.trim_leading(prefix), values)
+        Map.put(
+          acc,
+          field |> to_string() |> String.trim_leading(prefix),
+          values
+        )
       end)
 
     all_facet_result_states =
-      create_facet_result_states(all_facet_rows, facet_configs, search_params_value_lookup)
+      create_facet_result_states(
+        all_facet_rows,
+        facet_configs,
+        search_params_value_lookup
+      )
 
     filtered_facet_result_states =
-      create_facet_result_states(filtered_facet_rows, facet_configs, search_params_value_lookup)
+      create_facet_result_states(
+        filtered_facet_rows,
+        facet_configs,
+        search_params_value_lookup
+      )
 
     combined_facet_result_states =
       all_facet_result_states
@@ -327,11 +393,17 @@ defmodule FacetedSearch.Facets do
           facet_result_states(),
           facet_result_states()
         ) :: facet_result_states()
-  defp combine_facet_result_states(all_facet_result_states, filtered_facet_result_states)
+  defp combine_facet_result_states(
+         all_facet_result_states,
+         filtered_facet_result_states
+       )
        when filtered_facet_result_states == %{},
        do: all_facet_result_states
 
-  defp combine_facet_result_states(all_facet_result_states, filtered_facet_result_states) do
+  defp combine_facet_result_states(
+         all_facet_result_states,
+         filtered_facet_result_states
+       ) do
     # If any option in a group is selected, take all other options from all_facet_result_states
     filtered_facet_result_states
     |> Enum.reduce(%{}, fn {name, states}, acc ->
@@ -363,7 +435,8 @@ defmodule FacetedSearch.Facets do
          search_params_value_lookup,
          facet_configs
        ) do
-    derived_parent_values = derive_parent_values(search_params_value_lookup, facet_configs)
+    derived_parent_values =
+      derive_parent_values(search_params_value_lookup, facet_configs)
 
     combined_facet_result_states
     |> auto_select_parent_values(derived_parent_values)
@@ -371,6 +444,11 @@ defmodule FacetedSearch.Facets do
   end
 
   defp derive_parent_values(search_params_value_lookup, facet_configs) do
+    name_to_field_lookup =
+      Enum.reduce(facet_configs, %{}, fn {_, facet_config}, acc ->
+        Map.put(acc, facet_config.name, facet_config.field)
+      end)
+
     hierarchy_facet_configs =
       Enum.filter(facet_configs, fn {_name, config} -> !!config.hierarchy end)
 
@@ -381,8 +459,8 @@ defmodule FacetedSearch.Facets do
       end)
 
     hierarchy_facet_config_name_lookup =
-      Enum.reduce(hierarchy_facet_configs, %{}, fn {name, _config}, acc ->
-        Map.put(acc, to_string(name), true)
+      Enum.reduce(hierarchy_facet_configs, %{}, fn {_name, config}, acc ->
+        Map.put(acc, config.name, true)
       end)
 
     hierarchy_search_params_value_lookup =
@@ -395,11 +473,12 @@ defmodule FacetedSearch.Facets do
       end)
 
     facet_value_list =
-      Enum.reduce(hierarchy_search_params_value_lookup, [], fn {name, values}, acc ->
+      Enum.reduce(hierarchy_search_params_value_lookup, [], fn {name, values},
+                                                               acc ->
         Enum.concat(
           Enum.reduce(values, [], fn value, acc_1 ->
             Enum.concat(
-              Map.new([{name |> String.to_existing_atom(), value}]),
+              Map.new([{name_to_field_lookup[name], value}]),
               acc_1
             )
           end),
@@ -409,19 +488,32 @@ defmodule FacetedSearch.Facets do
 
     separator = Constants.hierarchy_separator()
 
-    Enum.reduce(facet_value_list, facet_value_list, fn {facet_name, value}, acc ->
+    Enum.reduce(facet_value_list, facet_value_list, fn {facet_name, value},
+                                                       acc ->
       Enum.concat(
-        collect_parent_values(facet_name, value |> String.split(separator), parent_lookup, []),
+        collect_parent_values(
+          facet_name,
+          value |> String.split(separator),
+          parent_lookup,
+          []
+        ),
         acc
       )
     end)
     |> Enum.uniq()
     |> Enum.reduce(%{}, fn {facet_name, parent_value}, acc ->
-      Map.update(acc, facet_name, [parent_value], fn existing -> [parent_value | existing] end)
+      Map.update(acc, facet_name, [parent_value], fn existing ->
+        [parent_value | existing]
+      end)
     end)
   end
 
-  defp collect_parent_values(_facet_name, value_parts, _parent_lookup, collected)
+  defp collect_parent_values(
+         _facet_name,
+         value_parts,
+         _parent_lookup,
+         collected
+       )
        when value_parts == [],
        do: collected
 
@@ -437,7 +529,8 @@ defmodule FacetedSearch.Facets do
         |> tl()
         |> Enum.reverse()
 
-      parent_value = Enum.join(parent_value_parts, Constants.hierarchy_separator())
+      parent_value =
+        Enum.join(parent_value_parts, Constants.hierarchy_separator())
 
       collected =
         Enum.concat(
@@ -445,7 +538,12 @@ defmodule FacetedSearch.Facets do
           collected
         )
 
-      collect_parent_values(parent_facet_name, parent_value_parts, parent_lookup, collected)
+      collect_parent_values(
+        parent_facet_name,
+        parent_value_parts,
+        parent_lookup,
+        collected
+      )
     end
   end
 
@@ -457,7 +555,10 @@ defmodule FacetedSearch.Facets do
 
       if parent_values_to_select do
         updated_states =
-          Enum.map(states, &Map.put(&1, :selected, &1.value in parent_values_to_select))
+          Enum.map(
+            states,
+            &Map.put(&1, :selected, &1.value in parent_values_to_select)
+          )
 
         [{facet_name, updated_states} | acc]
       else
@@ -466,7 +567,10 @@ defmodule FacetedSearch.Facets do
     end)
   end
 
-  defp only_keep_children_of_selected_parents(facet_result_states, derived_parent_values) do
+  defp only_keep_children_of_selected_parents(
+         facet_result_states,
+         derived_parent_values
+       ) do
     facet_result_states
     |> Enum.reduce([], fn {facet_name, states}, acc ->
       valid_states =
@@ -570,10 +674,18 @@ defmodule FacetedSearch.Facets do
 
   @spec create_facet_result_states(list(result_row()), facet_configs(), map()) ::
           facet_result_states()
-  defp create_facet_result_states(facet_rows, facet_configs, search_params_value_lookup) do
+  defp create_facet_result_states(
+         facet_rows,
+         facet_configs,
+         search_params_value_lookup
+       ) do
+    facet_config_list =
+      Enum.map(facet_configs, fn {_, facet_config} -> facet_config end)
+
     facet_rows
     |> Enum.map(fn {name, raw_value, database_label, count} ->
-      facet_config = get_in(facet_configs, [Access.key(String.to_existing_atom(name))])
+      facet_config =
+        Enum.find(facet_config_list, &(&1.name == name))
 
       if is_nil(facet_config) do
         raise "FacetedSearch: facet_field '#{name}' is not configured."
@@ -602,7 +714,10 @@ defmodule FacetedSearch.Facets do
 
   # If range_buckets contains valid entries, return the bucket for the given value
   # otherwise, return the value unchanged.
-  defp maybe_get_range_bucket_value(value, %{range_buckets: range_buckets} = _facet_config)
+  defp maybe_get_range_bucket_value(
+         value,
+         %{range_buckets: range_buckets} = _facet_config
+       )
        when is_list(range_buckets) and range_buckets != [] do
     Enum.find(range_buckets, fn {_bounds, bucket} -> bucket == value end)
   end
@@ -624,6 +739,8 @@ defmodule FacetedSearch.Facets do
 
   defp cast_value(raw_value, _), do: raw_value
 
-  def clean_search_params(%{filters: filters} = _search_params), do: %{filters: filters}
+  def clean_search_params(%{filters: filters} = _search_params),
+    do: %{filters: filters}
+
   def clean_search_params(_), do: %{filters: []}
 end
