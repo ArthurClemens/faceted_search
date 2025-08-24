@@ -20,7 +20,7 @@ defmodule FacetedSearch.Test.Factory do
     "emotion",
     "history",
     "interdisciplinary",
-    "language",
+    "language_analysis",
     "literature",
     "manuscripts",
     "materiality",
@@ -43,7 +43,7 @@ defmodule FacetedSearch.Test.Factory do
     "emotion" => "Emotion",
     "history" => "History",
     "interdisciplinary" => "Interdisciplinary",
-    "language" => "Language",
+    "language_analysis" => "Language analysis: Critical reading",
     "literature" => "Literature",
     "manuscripts" => "Manuscripts",
     "materiality" => "Materiality",
@@ -64,7 +64,7 @@ defmodule FacetedSearch.Test.Factory do
         "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
       summary:
         "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood.",
-      tags: ["politics", "history", "language"],
+      tags: ["politics", "history", "language_analysis"],
       author: "Helena van Dijk"
     },
     %{
@@ -88,7 +88,7 @@ defmodule FacetedSearch.Test.Factory do
         "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
       summary:
         "Investigates how unconventional syntax and grammar functioned as tools of political resistance in literary works tied to protest movements.",
-      tags: ["literature", "politics", "language"],
+      tags: ["literature", "politics", "language_analysis"],
       author: "Mateo Alvarez"
     },
     %{
@@ -188,7 +188,10 @@ defmodule FacetedSearch.Test.Factory do
       content: article_data.summary,
       publish_date:
         DateTime.utc_now()
-        |> DateTime.add(-1 * :rand.uniform(20), :day)
+        |> DateTime.add(
+          -1 * article_publish_date_offset(article_data.title),
+          :day
+        )
         |> DateTime.truncate(:second)
     }
 
@@ -220,5 +223,29 @@ defmodule FacetedSearch.Test.Factory do
 
   def author_name_factory do
     sequence(:author_name, @authors)
+  end
+
+  defp article_publish_date_offset(title) do
+    {min_code, max_code} = article_char_codes() |> min_max_article_char_codes()
+    article_char_code = article_char_code(title)
+    article_publish_date_step = 1 / (max_code - min_code) * 140
+
+    Kernel.round((max_code - article_char_code) * article_publish_date_step)
+  end
+
+  defp article_char_codes do
+    Enum.map(
+      @articles,
+      &(&1.title |> article_char_code())
+    )
+  end
+
+  defp article_char_code(title) do
+    String.first(title) |> String.to_charlist() |> hd
+  end
+
+  defp min_max_article_char_codes(article_char_codes) do
+    sorted = Enum.sort(article_char_codes)
+    {List.first(sorted), List.last(sorted)}
   end
 end

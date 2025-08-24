@@ -178,8 +178,12 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
           "publish_date" => "datetime",
           "title" =>
             "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
-          "tags" => ["history", "language", "politics"],
-          "tag_titles" => ["History", "Language", "Politics"],
+          "tags" => ["history", "language_analysis", "politics"],
+          "tag_titles" => [
+            "History",
+            "Language analysis: Critical reading",
+            "Politics"
+          ],
           "author" => "Helena van Dijk"
         }
       ]
@@ -230,7 +234,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       expected = [
-        ["History", "Language", "Politics"],
+        ["History", "Language analysis: Critical reading", "Politics"],
         ["History", "Manuscripts", "Semiotics"],
         ["Books", "History", "Materiality"],
         ["History", "Music", "Religion"]
@@ -246,11 +250,17 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     test "search subfield: tag_titles (multiple)" do
       search_params = %{
         filters: [
-          %{field: :tag_titles, op: :==, value: ["Literature", "Language"]}
+          %{
+            field: :tag_titles,
+            op: :==,
+            value: ["Literature", "Language analysis: Critical reading"]
+          }
         ]
       }
 
-      expected = [["Language", "Literature", "Politics"]]
+      expected = [
+        ["Language analysis: Critical reading", "Literature", "Politics"]
+      ]
 
       {:ok, {results, _meta}} =
         filtered_search("articles", ExpandedFacetSchema, search_params)
@@ -322,7 +332,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       :ok
     end
 
-    test "facet results" do
+    test "facet results (no search params)" do
       search_params = %{}
 
       {:ok, {_results, meta}, facets} =
@@ -360,6 +370,23 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               label: "Books",
               value: "books",
               selected: false
+            }
+          ]
+        },
+        publish_date: %{
+          count: 4,
+          first_2_options: [
+            %FacetedSearch.Option{
+              count: 3,
+              label: "2",
+              selected: false,
+              value: 2
+            },
+            %FacetedSearch.Option{
+              count: 2,
+              label: "3",
+              selected: false,
+              value: 3
             }
           ]
         }
@@ -415,6 +442,23 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               label: "Books",
               count: 1,
               selected: false
+            }
+          ]
+        },
+        publish_date: %{
+          count: 2,
+          first_2_options: [
+            %FacetedSearch.Option{
+              count: 3,
+              label: "2",
+              selected: false,
+              value: 2
+            },
+            %FacetedSearch.Option{
+              count: 1,
+              label: "4",
+              selected: false,
+              value: 4
             }
           ]
         }
@@ -477,11 +521,104 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               selected: false
             }
           ]
+        },
+        publish_date: %{
+          count: 1,
+          first_2_options: [
+            %FacetedSearch.Option{
+              count: 1,
+              label: "2",
+              selected: false,
+              value: 2
+            }
+          ]
         }
       }
 
       assert meta.total_count == 1
       assert facet_result_subset(facets) == expected
+    end
+
+    test "search facets (date range bound)" do
+      search_params = %{
+        filters: [
+          %{
+            value: [3, 4],
+            op: :==,
+            field: :facet_publish_date
+          }
+        ]
+      }
+
+      {:ok, {_results, meta}, facets} =
+        facets_search("articles", ExpandedFacetSchema, search_params)
+
+      expected = %{
+        author: %{
+          count: 4,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Jean-Marie Leclerc",
+              label: "Jean-Marie Leclerc",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        publish_date: %{
+          count: 4,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: 2,
+              label: "2",
+              count: 3,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: 3,
+              label: "3",
+              count: 2,
+              selected: true
+            }
+          ]
+        },
+        tags: %{
+          count: 12,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "culture",
+              label: "Culture",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "history",
+              label: "History",
+              count: 3,
+              selected: false
+            }
+          ]
+        }
+      }
+
+      assert meta.total_count == 5
+      assert facet_result_subset(facets) == expected
+
+      expected_publish_date_options = [
+        %FacetedSearch.Option{value: 2, label: "2", count: 3, selected: false},
+        %FacetedSearch.Option{value: 3, label: "3", count: 2, selected: true},
+        %FacetedSearch.Option{value: 4, label: "4", count: 3, selected: true},
+        %FacetedSearch.Option{value: 6, label: "6", count: 2, selected: false}
+      ]
+
+      assert Enum.find(facets, &(&1.field == :publish_date))
+             |> get_in([Access.key(:options)]) == expected_publish_date_options
     end
   end
 

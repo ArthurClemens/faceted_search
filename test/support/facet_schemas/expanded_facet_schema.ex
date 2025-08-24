@@ -73,6 +73,16 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           :author,
           tags: [
             label: :tag_titles
+          ],
+          publish_date: [
+            date_range_bounds: [
+              "2025-01-01",
+              "now() - interval '1 year'",
+              "now() - interval '3 month'",
+              "now() - interval '1 month'",
+              "now() - interval '1 week'",
+              "now() - interval '1 day'"
+            ]
           ]
         ]
       ]

@@ -97,33 +97,39 @@ defmodule FacetedSearch.Test.SearchViewTest do
       expected = %FacetedSearch.SearchViewDescription{
         sources: [
           %FacetedSearch.Source{
-            data_fields: [
-              %FacetedSearch.DataField{name: :title, entries: nil},
-              %FacetedSearch.DataField{name: :author, entries: nil},
-              %FacetedSearch.DataField{name: :tags, entries: nil},
-              %FacetedSearch.DataField{name: :tag_titles, entries: nil},
-              %FacetedSearch.DataField{name: :publish_date, entries: nil}
-            ],
-            facet_fields: [
-              %FacetedSearch.FacetField{
-                hide_when_selected: false,
-                hierarchy: nil,
-                label_field: nil,
-                name: :author,
-                parent: nil,
-                path: nil,
-                range_bounds: nil,
-                range_buckets: nil
+            table_name: :articles,
+            prefix: nil,
+            scopes: nil,
+            joins: [
+              %FacetedSearch.Join{
+                as: nil,
+                on: "author_articles.article_id = articles.id",
+                prefix: nil,
+                table: :author_articles
               },
-              %FacetedSearch.FacetField{
-                hide_when_selected: false,
-                hierarchy: nil,
-                label_field: :tag_titles,
-                name: :tags,
-                parent: nil,
-                path: nil,
-                range_bounds: nil,
-                range_buckets: nil
+              %FacetedSearch.Join{
+                as: nil,
+                on: "authors.id = author_articles.author_id",
+                prefix: nil,
+                table: :authors
+              },
+              %FacetedSearch.Join{
+                as: nil,
+                on: "article_tags.article_id = articles.id",
+                prefix: nil,
+                table: :article_tags
+              },
+              %FacetedSearch.Join{
+                as: nil,
+                on: "tags.id = article_tags.tag_id",
+                prefix: nil,
+                table: :tags
+              },
+              %FacetedSearch.Join{
+                table: :tag_texts,
+                on: "tag_texts.tag_id = tags.id",
+                prefix: nil,
+                as: nil
               }
             ],
             fields: [
@@ -170,46 +176,69 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 table_name: :articles
               }
             ],
-            joins: [
-              %FacetedSearch.Join{
-                as: nil,
-                on: "author_articles.article_id = articles.id",
-                prefix: nil,
-                table: :author_articles
+            data_fields: [
+              %FacetedSearch.DataField{name: :title, entries: nil},
+              %FacetedSearch.DataField{name: :author, entries: nil},
+              %FacetedSearch.DataField{name: :tags, entries: nil},
+              %FacetedSearch.DataField{name: :tag_titles, entries: nil},
+              %FacetedSearch.DataField{name: :publish_date, entries: nil}
+            ],
+            text_fields: [:author, :title, :content],
+            facet_fields: [
+              %FacetedSearch.FacetField{
+                name: :author,
+                parent: nil,
+                path: nil,
+                hierarchy: nil,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: nil,
+                range_buckets: nil
               },
-              %FacetedSearch.Join{
-                as: nil,
-                on: "authors.id = author_articles.author_id",
-                prefix: nil,
-                table: :authors
+              %FacetedSearch.FacetField{
+                name: :tags,
+                parent: nil,
+                path: nil,
+                hierarchy: nil,
+                hide_when_selected: false,
+                label_field: :tag_titles,
+                range_bounds: nil,
+                range_buckets: nil
               },
-              %FacetedSearch.Join{
-                as: nil,
-                on: "article_tags.article_id = articles.id",
-                prefix: nil,
-                table: :article_tags
-              },
-              %FacetedSearch.Join{
-                as: nil,
-                on: "tags.id = article_tags.tag_id",
-                prefix: nil,
-                table: :tags
-              },
-              %FacetedSearch.Join{
-                table: :tag_texts,
-                on: "tag_texts.tag_id = tags.id",
-                prefix: nil,
-                as: nil
+              %FacetedSearch.FacetField{
+                name: :publish_date,
+                parent: nil,
+                path: nil,
+                hierarchy: nil,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: [
+                  "'2025-01-01'::date",
+                  "now() - interval '1 year'",
+                  "now() - interval '3 month'",
+                  "now() - interval '1 month'",
+                  "now() - interval '1 week'",
+                  "now() - interval '1 day'"
+                ],
+                range_buckets: [
+                  {[:lower, "2025-01-01"], 0},
+                  {["2025-01-01", "now() - interval '1 year'"], 1},
+                  {["now() - interval '1 year'", "now() - interval '3 month'"],
+                   2},
+                  {["now() - interval '3 month'", "now() - interval '1 month'"],
+                   3},
+                  {["now() - interval '1 month'", "now() - interval '1 week'"],
+                   4},
+                  {["now() - interval '1 week'", "now() - interval '1 day'"],
+                   5},
+                  {["now() - interval '1 day'", :upper], 6}
+                ]
               }
             ],
-            prefix: nil,
-            scopes: nil,
             sort_fields: [
               %FacetedSearch.SortField{cast: nil, name: :author},
               %FacetedSearch.SortField{cast: nil, name: :publish_date}
-            ],
-            table_name: :articles,
-            text_fields: [:author, :title, :content]
+            ]
           }
         ]
       }
