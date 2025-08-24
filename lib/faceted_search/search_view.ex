@@ -206,9 +206,7 @@ defmodule FacetedSearch.SearchView do
          "source",
          "data",
          "text",
-         "tsv",
-         "hierarchies",
-         "buckets"
+         "tsv"
        ] ++
          get_sort_column_names(search_view_description))
       |> Enum.map(fn name ->
@@ -237,9 +235,7 @@ defmodule FacetedSearch.SearchView do
          %{name: "source"},
          %{name: "data", using: "gin(data)"},
          %{name: "text", using: "gin(text gin_trgm_ops)"},
-         %{name: "tsv", using: "gin(tsv)"},
-         %{name: "hierarchies", using: "gin(data)"},
-         %{name: "buckets", using: "gin(data)"}
+         %{name: "tsv", using: "gin(tsv)"}
        ] ++
          (get_sort_column_names(search_view_description)
           |> Enum.map(&%{name: &1})))
@@ -306,8 +302,6 @@ defmodule FacetedSearch.SearchView do
         &create_data_column/2,
         &create_text_column/2,
         &create_tsv_column/2,
-        &create_hierarchies_column/2,
-        &create_bucket_column/2,
         &create_sort_columns/2
       ]
       |> Enum.filter(&(not is_nil(&1) and &1 != ""))
@@ -664,51 +658,6 @@ defmodule FacetedSearch.SearchView do
     end)
   end
 
-  defp tsv_column_wrap(key_values) do
-    """
-    array_to_tsvector(
-      array_agg(array_remove(ARRAY[#{key_values}], NULL)) FILTER (WHERE array_remove(ARRAY[#{key_values}], NULL) <> '{}')
-    ) AS tsv
-    """
-  end
-
-  # Hierarchies column
-  @spec create_hierarchies_column(Source.t(), SearchViewDescription.t()) ::
-          String.t()
-  defp create_hierarchies_column(
-         %{fields: fields, facet_fields: facet_fields} = source,
-         _
-       )
-       when is_list(fields) and fields != [] and is_list(facet_fields) and
-              facet_fields != [] do
-    hierarchy_entries = create_hierarchy_entries(source)
-
-    object_string =
-      hierarchy_entries
-      |> Enum.filter(&(&1 != []))
-      |> Enum.join(",\n#{line_indent(1)}")
-
-    if object_string == "" do
-      "NULL::jsonb AS hierarchies"
-    else
-      """
-      jsonb_build_object(
-      #{line_indent(1)}#{object_string}
-      ) AS hierarchies
-      """
-    end
-  end
-
-  defp create_hierarchies_column(_, _), do: "NULL::jsonb AS hierarchies"
-
-  @spec create_hierarchy_entries(Source.t()) :: list(String.t())
-  defp create_hierarchy_entries(source) do
-    source.facet_fields
-    |> Enum.filter(& &1.hierarchy)
-    |> Enum.map(&create_hierarchy_entry(&1, source, aggregate_values: true))
-    |> Enum.map(fn %{name: name, value: value} -> "'#{name}', #{value}" end)
-  end
-
   @spec create_hierarchy_entry(FacetField.t(), Source.t(), Keyword.t()) :: map()
   defp create_hierarchy_entry(
          %{name: name, path: path, label_field: label_field},
@@ -772,58 +721,12 @@ defmodule FacetedSearch.SearchView do
     %{name: name, value: value, label: label}
   end
 
-  # Bucket column
-
-  @spec create_bucket_column(Source.t(), SearchViewDescription.t()) ::
-          String.t()
-  defp create_bucket_column(
-         %{fields: fields, facet_fields: facet_fields} = source,
-         _
-       )
-       when is_list(fields) and fields != [] and is_list(facet_fields) and
-              facet_fields != [] do
-    bucket_entries = create_bucket_entries(source)
-
-    object_string =
-      bucket_entries
-      |> Enum.filter(&(&1 != []))
-      |> Enum.join(",\n#{line_indent(1)}")
-
-    if object_string == "" do
-      "NULL::jsonb AS buckets"
-    else
-      """
-      jsonb_build_object(
-      #{line_indent(1)}#{object_string}
-      ) AS buckets
-      """
-    end
-  end
-
-  defp create_bucket_column(_, _), do: "NULL::jsonb AS buckets"
-
-  @spec create_bucket_entries(Source.t()) :: list(String.t())
-  defp create_bucket_entries(source) do
-    source.facet_fields
-    |> Enum.filter(&(not is_nil(&1.range_bounds)))
-    |> Enum.map(&create_bucket_entry(&1, source))
-  end
-
-  @spec create_bucket_entry(FacetField.t(), Source.t()) :: String.t()
-  defp create_bucket_entry(
-         %{name: name, range_bounds: range_bounds},
-         %{fields: fields, joins: joins} = _source
-       ) do
-    field = fields |> Enum.find(&(&1.name == name))
-
-    if field do
-      {table_name, column_name} = get_table_and_column(field, joins)
-      table_and_column = table_and_column_string(table_name, column_name)
-      width_bucket = create_width_bucket(table_and_column, range_bounds)
-      "'#{name}', #{width_bucket}"
-    else
-      ""
-    end
+  defp tsv_column_wrap(key_values) do
+    """
+    array_to_tsvector(
+      array_agg(array_remove(ARRAY[#{key_values}], NULL)) FILTER (WHERE array_remove(ARRAY[#{key_values}], NULL) <> '{}')
+    ) AS tsv
+    """
   end
 
   # Sort columns

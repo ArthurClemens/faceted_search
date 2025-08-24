@@ -392,11 +392,6 @@ sources: [
 
 A list of fields used to create facets, with options for labels from a database table, ranges, and hierarchies.
 
-The referenced fields populate these columns in the search view:
-- regular facets: `tsv`
-- range facets: `buckets`
-- hierarchical facets: `hierarchies`
-
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > facet_fields`
 
