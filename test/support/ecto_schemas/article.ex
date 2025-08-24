@@ -8,7 +8,8 @@ defmodule FacetedSearch.Test.MyApp.Article do
 
   schema "articles" do
     field :title, :string
-    field :content, :string
+    field :summary, :string
+    field :word_count, :integer
     field :publish_date, :utc_datetime
 
     has_many :author_articles, AuthorArticle

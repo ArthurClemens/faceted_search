@@ -31,11 +31,14 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           title: [
             ecto_type: :string
           ],
-          content: [
+          summary: [
             ecto_type: :string
           ],
           publish_date: [
             ecto_type: :utc_datetime
+          ],
+          word_count: [
+            ecto_type: :integer
           ],
           tags: [
             binding: :tags,
@@ -58,12 +61,13 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           :author,
           :tags,
           :tag_titles,
-          :publish_date
+          :publish_date,
+          :word_count
         ],
         text_fields: [
           :author,
           :title,
-          :content
+          :summary
         ],
         sort_fields: [
           :author,
@@ -73,6 +77,18 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           :author,
           tags: [
             label: :tag_titles
+          ],
+          word_count: [
+            number_range_bounds: [2000, 4000, 6000, 8000]
+          ],
+          publish_date: [
+            date_range_bounds: [
+              "now() - interval '1 year'",
+              "now() - interval '3 month'",
+              "now() - interval '1 month'",
+              "now() - interval '1 week'",
+              "now() - interval '1 day'"
+            ]
           ]
         ]
       ]
@@ -83,8 +99,38 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
 
   def schema_options, do: @options
 
-  def option_label(:draft, value, _) do
-    if value, do: "Yes", else: "No"
+  def option_label(:word_count, value, _) do
+    {bounds, _bucket} = value
+
+    case bounds do
+      [:lower, to] -> "0 - #{to}"
+      [from, :upper] -> "more than #{from}"
+      [from, to] -> "#{from}-#{to}"
+    end
+  end
+
+  def option_label(:publish_date, value, _) do
+    {bounds, _bucket} = value
+
+    case bounds do
+      [:lower, "now() - interval '1 year'"] ->
+        "older than 1 year"
+
+      ["now() - interval '1 year'", "now() - interval '3 month'"] ->
+        "last year"
+
+      ["now() - interval '3 month'", "now() - interval '1 month'"] ->
+        "last quarter"
+
+      ["now() - interval '1 month'", "now() - interval '1 week'"] ->
+        "last month"
+
+      ["now() - interval '1 week'", "now() - interval '1 day'"] ->
+        "last week"
+
+      ["now() - interval '1 day'", :upper] ->
+        "today"
+    end
   end
 
   def option_label(_, _, _), do: nil

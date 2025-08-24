@@ -45,7 +45,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 binding: nil,
                 ecto_type: :string,
                 field: nil,
-                name: :content,
+                name: :summary,
                 table_name: :articles
               },
               %FacetedSearch.Field{
@@ -84,7 +84,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
               %FacetedSearch.SortField{name: :author, cast: nil}
             ],
             table_name: :articles,
-            text_fields: [:title, :content]
+            text_fields: [:title, :summary]
           }
         ]
       }
@@ -93,16 +93,17 @@ defmodule FacetedSearch.Test.SearchViewTest do
                expected
     end
 
-    test "expanded schema" do
+    test "extended schema" do
       expected = %FacetedSearch.SearchViewDescription{
         sources: [
           %FacetedSearch.Source{
             data_fields: [
-              %FacetedSearch.DataField{name: :title, entries: nil},
-              %FacetedSearch.DataField{name: :author, entries: nil},
-              %FacetedSearch.DataField{name: :tags, entries: nil},
-              %FacetedSearch.DataField{name: :tag_titles, entries: nil},
-              %FacetedSearch.DataField{name: :publish_date, entries: nil}
+              %FacetedSearch.DataField{entries: nil, name: :title},
+              %FacetedSearch.DataField{entries: nil, name: :author},
+              %FacetedSearch.DataField{entries: nil, name: :tags},
+              %FacetedSearch.DataField{entries: nil, name: :tag_titles},
+              %FacetedSearch.DataField{entries: nil, name: :publish_date},
+              %FacetedSearch.DataField{name: :word_count, entries: nil}
             ],
             facet_fields: [
               %FacetedSearch.FacetField{
@@ -124,6 +125,49 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 path: nil,
                 range_bounds: nil,
                 range_buckets: nil
+              },
+              %FacetedSearch.FacetField{
+                name: :word_count,
+                parent: nil,
+                path: nil,
+                hierarchy: nil,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: [2000, 4000, 6000, 8000],
+                range_buckets: [
+                  {[:lower, 2000], 0},
+                  {[2000, 4000], 1},
+                  {[4000, 6000], 2},
+                  {[6000, 8000], 3},
+                  {[8000, :upper], 4}
+                ]
+              },
+              %FacetedSearch.FacetField{
+                hide_when_selected: false,
+                hierarchy: nil,
+                label_field: nil,
+                name: :publish_date,
+                parent: nil,
+                path: nil,
+                range_bounds: [
+                  "now() - interval '1 year'",
+                  "now() - interval '3 month'",
+                  "now() - interval '1 month'",
+                  "now() - interval '1 week'",
+                  "now() - interval '1 day'"
+                ],
+                range_buckets: [
+                  {[:lower, "now() - interval '1 year'"], 0},
+                  {["now() - interval '1 year'", "now() - interval '3 month'"],
+                   1},
+                  {["now() - interval '3 month'", "now() - interval '1 month'"],
+                   2},
+                  {["now() - interval '1 month'", "now() - interval '1 week'"],
+                   3},
+                  {["now() - interval '1 week'", "now() - interval '1 day'"],
+                   4},
+                  {["now() - interval '1 day'", :upper], 5}
+                ]
               }
             ],
             fields: [
@@ -138,7 +182,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 binding: nil,
                 ecto_type: :string,
                 field: nil,
-                name: :content,
+                name: :summary,
                 table_name: :articles
               },
               %FacetedSearch.Field{
@@ -149,6 +193,13 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 table_name: :articles
               },
               %FacetedSearch.Field{
+                name: :word_count,
+                binding: nil,
+                field: nil,
+                ecto_type: :integer,
+                table_name: :articles
+              },
+              %FacetedSearch.Field{
                 binding: :tags,
                 ecto_type: {:array, :string},
                 field: :name,
@@ -156,10 +207,10 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 table_name: :articles
               },
               %FacetedSearch.Field{
-                name: :tag_titles,
                 binding: :tag_texts,
-                field: :title,
                 ecto_type: {:array, :string},
+                field: :title,
+                name: :tag_titles,
                 table_name: :articles
               },
               %FacetedSearch.Field{
@@ -196,10 +247,10 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 table: :tags
               },
               %FacetedSearch.Join{
-                table: :tag_texts,
+                as: nil,
                 on: "tag_texts.tag_id = tags.id",
                 prefix: nil,
-                as: nil
+                table: :tag_texts
               }
             ],
             prefix: nil,
@@ -209,7 +260,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
               %FacetedSearch.SortField{cast: nil, name: :publish_date}
             ],
             table_name: :articles,
-            text_fields: [:author, :title, :content]
+            text_fields: [:author, :title, :summary]
           }
         ]
       }

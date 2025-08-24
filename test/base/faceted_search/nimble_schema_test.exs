@@ -13,7 +13,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
               title: [
                 ecto_type: :string
               ],
-              content: [
+              summary: [
                 ecto_type: :string
               ],
               draft: [
@@ -30,7 +30,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
             ],
             text_fields: [
               :title,
-              :content
+              :summary
             ],
             facet_fields: [
               :draft
