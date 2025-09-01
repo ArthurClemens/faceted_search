@@ -19,7 +19,7 @@ defmodule FacetedSearch.Types do
         @type create_search_view_option ::
                 {:scopes, term()}
                 | {:repo, module()}
-                | {:tenant, String.t()}
+                | {:prefix, String.t()}
                 | {:timeout, integer()}
                 | {:pool_timeout, integer()}
       end
