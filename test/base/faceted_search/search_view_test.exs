@@ -168,6 +168,46 @@ defmodule FacetedSearch.Test.SearchViewTest do
                    4},
                   {["now() - interval '1 day'", :upper], 5}
                 ]
+              },
+              %FacetedSearch.FacetField{
+                name: :category_tags_author,
+                parent: :category_tags,
+                path: [:tags, :author],
+                hierarchy: true,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: nil,
+                range_buckets: nil
+              },
+              %FacetedSearch.FacetField{
+                name: :category_tags,
+                parent: nil,
+                path: [:tags],
+                hierarchy: true,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: nil,
+                range_buckets: nil
+              },
+              %FacetedSearch.FacetField{
+                name: :category_author_tags,
+                parent: :category_author,
+                path: [:author, :tags],
+                hierarchy: true,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: nil,
+                range_buckets: nil
+              },
+              %FacetedSearch.FacetField{
+                name: :category_author,
+                parent: nil,
+                path: [:author],
+                hierarchy: true,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: nil,
+                range_buckets: nil
               }
             ],
             fields: [

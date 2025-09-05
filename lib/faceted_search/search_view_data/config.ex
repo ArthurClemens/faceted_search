@@ -3,8 +3,8 @@ defmodule FacetedSearch.Config do
 
   use FacetedSearch.Types, include: [:create_search_view_options]
 
-  alias FacetedSearch.Errors.NoRepoError
-  alias FacetedSearch.Errors.SearchViewError
+  alias FacetedSearch.NoRepoError
+  alias FacetedSearch.SearchViewError
 
   @search_view_prefix "fv_"
   @name_separator "_"

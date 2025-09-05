@@ -211,7 +211,7 @@ sources: [
 
 ## data_fields
 
-Fields to be used for filtering and data extraction in search results.
+Fields to be used for filtering and displaying details in search results.
 The referenced fields populate the `data` column in the search view.
 
 Additionally, custom fields can be defined to generate data from other sources.

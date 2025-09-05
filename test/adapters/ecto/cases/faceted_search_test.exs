@@ -391,6 +391,40 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
             }
           ]
         },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 2,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "books",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
         publish_date: %{
           count: 4,
           first_2_options: [
@@ -480,6 +514,40 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
             }
           ]
         },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 2,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "books",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
         publish_date: %{
           count: 2,
           first_2_options: [
@@ -565,6 +633,40 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               label: "2000-4000",
               selected: false,
               value: 1
+            }
+          ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "books",
+              count: 1,
+              selected: false
             }
           ]
         },
@@ -665,6 +767,40 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               label: "4000-6000",
               selected: true,
               value: 2
+            }
+          ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "books",
+              count: 1,
+              selected: false
             }
           ]
         }
@@ -786,6 +922,40 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               value: 2
             }
           ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 2,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "books",
+              count: 1,
+              selected: false
+            }
+          ]
         }
       }
 
@@ -821,6 +991,268 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
       assert Enum.find(facets, &(&1.field == :publish_date))
              |> get_in([Access.key(:options)]) == expected_publish_date_options
+    end
+
+    test "search facets: hierarchies (level 1)" do
+      search_params = %{
+        filters: [
+          %{
+            value: ["Aisha Rahman", "Helena van Dijk"],
+            op: :==,
+            field: :facet_category_author
+          }
+        ]
+      }
+
+      {:ok, {_results, meta}, facets} =
+        facets_search("articles", ExpandedFacetSchema, search_params)
+
+      expected = %{
+        author: %{
+          count: 2,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 2,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: false
+            }
+          ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 2,
+              selected: true
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 2,
+              selected: true
+            }
+          ]
+        },
+        category_author_tags: %{
+          count: 12,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman>books",
+              label: "Aisha Rahman>books",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Aisha Rahman>emotion",
+              label: "Aisha Rahman>emotion",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "books",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        publish_date: %{
+          count: 3,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: 1,
+              label: "last year",
+              count: 2,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: 2,
+              label: "last quarter",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        tags: %{
+          count: 11,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "books",
+              label: "Books",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "emotion",
+              label: "Emotion",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        word_count: %{
+          count: 2,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: 1,
+              label: "2000-4000",
+              count: 3,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: 3,
+              label: "6000-8000",
+              count: 1,
+              selected: false
+            }
+          ]
+        }
+      }
+
+      assert meta.total_count == 4
+      assert facet_result_subset(facets) == expected
+    end
+
+    test "search facets: hierarchies (level 2)" do
+      search_params = %{
+        filters: [
+          %{
+            value: ["Helena van Dijk>history"],
+            op: :==,
+            field: :facet_category_author_tags
+          }
+        ]
+      }
+
+      {:ok, {_results, meta}, facets} =
+        facets_search("articles", ExpandedFacetSchema, search_params)
+
+      expected = %{
+        author: %{
+          count: 1,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Aisha Rahman",
+              label: "Aisha Rahman",
+              count: 2,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 1,
+              selected: true
+            }
+          ]
+        },
+        category_author_tags: %{
+          count: 6,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Helena van Dijk>history",
+              label: "Helena van Dijk>history",
+              count: 1,
+              selected: true
+            },
+            %FacetedSearch.Option{
+              value: "Helena van Dijk>interdisciplinary",
+              label: "Helena van Dijk>interdisciplinary",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "archives",
+              label: "archives",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "books",
+              label: "books",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        publish_date: %{
+          count: 1,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: 2,
+              label: "last quarter",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        tags: %{
+          count: 3,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "history",
+              label: "History",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "language_analysis",
+              label: "Language analysis: Critical reading",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        word_count: %{
+          count: 1,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: 1,
+              label: "2000-4000",
+              count: 1,
+              selected: false
+            }
+          ]
+        }
+      }
+
+      assert meta.total_count == 1
+      assert facet_result_subset(facets) == expected
     end
   end
 

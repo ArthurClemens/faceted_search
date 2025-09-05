@@ -14,11 +14,11 @@ defmodule FacetedSearch.SearchView do
   alias FacetedSearch.Config
   alias FacetedSearch.Constants
   alias FacetedSearch.DataField
-  alias FacetedSearch.Errors.SearchViewError
   alias FacetedSearch.FacetField
   alias FacetedSearch.Field
   alias FacetedSearch.Join
   alias FacetedSearch.SearchViewDescription
+  alias FacetedSearch.SearchViewError
   alias FacetedSearch.Source
 
   @doc """

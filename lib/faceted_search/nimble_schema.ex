@@ -2,8 +2,9 @@ defmodule FacetedSearch.NimbleSchema do
   @moduledoc false
 
   alias FacetedSearch.Constants
-  alias FacetedSearch.Errors.InvalidOptionsError
-  alias FacetedSearch.Errors.MissingCallbackError
+  alias FacetedSearch.InvalidOptionsError
+  alias FacetedSearch.MissingCallbackError
+  alias FacetedSearch.SchemaValidationData
 
   @default_schema_fields [
     :id,
@@ -102,35 +103,71 @@ defmodule FacetedSearch.NimbleSchema do
       {:ok, opts} ->
         collected_errors =
           []
-          |> validate_options(module, opts, :data_fields,
+          |> validate_options(module, opts, :fields,
             get_supported_keyword_list_options: fn
-              %{path: [_, _, :data_fields]}, _field_keys ->
-                :any
+              %{path: [_, _, :fields]}, _keys_map ->
+                :ok
 
-              %{path: [_, _, :data_fields, _], key: key, values: values},
-              field_keys ->
-                if Keyword.keyword?(values.raw) and key in field_keys do
-                  :any
+              %{path: [_, _, :fields, _], key: :binding, raw: binding_key},
+              %{join_keys: join_keys} ->
+                if binding_key in join_keys do
+                  :ok
                 else
-                  if MapSet.equal?(
-                       MapSet.new([:binding, :field]),
-                       MapSet.new(Keyword.keys(values.raw))
-                     ) do
-                    :any
-                  else
-                    field_keys
-                  end
+                  %{
+                    error: :unlisted_join_binding,
+                    key: binding_key,
+                    supported_keys: join_keys
+                  }
                 end
 
-              %{path: [_, _, :data_fields, _, _]}, _field_keys ->
-                %{
-                  binding: :atom,
-                  field: :atom,
-                  cast: :atom
-                }
+              _, _ ->
+                :ok
+            end
+          )
+          |> validate_options(module, opts, :data_fields,
+            get_supported_keyword_list_options: fn
+              %{path: [_, _, :data_fields]}, _keys_map ->
+                :ok
+
+              %{
+                path: [_, _, :data_fields, _],
+                values: %{raw: raw_values} = _values
+              },
+              _keys_map
+              when is_list(raw_values) ->
+                cond do
+                  MapSet.equal?(
+                    MapSet.new([:binding, :field]),
+                    MapSet.new(Keyword.keys(raw_values))
+                  ) ->
+                    :ok
+
+                  MapSet.equal?(
+                    MapSet.new([:cast]),
+                    MapSet.new(Keyword.keys(raw_values))
+                  ) ->
+                    :ok
+
+                  true ->
+                    key = Keyword.keys(raw_values) |> List.first()
+
+                    %{
+                      error: :unlisted,
+                      key: key,
+                      supported_keys: [:binding, :field, :cast]
+                    }
+                end
+
+              %{path: [_, _, :data_fields, _], key: key},
+              %{field_keys: field_keys} ->
+                if key in field_keys do
+                  :ok
+                else
+                  %{error: :unlisted, key: key, supported_keys: field_keys}
+                end
 
               _, _ ->
-                nil
+                :ok
             end
           )
           |> validate_options(module, opts, :text_fields)
@@ -138,41 +175,59 @@ defmodule FacetedSearch.NimbleSchema do
             get_supported_keyword_list_options: fn
               %{path: [_, _, :facet_fields], key: key}, _
               when key == :hierarchies ->
-                :any
+                :ok
 
               %{path: [_, _, :facet_fields, :hierarchies]}, _ ->
-                :any
+                :ok
 
-              %{path: [_, _, :facet_fields, :hierarchies, _]}, _field_keys ->
-                %{
-                  path: {:array, :atom},
-                  label: :atom,
-                  parent: :atom,
-                  hide_when_selected: :boolean
-                }
-
-              %{path: [_, _, :facet_fields], key: key, values: values},
-              field_keys ->
-                if Keyword.keyword?(values.raw) and key in field_keys do
-                  :any
+              %{path: [_, _, :facet_fields, :hierarchies, key]},
+              %{facet_keys: facet_keys} ->
+                if key in facet_keys do
+                  %{error: :duplicate, key: key, supported_keys: facet_keys}
                 else
-                  field_keys
+                  :ok
                 end
 
-              %{path: [_, _, :facet_fields, _]}, _field_keys ->
-                %{
-                  label: :atom,
-                  number_range_bounds: {:array, :number},
-                  date_range_bounds: {:array, :string}
-                }
+              %{path: [_, _, :facet_fields], key: key, values: values},
+              %{field_keys: field_keys} ->
+                if Keyword.keyword?(values.raw) and key in field_keys do
+                  :ok
+                else
+                  %{error: :unlisted, key: key, supported_keys: field_keys}
+                end
+
+              %{path: [_, _, :facet_fields, _], key: key}, _keys_map ->
+                supported_keys = [
+                  :label,
+                  :number_range_bounds,
+                  :date_range_bounds
+                ]
+
+                if key in supported_keys do
+                  :ok
+                else
+                  %{error: :unlisted, key: key, supported_keys: supported_keys}
+                end
 
               _, _ ->
-                nil
+                :ok
             end
           )
           |> validate_options(module, opts, :sort_fields,
             get_supported_keyword_list_options: fn
-              _, _ -> %{cast: :atom}
+              %{path: [_, _, :sort_fields, _], key: key}, _keys_map ->
+                supported_keys = [
+                  :cast
+                ]
+
+                if key in supported_keys do
+                  :ok
+                else
+                  %{error: :unlisted, key: key, supported_keys: supported_keys}
+                end
+
+              _, _ ->
+                :ok
             end
           )
           # Place items with same error type together
@@ -181,7 +236,9 @@ defmodule FacetedSearch.NimbleSchema do
           |> List.flatten()
 
         if not Enum.empty?(collected_errors) do
-          raise InvalidOptionsError.messages(collected_errors)
+          raise InvalidOptionsError.from_validation(collected_errors,
+                  module: module
+                )
         end
 
         validate_scope_callback(opts, opts[:module])
@@ -206,11 +263,16 @@ defmodule FacetedSearch.NimbleSchema do
     get_source_entries(opts, option)
     |> Enum.reduce(collected_errors, fn %{
                                           processed: processed,
-                                          field_keys: field_keys
+                                          field_keys: field_keys,
+                                          facet_keys: facet_keys,
+                                          join_keys: join_keys
                                         },
                                         acc ->
       validation_opts =
-        Keyword.put_new(validation_opts, :field_keys, field_keys)
+        validation_opts
+        |> Keyword.put_new(:field_keys, field_keys)
+        |> Keyword.put_new(:facet_keys, facet_keys)
+        |> Keyword.put_new(:join_keys, join_keys)
 
       Enum.reduce(processed, acc, fn {type, entries}, acc_1 ->
         list_errored_entries(type, entries, validation_opts)
@@ -231,6 +293,22 @@ defmodule FacetedSearch.NimbleSchema do
         |> List.flatten()
         |> Keyword.keys()
 
+      join_keys =
+        Keyword.get_values(source_options, :joins)
+        |> List.flatten()
+        |> Enum.map(fn
+          key when is_atom(key) -> key
+          {key, _} -> key
+        end)
+
+      facet_keys =
+        Keyword.get_values(source_options, :facet_fields)
+        |> List.flatten()
+        |> Enum.map(fn
+          key when is_atom(key) -> key
+          {key, _} -> key
+        end)
+
       entries =
         source_options
         |> Keyword.get_values(option)
@@ -243,7 +321,9 @@ defmodule FacetedSearch.NimbleSchema do
           entries: entries,
           processed: processed_entries,
           source: source,
-          field_keys: field_keys
+          join_keys: join_keys,
+          field_keys: field_keys,
+          facet_keys: facet_keys
         }
         | acc
       ]
@@ -327,35 +407,35 @@ defmodule FacetedSearch.NimbleSchema do
 
     entries
     |> Enum.filter(&(&1.key not in field_keys))
-    |> insert_error_type(:invalid_reference)
+    |> insert_error_type(:invalid_key)
   end
 
   defp list_errored_entries(:keyword_lists, entries, validation_opts) do
     entries
     |> Enum.reduce([], fn entry, acc ->
-      value_keys =
-        get_in(entry, [:values, :raw])
-        |> case do
-          nil -> []
-          value -> Keyword.keys(value)
-        end
-
       %{
+        key: key,
+        error_type: error_type,
         has_supported_keys: has_supported_keys,
         supported_keyword_list_option_keys: supported_keyword_list_option_keys
       } =
-        supported_keys?(entry, validation_opts, value_keys)
+        get_supported_key_data(entry, validation_opts)
 
-      if has_supported_keys do
+      if is_nil(error_type) or has_supported_keys do
         acc
       else
         [
-          Map.put(entry, :supported_keys, supported_keyword_list_option_keys)
+          SchemaValidationData.new(
+            Map.merge(entry, %{
+              error_type: error_type,
+              key: key,
+              supported_keys: supported_keyword_list_option_keys
+            })
+          )
           | acc
         ]
       end
     end)
-    |> insert_error_type(:unsupported_option)
   end
 
   defp list_errored_entries(:key_values, entries, validation_opts) do
@@ -363,43 +443,62 @@ defmodule FacetedSearch.NimbleSchema do
       entries
       |> Enum.reduce([], fn entry, acc ->
         %{
+          key: key,
+          error_type: error_type,
           has_supported_keys: has_supported_keys,
           supported_keyword_list_option_keys: supported_keyword_list_option_keys
         } =
-          supported_keys?(entry, validation_opts)
+          get_supported_key_data(entry, validation_opts)
 
-        if has_supported_keys do
+        if is_nil(error_type) or has_supported_keys do
           acc
         else
           [
-            Map.put(entry, :supported_keys, supported_keyword_list_option_keys)
+            SchemaValidationData.new(
+              Map.merge(entry, %{
+                key: key,
+                error_type: error_type,
+                supported_keys: supported_keyword_list_option_keys
+              })
+            )
             | acc
           ]
         end
       end)
-      |> insert_error_type(:unsupported_option)
 
     invalid_values =
       entries
-      |> Enum.reduce([], fn %{key: key, raw: raw} = entry, acc ->
-        %{supported_keyword_list_options: supported_keyword_list_options} =
-          supported_keys?(entry, validation_opts)
+      |> Enum.reduce([], fn %{raw: raw} = entry, acc ->
+        %{
+          key: key,
+          error_type: error_type,
+          supported_keyword_list_options: supported_keyword_list_options
+        } =
+          get_supported_key_data(entry, validation_opts)
 
         type = supported_keyword_list_options[key]
 
-        if valid_type?(raw, type) do
+        if is_nil(error_type) or valid_type?(raw, type) do
           acc
         else
-          [Map.put(entry, :expected_type, error_message_type(type)) | acc]
+          [
+            SchemaValidationData.new(
+              Map.merge(entry, %{
+                key: key,
+                error_type: error_type,
+                expected_type: error_message_type(type)
+              })
+            )
+            | acc
+          ]
         end
       end)
-      |> insert_error_type(:invalid_value)
 
     Enum.concat(unsupported_options, invalid_values)
     |> Enum.uniq_by(&[&1.key | &1.path])
   end
 
-  defp supported_keys?(entry, validation_opts, value_keys \\ nil) do
+  defp get_supported_key_data(entry, validation_opts) do
     field_keys =
       @default_schema_fields
       |> Enum.concat(Keyword.get(validation_opts, :field_keys, []))
@@ -408,48 +507,27 @@ defmodule FacetedSearch.NimbleSchema do
     get_supported_keyword_list_options =
       Keyword.get(validation_opts, :get_supported_keyword_list_options)
 
-    case get_supported_keyword_list_options.(entry, field_keys) do
-      :any ->
+    case get_supported_keyword_list_options.(entry, %{
+           field_keys: field_keys,
+           facet_keys: Keyword.get(validation_opts, :facet_keys, []),
+           join_keys: Keyword.get(validation_opts, :join_keys, [])
+         }) do
+      :ok ->
         %{
+          key: entry.key,
+          error_type: nil,
           has_supported_keys: true,
           supported_keyword_list_options: [],
           supported_keyword_list_option_keys: []
         }
 
-      options when is_map(options) and is_list(value_keys) ->
-        option_keys = Map.keys(options)
-
-        has_supported_keys =
-          MapSet.subset?(
-            MapSet.new(value_keys),
-            MapSet.new(option_keys)
-          )
-
+      %{error: error_type, key: key, supported_keys: supported_keys} ->
         %{
-          has_supported_keys: has_supported_keys,
-          supported_keyword_list_options: options,
-          supported_keyword_list_option_keys: option_keys
-        }
-
-      options when is_map(options) ->
-        option_keys = Map.keys(options)
-
-        supported_keys =
-          option_keys
-          |> Enum.concat(field_keys)
-          |> Enum.uniq()
-
-        %{
-          has_supported_keys: entry.key in supported_keys,
-          supported_keyword_list_options: options,
-          supported_keyword_list_option_keys: option_keys
-        }
-
-      _ ->
-        %{
+          key: key,
+          error_type: error_type,
           has_supported_keys: false,
           supported_keyword_list_options: [],
-          supported_keyword_list_option_keys: field_keys
+          supported_keyword_list_option_keys: supported_keys
         }
     end
   end

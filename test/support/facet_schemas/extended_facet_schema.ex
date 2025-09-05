@@ -89,6 +89,20 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
               "now() - interval '1 week'",
               "now() - interval '1 day'"
             ]
+          ],
+          hierarchies: [
+            category_author: [
+              path: [:author]
+            ],
+            category_author_tags: [
+              path: [:author, :tags]
+            ],
+            category_tags: [
+              path: [:tags]
+            ],
+            category_tags_author: [
+              path: [:tags, :author]
+            ]
           ]
         ]
       ]
