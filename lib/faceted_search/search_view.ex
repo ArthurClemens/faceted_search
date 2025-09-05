@@ -360,8 +360,11 @@ defmodule FacetedSearch.SearchView do
          %{current_scope: current_scope} = _config
        )
        when is_list(scopes) and scopes != [] and not is_nil(current_scope) do
+    current_scope_keys = Map.keys(current_scope)
+
     filters =
       scopes
+      |> Enum.filter(&(&1.key in current_scope_keys))
       |> Enum.map_join(
         " AND ",
         &create_where_filter(&1, table_name, current_scope)

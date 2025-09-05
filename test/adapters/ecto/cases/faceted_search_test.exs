@@ -7,6 +7,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
   import FacetedSearch.Test.Factory
 
   alias FacetedSearch.Test.MyApp.ExpandedFacetSchema
+  alias FacetedSearch.Test.MyApp.ScopedFacetSchema
   alias FacetedSearch.Test.Repo
 
   describe "search view" do
@@ -1253,6 +1254,111 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
       assert meta.total_count == 1
       assert facet_result_subset(facets) == expected
+    end
+  end
+
+  describe "scopes (word_count)" do
+    setup do
+      init_resources(article_count: 10)
+
+      FacetedSearch.create_search_view(ScopedFacetSchema, "articles",
+        scopes: %{word_count: 4000}
+      )
+
+      :ok
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = [4898, 5591, 6131, 6581, 7643]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ScopedFacetSchema, search_params)
+
+      assert results |> Enum.map(& &1.data["word_count"]) |> Enum.sort() ==
+               expected
+    end
+  end
+
+  describe "scopes (publish_date)" do
+    setup do
+      init_resources(article_count: 10)
+
+      last_month = DateTime.utc_now() |> DateTime.add(-30, :day)
+
+      FacetedSearch.create_search_view(ScopedFacetSchema, "articles",
+        scopes: %{publish_date: last_month}
+      )
+
+      :ok
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = [
+        "2025-08-27",
+        "2025-08-27",
+        "2025-08-27",
+        "2025-09-05",
+        "2025-09-05"
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ScopedFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(&(&1.data["publish_date"] |> String.slice(0, 10)))
+             |> Enum.sort() ==
+               expected
+    end
+  end
+
+  describe "scopes (combined word_count and publish_date)" do
+    setup do
+      init_resources(article_count: 10)
+
+      last_month = DateTime.utc_now() |> DateTime.add(-30, :day)
+
+      FacetedSearch.create_search_view(ScopedFacetSchema, "articles",
+        scopes: %{word_count: 4000, publish_date: last_month}
+      )
+
+      :ok
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = [
+        %{
+          "publish_date" => "2025-08-27",
+          "title" =>
+            "Spectral Agency: Ghost Narratives as Cultural Memory Archives",
+          "word_count" => 4898
+        },
+        %{
+          "publish_date" => "2025-08-27",
+          "title" =>
+            "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture",
+          "word_count" => 5591
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ScopedFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(
+               &Map.replace(
+                 &1.data,
+                 "publish_date",
+                 &1.data["publish_date"] |> String.slice(0, 10)
+               )
+             )
+             |> Enum.sort_by(& &1["word_count"]) ==
+               expected
     end
   end
 

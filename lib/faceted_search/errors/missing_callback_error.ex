@@ -12,12 +12,9 @@ defmodule FacetedSearch.MissingCallbackError do
 
         Option "scopes" was used, and that requires the behaviour callback #{error.callback} to be defined in module #{error.module}.
 
+        Make sure to place the callback below `use FacetedSearch`.
+
         Example:
-
-            For schema with option:
-
-                scopes: [:current_user],
-                ...
 
             Add a function `scope_by/2` that accepts the same key and a scope parameter to read from:
 
@@ -28,6 +25,11 @@ defmodule FacetedSearch.MissingCallbackError do
                     value: current_user.id
                   }
                 end
+
+                use FacetedSearch,
+                  sources: [
+                    scopes: [...],
+                  ]
     """
   end
 end
