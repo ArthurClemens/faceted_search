@@ -21,7 +21,7 @@ defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
           title: [
             ecto_type: :string
           ],
-          content: [
+          summary: [
             ecto_type: :string
           ],
           publish_date: [
@@ -40,7 +40,7 @@ defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
         ],
         text_fields: [
           :title,
-          :content
+          :summary
         ],
         sort_fields: [
           :publish_date,

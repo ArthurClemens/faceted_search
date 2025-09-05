@@ -2,14 +2,15 @@ defmodule FacetedSearch.Filter do
   @moduledoc false
 
   # Filters for custom fields
-  # Adds support for searching the `data` JSON field in the document view table.
+  # Adds support for searching the `data` JSON column and the `tsv` TSVector column in the document view table.
 
   import Ecto.Query, warn: false
 
   require Logger
 
+  alias FacetedSearch.Constants
+
   def filter(query, %Flop.Filter{field: field, value: value, op: op}, opts) do
-    is_hierarchy_facet = Keyword.get(opts, :is_hierarchy_facet)
     ecto_type = Keyword.get(opts, :ecto_type)
     source_is_array = Keyword.get(opts, :source_is_array, false)
 
@@ -33,19 +34,17 @@ defmodule FacetedSearch.Filter do
           dynamic_expr(name, ecto_type, %{
             source_is_array: source_is_array,
             is_facet_search: is_facet_search,
-            is_range_facet: is_range_facet,
-            is_hierarchy_facet: is_hierarchy_facet
+            is_range_facet: is_range_facet
           })
 
         conditions =
           cond do
             is_facet_search ->
               get_facet_conditions(
+                name,
                 op,
-                value_type,
                 expr,
-                query_value,
-                source_is_array
+                query_value
               )
 
             source_is_array_value ->
@@ -113,63 +112,46 @@ defmodule FacetedSearch.Filter do
     )
   end
 
-  defp get_facet_conditions(:==, :string, expr, query_value, source_is_array)
-       when source_is_array do
-    dynamic(
-      [r],
-      fragment(
-        "? \\?| STRING_TO_ARRAY(?, ',')",
-        ^expr,
-        ^(query_value |> Enum.join(","))
-      )
-    )
-  end
+  defp get_facet_conditions(name, :==, expr, facet_values)
+       when is_list(facet_values) do
+    values = Enum.map(facet_values, &"#{name}#{Constants.tsv_separator()}#{&1}")
 
-  defp get_facet_conditions(:==, :string, expr, query_value, _source_is_array) do
     dynamic(
       [r],
-      fragment(
-        "? <@ STRING_TO_ARRAY(?, ',')::text[]",
-        ^expr,
-        ^(query_value |> Enum.join(","))
-      )
-    )
-  end
-
-  defp get_facet_conditions(:==, :boolean, expr, query_value, _source_is_array) do
-    dynamic(
-      [r],
-      fragment(
-        "? <@ STRING_TO_ARRAY(?, ',')::boolean[]",
-        ^expr,
-        ^(query_value |> Enum.join(","))
-      )
-    )
-  end
-
-  defp get_facet_conditions(:==, :integer, expr, query_value, _source_is_array) do
-    dynamic(
-      [r],
-      fragment(
-        "? <@ STRING_TO_ARRAY(?, ',')::int[]",
-        ^expr,
-        ^(query_value |> Enum.join(","))
-      )
+      fragment("? @@ (SELECT array_to_string(
+  ARRAY(
+    SELECT quote_literal(v) || ':*'
+    FROM unnest(ARRAY[?]) AS t(v)
+  ),
+  ' | '
+))::tsquery", ^expr, splice(^values))
     )
   end
 
   defp get_facet_conditions(
+         name,
          op,
-         _value_type,
          expr,
-         query_value,
-         _source_is_array
+         query_value
        ) do
     Logger.error(
-      "Operator #{op} for query value '#{query_value}' is not supported"
+      "Operator #{op} for '#{name}' and query value '#{query_value}' is not supported"
     )
 
     expr
+  end
+
+  def dynamic_expr(_name, _, %{
+        is_facet_search: is_facet_search
+      })
+      when is_facet_search do
+    dynamic(
+      [r],
+      fragment(
+        "?",
+        field(r, :tsv)
+      )
+    )
   end
 
   def dynamic_expr(name, :integer, _props) do
@@ -201,72 +183,6 @@ defmodule FacetedSearch.Filter do
       fragment(
         "CAST((?->>?) AS jsonb)",
         field(r, :data),
-        ^name
-      )
-    )
-  end
-
-  def dynamic_expr(name, {:array, :integer}, %{
-        is_facet_search: is_facet_search,
-        is_range_facet: is_range_facet
-      })
-      when is_facet_search and is_range_facet do
-    dynamic(
-      [r],
-      fragment(
-        "ARRAY[CAST((?->>?) AS int)]",
-        field(r, :buckets),
-        ^name
-      )
-    )
-  end
-
-  def dynamic_expr(name, {:array, :integer}, %{
-        is_facet_search: is_facet_search,
-        is_hierarchy_facet: is_hierarchy_facet
-      })
-      when is_facet_search do
-    column = if is_hierarchy_facet, do: :hierarchies, else: :data
-
-    dynamic(
-      [r],
-      fragment(
-        "ARRAY[CAST((?->>?) AS int)]",
-        field(r, ^column),
-        ^name
-      )
-    )
-  end
-
-  def dynamic_expr(name, {:array, :boolean}, %{
-        is_facet_search: is_facet_search,
-        is_hierarchy_facet: is_hierarchy_facet
-      })
-      when is_facet_search do
-    column = if is_hierarchy_facet, do: :hierarchies, else: :data
-
-    dynamic(
-      [r],
-      fragment(
-        "ARRAY[CAST((?->>?) AS boolean)]",
-        field(r, ^column),
-        ^name
-      )
-    )
-  end
-
-  def dynamic_expr(name, {:array, :string}, %{
-        is_facet_search: is_facet_search,
-        is_hierarchy_facet: is_hierarchy_facet
-      })
-      when is_facet_search do
-    column = if is_hierarchy_facet, do: :hierarchies, else: :data
-
-    dynamic(
-      [r],
-      fragment(
-        "ARRAY[(?->>?)]",
-        field(r, ^column),
         ^name
       )
     )

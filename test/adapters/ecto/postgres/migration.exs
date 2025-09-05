@@ -13,7 +13,8 @@ defmodule FacetedSearch.Test.Repo.Postgres.Migration do
 
     create table(:articles) do
       add(:title, :text)
-      add(:content, :text)
+      add(:summary, :text)
+      add(:word_count, :integer)
       add(:publish_date, :utc_datetime)
     end
 

@@ -20,7 +20,7 @@ defmodule FacetedSearch.Test.Factory do
     "emotion",
     "history",
     "interdisciplinary",
-    "language",
+    "language_analysis",
     "literature",
     "manuscripts",
     "materiality",
@@ -43,7 +43,7 @@ defmodule FacetedSearch.Test.Factory do
     "emotion" => "Emotion",
     "history" => "History",
     "interdisciplinary" => "Interdisciplinary",
-    "language" => "Language",
+    "language_analysis" => "Language analysis: Critical reading",
     "literature" => "Literature",
     "manuscripts" => "Manuscripts",
     "materiality" => "Materiality",
@@ -64,8 +64,9 @@ defmodule FacetedSearch.Test.Factory do
         "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
       summary:
         "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood.",
-      tags: ["politics", "history", "language"],
-      author: "Helena van Dijk"
+      tags: ["politics", "history", "language_analysis"],
+      author: "Helena van Dijk",
+      word_count: 3473
     },
     %{
       title:
@@ -73,7 +74,8 @@ defmodule FacetedSearch.Test.Factory do
       summary:
         "Analyzes the layered temporal structures present in oral testimonies from post-war societies, integrating insights from history, psychology, and narratology.",
       tags: ["memory", "oral-history", "interdisciplinary"],
-      author: "Helena van Dijk"
+      author: "Helena van Dijk",
+      word_count: 2871
     },
     %{
       title:
@@ -81,15 +83,17 @@ defmodule FacetedSearch.Test.Factory do
       summary:
         "Explores how symbolic motifs circulated through manuscript production, illuminating networks of cultural exchange in medieval Europe.",
       tags: ["semiotics", "manuscripts", "history"],
-      author: "Mateo Alvarez"
+      author: "Mateo Alvarez",
+      word_count: 5591
     },
     %{
       title:
         "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
       summary:
         "Investigates how unconventional syntax and grammar functioned as tools of political resistance in literary works tied to protest movements.",
-      tags: ["literature", "politics", "language"],
-      author: "Mateo Alvarez"
+      tags: ["literature", "politics", "language_analysis"],
+      author: "Mateo Alvarez",
+      word_count: 3627
     },
     %{
       title:
@@ -97,7 +101,8 @@ defmodule FacetedSearch.Test.Factory do
       summary:
         "Charts the representation of emotions in Victorian travel narratives to show how writers spatialized feelings in relation to foreign landscapes.",
       tags: ["literature", "emotion", "travel-writing"],
-      author: "Aisha Rahman"
+      author: "Aisha Rahman",
+      word_count: 6131
     },
     %{
       title:
@@ -105,14 +110,16 @@ defmodule FacetedSearch.Test.Factory do
       summary:
         "Traces the transformation of the book as a material and symbolic object from antiquity to the digital age, emphasizing shifts in reading practices.",
       tags: ["books", "materiality", "history"],
-      author: "Aisha Rahman"
+      author: "Aisha Rahman",
+      word_count: 2198
     },
     %{
       title: "Spectral Agency: Ghost Narratives as Cultural Memory Archives",
       summary:
         "Considers ghost stories as repositories of collective memory, revealing their role in preserving suppressed or marginalized histories.",
       tags: ["memory", "literature", "culture"],
-      author: "Sven Olsson"
+      author: "Sven Olsson",
+      word_count: 4898
     },
     %{
       title:
@@ -120,7 +127,8 @@ defmodule FacetedSearch.Test.Factory do
       summary:
         "Applies principles from chaos theory to explain the apparent disorder and hidden patterning in selected modernist novels.",
       tags: ["literature", "modernism", "theory"],
-      author: "Sven Olsson"
+      author: "Sven Olsson",
+      word_count: 6581
     },
     %{
       title:
@@ -128,7 +136,8 @@ defmodule FacetedSearch.Test.Factory do
       summary:
         "Combines acoustic modeling and musicology to reconstruct the sonic environment of medieval chant within cathedral spaces.",
       tags: ["music", "religion", "history"],
-      author: "Jean-Marie Leclerc"
+      author: "Jean-Marie Leclerc",
+      word_count: 3352
     },
     %{
       title:
@@ -136,7 +145,8 @@ defmodule FacetedSearch.Test.Factory do
       summary:
         "Explores computational methods for indexing, visualizing, and analyzing large-scale Holocaust testimony datasets.",
       tags: ["digital-humanities", "memory", "archives"],
-      author: "Jean-Marie Leclerc"
+      author: "Jean-Marie Leclerc",
+      word_count: 7643
     }
   ]
 
@@ -185,10 +195,14 @@ defmodule FacetedSearch.Test.Factory do
 
     article = %Article{
       title: article_data.title,
-      content: article_data.summary,
+      summary: article_data.summary,
+      word_count: article_data.word_count,
       publish_date:
         DateTime.utc_now()
-        |> DateTime.add(-1 * :rand.uniform(20), :day)
+        |> DateTime.add(
+          -1 * article_publish_date_offset(article_data.title),
+          :day
+        )
         |> DateTime.truncate(:second)
     }
 
@@ -220,5 +234,28 @@ defmodule FacetedSearch.Test.Factory do
 
   def author_name_factory do
     sequence(:author_name, @authors)
+  end
+
+  defp article_publish_date_offset(title) do
+    {min_code, max_code} = article_char_codes() |> min_max_article_char_codes()
+    article_char_code = article_char_code(title)
+    article_publish_date_step = 1 / (max_code - min_code) * 140
+
+    Kernel.round((max_code - article_char_code) * article_publish_date_step)
+  end
+
+  defp article_char_codes do
+    Enum.map(
+      @articles,
+      &(&1.title |> article_char_code())
+    )
+  end
+
+  defp article_char_code(title) do
+    String.first(title) |> String.to_charlist() |> hd
+  end
+
+  defp min_max_article_char_codes(article_char_codes) do
+    {Enum.min(article_char_codes), Enum.max(article_char_codes)}
   end
 end

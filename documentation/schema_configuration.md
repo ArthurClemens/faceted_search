@@ -211,7 +211,7 @@ sources: [
 
 ## data_fields
 
-Fields to be used for filtering and data extraction in search results.
+Fields to be used for filtering and displaying details in search results.
 The referenced fields populate the `data` column in the search view.
 
 Additionally, custom fields can be defined to generate data from other sources.
@@ -391,11 +391,6 @@ sources: [
 ## facet_fields
 
 A list of fields used to create facets, with options for labels from a database table, ranges, and hierarchies.
-
-The referenced fields populate these columns in the search view:
-- regular facets: `tsv`
-- range facets: `buckets`
-- hierarchical facets: `hierarchies`
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > facet_fields`
