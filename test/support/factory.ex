@@ -198,7 +198,7 @@ defmodule FacetedSearch.Test.Factory do
       summary: article_data.summary,
       word_count: article_data.word_count,
       publish_date:
-        DateTime.utc_now()
+        ~U[2025-09-05 23:13:46.493983Z]
         |> DateTime.add(
           -1 * article_publish_date_offset(article_data.title),
           :day
