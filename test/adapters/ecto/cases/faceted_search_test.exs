@@ -1285,7 +1285,8 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     setup do
       init_resources(article_count: 10)
 
-      last_month = DateTime.utc_now() |> DateTime.add(-30, :day)
+      now = ~U[2025-09-05 23:13:46.493983Z]
+      last_month = now |> DateTime.add(-30, :day)
 
       FacetedSearch.create_search_view(ScopedFacetSchema, "articles",
         scopes: %{publish_date: last_month}
@@ -1319,7 +1320,8 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     setup do
       init_resources(article_count: 10)
 
-      last_month = DateTime.utc_now() |> DateTime.add(-30, :day)
+      now = ~U[2025-09-05 23:13:46.493983Z]
+      last_month = now |> DateTime.add(-30, :day)
 
       FacetedSearch.create_search_view(ScopedFacetSchema, "articles",
         scopes: %{word_count: 4000, publish_date: last_month}
