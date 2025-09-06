@@ -108,9 +108,9 @@ defmodule FacetedSearch.NimbleSchema do
               %{path: [_, _, :fields]}, _keys_map ->
                 :ok
 
-              %{path: [_, _, :fields, _], key: :binding, raw: binding_key},
+              %{path: [_, source, :fields, _], key: :binding, raw: binding_key},
               %{join_keys: join_keys} ->
-                if binding_key in join_keys do
+                if binding_key in join_keys or binding_key == source do
                   :ok
                 else
                   %{
