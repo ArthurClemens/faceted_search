@@ -52,16 +52,18 @@ Settings per source. The source key refers to the name of a source table in your
 - Path: `sources` (schema root)
 - Required
 
+When using multiple sources, the source ID's must be unique.
+
 ### Example
 
 ```
 use FacetedSearch,
   sources: [
     books: [
-       options for the books table
+       # options for the books table
     ],
     movies: [
-       options for the movies table
+       # options for the movies table
     ]
   ]
 ```

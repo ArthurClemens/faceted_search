@@ -385,7 +385,7 @@ The `value ` field contains the data from a table's column, cast to the `ecto_ty
 
 #### Option: label
 
-The `label` field contains the string value of the `value` field, unless configured otherwise. See [Option labels ↓](#option-labels). 
+The `label` field contains the string value of the `value` field, unless configured otherwise. See [Option labels ↓](#option-labels).
 
 #### Option: count
 
@@ -394,7 +394,7 @@ The `count` field corresponds to the the number of rows with the column value wi
 #### Option: selected
 
 The `selected` field simply stores the selected state of the applied filter.
- 
+
 ### 4. Facet selection
 
 Selected facet options are translated to additional search filters, using the configured [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields).
@@ -445,9 +445,10 @@ The returned facet results will look like this:
 
 ## Option labels
 
-Instead of displaying the option values, option labels may contain texts that are better suited for a user interface. 
+Instead of displaying the option values, option labels may contain texts that are better suited for a user interface.
 
 Two scenarios are supported:
+
 1. A database table provides text representations - for example, product names, genre titles, user roles, etc.
 2. Custom text is needed, and it's preferable that UI components do not have to process the option values themselves.
 
@@ -491,7 +492,7 @@ defmodule MyApp.FacetSchema do
       _ -> database_label
     end
   end
-  
+
   def option_label(_, _, _), do: nil
 
   ...
@@ -508,8 +509,8 @@ Ranges divide numerical and date entries into distinct categories (buckets), for
 
 In the schema configuration for `facet_fields`, use range bound options to define the bounds of the buckets.
 
--  `number_range_bounds` - for numerical data
--  `date_range_bounds` - for dates, timestamps, and intervals
+- `number_range_bounds` - for numerical data
+- `date_range_bounds` - for dates, timestamps, and intervals
 
 When using date ranges, refresh the search view at least as often as the smallest configured interval to avoid outdated values.
 
@@ -547,7 +548,7 @@ facet_fields: [
 
 ### Filtering range facets
 
-For a range facet, the option value in the facet results contains the bucket number. Bucket numbers starts at 0, so values 2 and 3 correspond to the range bounds "1 week" and "1 day" above. 
+For a range facet, the option value in the facet results contains the bucket number. Bucket numbers starts at 0, so values 2 and 3 correspond to the range bounds "1 week" and "1 day" above.
 
 ```elixir
 %{filters: [
@@ -560,6 +561,7 @@ For a range facet, the option value in the facet results contains the bucket num
 Use the callback function `option_label/3` described at [custom labels](#custom-labels) to create readable option labels for ranges.
 
 The value passed to the callback contains a tuple containing:
+
 - The lower and upper bound:
   - The bound value
   - `:lower` indicates: lower than (or before) the first bound
@@ -610,14 +612,16 @@ end
 Hierarchical facets allow users to refine their search step-by-step by navigating a tree-based data structure such as a product catalog.
 
 An art catalog might have the categorization: `Art periods → Modern art → Pop art`. When using hierarchical facets, option "Pop art" becomes available only after selecting "Modern art".
-  
+
 Hierarchical facets are generated in the same way as regular facets, with these differences:
+
 - A parent relation is added automatically based on the paths (unless option `parent` is used to point to a specific field).
 - Option values are strings, containing the path values separated by ">", for example: "modern_art>pop_art".
- 
+
 ### Configuration
 
 Hierarchical facets are configured under a special entry `hierarchies` - below this, the settings are the same as for regular facets, with these differences:
+
 - The entry name is custom, and does not need to reference a existing field.
 - Key `path` contains the list of fields that creates the hierarchy.
 
@@ -638,6 +642,7 @@ facet_fields: [
 ```
 
 Hierarchy paths can be created in any order. For example:
+
 - `Art form → Medium → Artist`
 - `Artist → Medium → Art form`
 
@@ -689,7 +694,7 @@ Example:
 ```elixir
 def option_label(:movements, value, label) do
   movements_value = value |> String.split(">") |> List.last()
-  
+
   case movements_value do
     "pop_art" -> gettext("Pop art")
     _ -> label
@@ -730,7 +735,7 @@ A rough performance goal for a search query is to take less than 300ms.
 
 One way to improve query time is to break up a single search view into multiple ones, each scoped with a filter.
 
-This is common in ecommerce: instead of searching in everything, the user is first guided through main categories or even subcategories before facets are even offered. 
+This is common in ecommerce: instead of searching in everything, the user is first guided through main categories or even subcategories before facets are even offered.
 
 The idea of scoped search views is that the number of rows are smaller, resulting in faster search responses, and that facets can be made more specific to the subdomain.
 
@@ -757,6 +762,7 @@ The cache is only written and read when option `cache_facets` is `true` - see be
 ### Setup caching
 
 1. Add `FacetSearch.Cache` to a supervisor (typically in `application.ex`):
+
    ```elixir
    children = [
      {FacetSearch.Cache, []}
@@ -765,6 +771,7 @@ The cache is only written and read when option `cache_facets` is `true` - see be
 
    Supervisor.start_link(children, options)
    ```
+
 2. Enable caching of results from filter parameters by calling `FacetedSearch.search/3` with option `cache_facets` set to `true`.
 
 ### Cache warming
@@ -790,6 +797,7 @@ Note: cached data, including from a warmed cache, is only returned when option `
 ### Example of conditional caching
 
 Builing upon the example search function from before, we add conditional caching with the following logic:
+
 - Don't cache when text search is invoked
 - Only cache when the result count is greater than 1,000
 
@@ -816,6 +824,7 @@ end
 Scoping is the method of filtering search view data upfront, in order to create multiple search views.
 
 This is useful:
+
 - When working with large datasets, where data can be split up in separate logical parts, for example items filtered by category, source or date.
 - In multi-tenant applications, where each user or tenant should only have access to a specific subset of the data.
 
@@ -902,6 +911,8 @@ FacetedSearch.create_search_view(
 When multiple resources share common attributes, a unified search interface allows users to search across all of them and use the resource type itself as a facet. For example, in a media library containing books, movies, and music, each item has a title, author or creator, publishing date, and genre. The media type can then serve as one of the filters in the search.
 
 To create such a unified interface for resources with similar attributes, add a configuration for each resource under `sources`, using the resource’s table name as the key.
+
+The resource's ID's must be unique.
 
 See [schema configuration: sources](documentation/schema_configuration.md#sources) for details.
 
