@@ -151,11 +151,27 @@ defmodule FacetedSearch.Test.Factory do
   ]
 
   @authors [
-    "Helena van Dijk",
-    "Mateo Alvarez",
-    "Aisha Rahman",
-    "Sven Olsson",
-    "Jean-Marie Leclerc"
+    %{
+      full_name: "Helena van Dijk",
+      birthdate: ~D[1977-01-25]
+    },
+    %{
+      full_name: "Mateo Alvarez",
+      birthdate: ~D[1998-06-02]
+    },
+    %{
+      full_name: "Aisha Rahman",
+      birthdate: ~D[1967-10-22]
+    },
+    %{
+      full_name: "Sven Olsson",
+      birthdate: ~D[1947-10-22],
+      death_date: ~D[2023-02-19]
+    },
+    %{
+      full_name: "Jean-Marie Leclerc",
+      birthdate: ~D[1985-12-01]
+    }
   ]
 
   @roles [
@@ -178,8 +194,8 @@ defmodule FacetedSearch.Test.Factory do
       })
     end)
 
-    Enum.each(@authors, fn name ->
-      author = insert(%Author{name: name})
+    Enum.each(@authors, fn data ->
+      author = insert(struct(Author, data))
 
       insert(%Role{
         name: sequence(:role_name, @roles),
@@ -218,7 +234,7 @@ defmodule FacetedSearch.Test.Factory do
       })
     end)
 
-    author = apply(Repo, :get_by, [Author, %{name: article_data.author}])
+    author = apply(Repo, :get_by, [Author, %{full_name: article_data.author}])
 
     insert(%AuthorArticle{
       article_id: article.id,

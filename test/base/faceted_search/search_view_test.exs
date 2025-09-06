@@ -58,7 +58,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
               %FacetedSearch.Field{
                 name: :author,
                 binding: :authors,
-                field: :name,
+                field: :full_name,
                 ecto_type: :string,
                 table_name: :articles
               }
@@ -256,7 +256,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
               %FacetedSearch.Field{
                 binding: :authors,
                 ecto_type: :string,
-                field: :name,
+                field: :full_name,
                 name: :author,
                 table_name: :articles
               }
