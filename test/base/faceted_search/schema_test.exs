@@ -2,6 +2,8 @@ defmodule FacetedSearch.Test.SchemaTest do
   use ExUnit.Case, async: true
 
   alias FacetedSearch.Test.MyApp.ExpandedFacetSchema
+  alias FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema
+  alias FacetedSearch.Test.MyApp.ScopedFacetSchema
   alias FacetedSearch.Test.MyApp.SimpleFacetSchema
 
   describe "the options/1 function" do
@@ -20,7 +22,8 @@ defmodule FacetedSearch.Test.SchemaTest do
                {:title, [ecto_type: :string]},
                {:summary, [ecto_type: :string]},
                {:publish_date, [ecto_type: :utc_datetime]},
-               {:author, [binding: :authors, field: :name, ecto_type: :string]}
+               {:author,
+                [binding: :authors, field: :full_name, ecto_type: :string]}
              ]},
             data_fields: [:title, :publish_date, :author],
             text_fields: [:title, :summary],
@@ -34,7 +37,7 @@ defmodule FacetedSearch.Test.SchemaTest do
 
     test "extended schema" do
       expected = [
-        module: FacetedSearch.Test.MyApp.ExpandedFacetSchema,
+        module: ExpandedFacetSchema,
         sources: [
           articles: [
             joins: [
@@ -57,7 +60,8 @@ defmodule FacetedSearch.Test.SchemaTest do
                  field: :title,
                  ecto_type: {:array, :string}
                ]},
-              {:author, [binding: :authors, field: :name, ecto_type: :string]}
+              {:author,
+               [binding: :authors, field: :full_name, ecto_type: :string]}
             ],
             data_fields: [
               :title,
@@ -96,6 +100,67 @@ defmodule FacetedSearch.Test.SchemaTest do
       ]
 
       assert FacetedSearch.options(ExpandedFacetSchema) == expected
+    end
+
+    test "scoped schema" do
+      expected = [
+        {:module, FacetedSearch.Test.MyApp.ScopedFacetSchema},
+        {:sources,
+         [
+           articles: [
+             scope_keys: [:word_count, :publish_date],
+             fields: [
+               title: [ecto_type: :string],
+               word_count: [ecto_type: :integer],
+               publish_date: [ecto_type: :utc_datetime]
+             ],
+             data_fields: [:title, :word_count, :publish_date]
+           ]
+         ]}
+      ]
+
+      assert FacetedSearch.options(ScopedFacetSchema) == expected
+    end
+
+    test "multiple sources schema" do
+      expected = [
+        module: FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema,
+        sources: [
+          authors: [
+            {:fields,
+             [
+               author: [
+                 binding: :authors,
+                 field: :full_name,
+                 ecto_type: :string
+               ],
+               birthdate: [ecto_type: :date]
+             ]},
+            {:data_fields, [:author, :birthdate]},
+            {:text_fields, [:author, :birthdate]},
+            {:sort_fields, [:author, :birthdate]},
+            facet_fields: [:author, :source]
+          ],
+          articles: [
+            joins: [
+              author_articles: [on: "author_articles.article_id = articles.id"],
+              authors: [on: "authors.id = author_articles.author_id"]
+            ],
+            fields: [
+              title: [ecto_type: :string],
+              summary: [ecto_type: :string],
+              publish_date: [ecto_type: :utc_datetime],
+              author: [binding: :authors, field: :full_name, ecto_type: :string]
+            ],
+            data_fields: [:author, :publish_date, :title],
+            text_fields: [:title, :summary],
+            sort_fields: [:publish_date, :author],
+            facet_fields: [:author, :source]
+          ]
+        ]
+      ]
+
+      assert FacetedSearch.options(MultipleSourcesFacetSchema) == expected
     end
   end
 

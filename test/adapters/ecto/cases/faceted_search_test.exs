@@ -7,6 +7,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
   import FacetedSearch.Test.Factory
 
   alias FacetedSearch.Test.MyApp.ExpandedFacetSchema
+  alias FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema
   alias FacetedSearch.Test.MyApp.ScopedFacetSchema
   alias FacetedSearch.Test.Repo
 
@@ -236,16 +237,17 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       expected = [
+        ["Books", "History", "Materiality"],
         ["History", "Language analysis: Critical reading", "Politics"],
         ["History", "Manuscripts", "Semiotics"],
-        ["Books", "History", "Materiality"],
         ["History", "Music", "Religion"]
       ]
 
       {:ok, {results, _meta}} =
         filtered_search("articles", ExpandedFacetSchema, search_params)
 
-      assert get_in(results, [Access.all(), Access.key(:data), "tag_titles"]) ==
+      assert get_in(results, [Access.all(), Access.key(:data), "tag_titles"])
+             |> Enum.sort() ==
                expected
     end
 
@@ -338,7 +340,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       search_params = %{}
 
       {:ok, {_results, meta}, facets} =
-        facets_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExpandedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -461,7 +463,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facets_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExpandedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -589,7 +591,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facets_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExpandedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -700,7 +702,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facets_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExpandedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -853,7 +855,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facets_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExpandedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -1006,7 +1008,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facets_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExpandedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -1146,7 +1148,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facets_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExpandedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -1364,6 +1366,143 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     end
   end
 
+  describe "multiple sources schema" do
+    setup do
+      init_resources(article_count: 10)
+
+      FacetedSearch.create_search_view(MultipleSourcesFacetSchema, "articles")
+
+      :ok
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = [
+        "articles",
+        "articles",
+        "articles",
+        "articles",
+        "articles",
+        "articles",
+        "articles",
+        "articles",
+        "articles",
+        "articles",
+        "authors",
+        "authors",
+        "authors",
+        "authors",
+        "authors"
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", MultipleSourcesFacetSchema, search_params,
+          page_size: 100
+        )
+
+      assert results |> Enum.map(& &1.source) |> Enum.sort() == expected
+    end
+
+    test "filter on shared data field" do
+      search_params = %{
+        filters: [
+          %{field: :author, op: :==, value: "Helena van Dijk"}
+        ]
+      }
+
+      expected = [
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "birthdate" => "1977-01-25"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "publish_date" => "2025-07-06T23:13:46",
+            "title" =>
+              "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
+          },
+          source: "articles"
+        },
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "publish_date" => "2025-09-05T23:13:46",
+            "title" =>
+              "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
+          },
+          source: "articles"
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", MultipleSourcesFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(&%{source: &1.source, data: &1.data})
+             |> Enum.sort() == expected
+    end
+
+    test "sort on field from 1 source" do
+      search_params =
+        %{
+          order_by: [:sort_birthdate],
+          order_directions: [:asc]
+        }
+
+      expected = [
+        %{
+          data: %{
+            "author" => "Sven Olsson",
+            "birthdate" => "1947-10-22"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Aisha Rahman",
+            "birthdate" => "1967-10-22"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "birthdate" => "1977-01-25"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Jean-Marie Leclerc",
+            "birthdate" => "1985-12-01"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Mateo Alvarez",
+            "birthdate" => "1998-06-02"
+          },
+          source: "authors"
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", MultipleSourcesFacetSchema, search_params,
+          page_size: 100
+        )
+
+      assert results
+             |> Enum.map(&%{source: &1.source, data: &1.data})
+             |> Enum.filter(&(&1.source == "authors")) == expected
+    end
+  end
+
   defp search_all(view_id, schema) do
     ecto_schema = FacetedSearch.ecto_schema(schema, view_id)
 
@@ -1371,18 +1510,20 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     |> Repo.all()
   end
 
-  defp filtered_search(view_id, schema, search_params) do
+  defp filtered_search(view_id, schema, search_params, opts \\ []) do
+    page_size = Keyword.get(opts, :page_size, 10)
     ecto_schema = FacetedSearch.ecto_schema(schema, view_id)
     query = from(ecto_schema)
-    search_params = Map.put(search_params, :page_size, 10)
+    search_params = Map.put(search_params, :page_size, page_size)
 
     Flop.validate_and_run(query, search_params, for: schema)
   end
 
-  defp facets_search(view_id, schema, search_params) do
+  defp facet_search(view_id, schema, search_params, opts \\ []) do
+    page_size = Keyword.get(opts, :page_size, 10)
     ecto_schema = FacetedSearch.ecto_schema(schema, view_id)
     query = from(ecto_schema)
-    search_params = Map.put(search_params, :page_size, 10)
+    search_params = Map.put(search_params, :page_size, page_size)
 
     with {:ok, search_results} <-
            Flop.validate_and_run(query, search_params, for: schema),

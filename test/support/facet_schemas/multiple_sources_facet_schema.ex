@@ -1,13 +1,38 @@
-defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
+defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
   @moduledoc """
-  A simple facet schema:
-  - a single source
-  - no facets
-  - no callbacks
+  A facet schema with multiple sources.
   """
 
   @options [
     sources: [
+      authors: [
+        fields: [
+          author: [
+            binding: :authors,
+            field: :full_name,
+            ecto_type: :string
+          ],
+          birthdate: [
+            ecto_type: :date
+          ]
+        ],
+        data_fields: [
+          :author,
+          :birthdate
+        ],
+        text_fields: [
+          :author,
+          :birthdate
+        ],
+        sort_fields: [
+          :author,
+          :birthdate
+        ],
+        facet_fields: [
+          :author,
+          :source
+        ]
+      ],
       articles: [
         joins: [
           author_articles: [
@@ -34,9 +59,9 @@ defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
           ]
         ],
         data_fields: [
-          :title,
+          :author,
           :publish_date,
-          :author
+          :title
         ],
         text_fields: [
           :title,
@@ -45,6 +70,10 @@ defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
         sort_fields: [
           :publish_date,
           :author
+        ],
+        facet_fields: [
+          :author,
+          :source
         ]
       ]
     ]

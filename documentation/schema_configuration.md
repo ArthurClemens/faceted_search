@@ -52,16 +52,18 @@ Settings per source. The source key refers to the name of a source table in your
 - Path: `sources` (schema root)
 - Required
 
+When using multiple sources, the source ID's must be unique.
+
 ### Example
 
 ```
 use FacetedSearch,
   sources: [
     books: [
-       options for the books table
+       # options for the books table
     ],
     movies: [
-       options for the movies table
+       # options for the movies table
     ]
   ]
 ```
@@ -150,10 +152,10 @@ A unique name used as reference in field definitions `data_fields`, `text_fields
   - Type: `any()`
   - Required
 - `binding`
-  - Name or alias of a joined table. Use togeter with option `field`.
+  - Name of a joined table or the source table. Use togeter with option `field`.
   - Type: `atom()`
 - `field`
-  - Referenced field of the joined table.
+  - Referenced field of the joined table or the source table.
   - Type: `atom()`
   - Required: when using `binding`
 - `filter`
@@ -203,6 +205,27 @@ sources: [
         field: :title,
         ecto_type: :string
       ]
+    ],
+    ...
+  ]
+]
+```
+
+Also pass `binding` and `field` when creating an alias for a source table column. In this example we
+create the alias `author_name` from `books.author`, so that we can reference it in `data_fields` and so on.
+
+```
+sources: [
+  books: [
+    fields: [
+      author_name: [
+        binding: :books,
+        field: :author,
+        ecto_type: :string
+      ]
+    ],
+    data_fields: [
+      :author_name
     ],
     ...
   ]
@@ -404,7 +427,7 @@ Either:
   - Key: a field name from option `fields`
   - Values:
     - To reference a label from a database table/column:
-      - Key: `label` 
+      - Key: `label`
       - Value: a field name from option `fields`
     - To create a range of numerical entries:
       - Key: `number_range_bounds`
@@ -420,10 +443,10 @@ Either:
         - Key: `path` (required)
         - Value: a list of field names from option `fields`
       - To reference a label from a database table/column:
-        - Key: `label` 
+        - Key: `label`
         - Value: a field name from option `fields`
       - To set a custom parent for a path:
-        - Key: `parent` 
+        - Key: `parent`
         - Value: one of the listed custom hierarchy names
       - To hide facet data from a field once one of the options has been selected (by default, the facet along with the non-selected options will be returned):
         - Key: `hide_when_selected`
@@ -482,8 +505,8 @@ sources: [
 
 Range buckets are categories for numerical or date values. Use a range option to define the bounds of the buckets:
 
--  `number_range_bounds` - for numerical data
--  `date_range_bounds` - for dates, timestamps, and intervals
+- `number_range_bounds` - for numerical data
+- `date_range_bounds` - for dates, timestamps, and intervals
 
 Given the example list or numerical values `[1980, 2000, 2020]`, the following buckets are created:
 
@@ -558,7 +581,7 @@ sources: [
 
 A list of fields used for sorting results. Field values can optionally be cast to another data type.
 
-The fields referenced from the `fields` option are used to create extra columns in the search view. 
+The fields referenced from the `fields` option are used to create extra columns in the search view.
 
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > sort_fields`

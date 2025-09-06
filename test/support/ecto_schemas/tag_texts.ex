@@ -1,7 +1,7 @@
 defmodule FacetedSearch.Test.MyApp.TagText do
   @moduledoc false
 
-  use Ecto.Schema
+  use FacetedSearch.Test.EctoSchemaExtension
 
   alias FacetedSearch.Test.MyApp.Tag
 

@@ -1,9 +1,8 @@
 defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
   @moduledoc """
   A facet schema that includes:
-  - multiple sources
   - joined tables
-  - multiple facets
+  - facets
   - callbacks
   """
 
@@ -52,7 +51,7 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           ],
           author: [
             binding: :authors,
-            field: :name,
+            field: :full_name,
             ecto_type: :string
           ]
         ],

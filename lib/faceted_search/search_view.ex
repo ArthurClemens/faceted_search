@@ -758,6 +758,7 @@ defmodule FacetedSearch.SearchView do
     current_source_sort_field_names = sort_fields |> Enum.map(& &1.name)
 
     combined_sort_fields
+    |> Enum.sort_by(&(&1.name |> to_string()))
     |> Enum.map(
       &%{
         sort_field: &1,
@@ -867,6 +868,18 @@ defmodule FacetedSearch.SearchView do
       {table_name, field.field}
     end
   end
+
+  # Create alias for a column in the source table
+  defp get_table_and_column(
+         %Field{
+           table_name: table_name,
+           binding: binding,
+           field: field
+         },
+         _joins
+       )
+       when not is_nil(binding) and not is_nil(field),
+       do: {table_name, field}
 
   defp get_table_and_column(
          %Field{table_name: table_name, name: column_name},

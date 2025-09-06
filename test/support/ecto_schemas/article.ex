@@ -1,7 +1,7 @@
 defmodule FacetedSearch.Test.MyApp.Article do
   @moduledoc false
 
-  use Ecto.Schema
+  use FacetedSearch.Test.EctoSchemaExtension
 
   alias FacetedSearch.Test.MyApp.ArticleTag
   alias FacetedSearch.Test.MyApp.AuthorArticle
