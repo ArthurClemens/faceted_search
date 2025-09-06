@@ -6,7 +6,6 @@ defmodule FacetedSearch.Test.Repo.Postgres.Migration do
       add(:id, :uuid, primary_key: true)
       add(:full_name, :string)
       add(:birthdate, :date)
-      add(:death_date, :date)
     end
 
     create table(:roles, primary_key: false) do

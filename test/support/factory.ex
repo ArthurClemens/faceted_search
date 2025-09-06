@@ -165,8 +165,7 @@ defmodule FacetedSearch.Test.Factory do
     },
     %{
       full_name: "Sven Olsson",
-      birthdate: ~D[1947-10-22],
-      death_date: ~D[2023-02-19]
+      birthdate: ~D[1947-10-22]
     },
     %{
       full_name: "Jean-Marie Leclerc",

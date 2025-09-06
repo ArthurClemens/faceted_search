@@ -7,28 +7,30 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
     sources: [
       authors: [
         fields: [
-          full_name: [
+          author: [
+            binding: :authors,
+            field: :full_name,
             ecto_type: :string
           ],
           birthdate: [
             ecto_type: :date
-          ],
-          death_date: [
-            ecto_type: :date
           ]
         ],
         data_fields: [
-          :full_name,
-          :birthdate,
-          :death_date
+          :author,
+          :birthdate
         ],
         text_fields: [
-          :full_name,
+          :author,
           :birthdate
         ],
         sort_fields: [
-          :full_name,
+          :author,
           :birthdate
+        ],
+        facet_fields: [
+          :author,
+          :source
         ]
       ],
       articles: [
@@ -57,9 +59,9 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
           ]
         ],
         data_fields: [
-          :title,
+          :author,
           :publish_date,
-          :author
+          :title
         ],
         text_fields: [
           :title,
@@ -68,6 +70,10 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
         sort_fields: [
           :publish_date,
           :author
+        ],
+        facet_fields: [
+          :author,
+          :source
         ]
       ]
     ]

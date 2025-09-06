@@ -124,33 +124,40 @@ defmodule FacetedSearch.Test.SchemaTest do
 
     test "multiple sources schema" do
       expected = [
-        {:module, FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema},
-        {:sources,
-         [
-           authors: [
-             fields: [
-               full_name: [ecto_type: :string],
-               birthdate: [ecto_type: :date],
-               death_date: [ecto_type: :date]
-             ],
-             data_fields: [:full_name, :birthdate, :death_date]
-           ],
-           articles: [
-             joins: [
-               author_articles: [on: "author_articles.article_id = articles.id"],
-               authors: [on: "authors.id = author_articles.author_id"]
-             ],
-             fields: [
-               title: [ecto_type: :string],
-               summary: [ecto_type: :string],
-               publish_date: [ecto_type: :utc_datetime],
-               author: [binding: :authors, field: :name, ecto_type: :string]
-             ],
-             data_fields: [:title, :publish_date, :author],
-             text_fields: [:title, :summary],
-             sort_fields: [:publish_date, :author]
-           ]
-         ]}
+        module: FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema,
+        sources: [
+          authors: [
+            {:fields,
+             [
+               author: [
+                 binding: :authors,
+                 field: :full_name,
+                 ecto_type: :string
+               ],
+               birthdate: [ecto_type: :date]
+             ]},
+            {:data_fields, [:author, :birthdate]},
+            {:text_fields, [:author, :birthdate]},
+            {:sort_fields, [:author, :birthdate]},
+            facet_fields: [:author, :source]
+          ],
+          articles: [
+            joins: [
+              author_articles: [on: "author_articles.article_id = articles.id"],
+              authors: [on: "authors.id = author_articles.author_id"]
+            ],
+            fields: [
+              title: [ecto_type: :string],
+              summary: [ecto_type: :string],
+              publish_date: [ecto_type: :utc_datetime],
+              author: [binding: :authors, field: :full_name, ecto_type: :string]
+            ],
+            data_fields: [:author, :publish_date, :title],
+            text_fields: [:title, :summary],
+            sort_fields: [:publish_date, :author],
+            facet_fields: [:author, :source]
+          ]
+        ]
       ]
 
       assert FacetedSearch.options(MultipleSourcesFacetSchema) == expected
