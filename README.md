@@ -929,7 +929,7 @@ def scope_by(:current_user, %{current_user: current_user} = _scopes) do
 end
 ```
 
-The value at key `field` should reference a field listed in `fields`.
+The value at key `field` should reference a field listed in `fields`, or a column in the source table.
 
 #### 3. Pass the scope to `FacetedSearch.create_search_view/3`:
 
@@ -942,9 +942,9 @@ FacetedSearch.create_search_view(MyApp.FacetSchema, view_id,
 
 ### Combining scopes
 
-When passing multiple scope keys, each result from the `scope_by` callback is "AND"-ed in the search view creation.
+When passing multiple scope keys, each result from the `scope_by` callback is combined with a logical AND in the search view creation.
 
-For example, to scope by publication year, limiting the table to the current user and to books published after 2018, add both scope keys:
+For example, to scope by publication year, limiting the table to the current user AND books published after 2018, add both scope keys:
 
 ```elixir
 scope_keys: [:current_user, :publication_year],

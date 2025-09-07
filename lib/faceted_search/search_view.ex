@@ -394,7 +394,7 @@ defmodule FacetedSearch.SearchView do
   defp create_where_filters(_source, _config), do: nil
 
   defp create_where_filter(scope, source, current_scope) do
-    %{fields: fields, joins: joins} = source
+    %{fields: fields, joins: joins, table_name: table_name} = source
     %{key: key, module: module} = scope
 
     if module.__info__(:attributes)
@@ -413,14 +413,20 @@ defmodule FacetedSearch.SearchView do
 
     if scope_by_result do
       %{
-        field: field,
+        field: field_or_column_name,
         comparison: comparison,
         value: value
       } = scope_by_result
 
-      field = Enum.find(fields, &(&1.name == field))
-      {table_name, column_name} = get_table_and_column(field, joins)
-      table_and_column = table_and_column_string(table_name, column_name)
+      field = Enum.find(fields, &(&1.name == field_or_column_name))
+
+      table_and_column =
+        if field do
+          {table_name, column_name} = get_table_and_column(field, joins)
+          table_and_column_string(table_name, column_name)
+        else
+          table_and_column_string(table_name, field_or_column_name)
+        end
 
       """
       #{table_and_column} #{comparison} '#{value}'
