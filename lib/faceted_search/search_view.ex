@@ -528,8 +528,8 @@ defmodule FacetedSearch.SearchView do
               nil
           end
 
-        %{name: name, cast: cast, binding: binding, field: field} ->
-          %{name: name, table_name: binding, column_name: field, cast: cast}
+        %{name: name, cast: cast, binding: binding, column: column} ->
+          %{name: name, table_name: binding, column_name: column, cast: cast}
 
         _ ->
           nil

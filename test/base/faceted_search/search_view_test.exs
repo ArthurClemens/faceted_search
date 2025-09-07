@@ -3,6 +3,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
 
   alias FacetedSearch.Test.MyApp.ExpandedFacetSchema
   alias FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema
+  alias FacetedSearch.Test.MyApp.PrefixFacetSchema
   alias FacetedSearch.Test.MyApp.ScopedFacetSchema
   alias FacetedSearch.Test.MyApp.SimpleFacetSchema
 
@@ -20,6 +21,14 @@ defmodule FacetedSearch.Test.SearchViewTest do
       expected = "fv_articles_123"
 
       assert FacetedSearch.search_view_name(SimpleFacetSchema, view_id) ==
+               expected
+    end
+
+    test "prefix schema" do
+      view_id = "articles"
+      expected = "fv_articles"
+
+      assert FacetedSearch.search_view_name(PrefixFacetSchema, view_id) ==
                expected
     end
   end
@@ -581,6 +590,71 @@ defmodule FacetedSearch.Test.SearchViewTest do
       }
 
       assert FacetedSearch.search_view_description(MultipleSourcesFacetSchema) ==
+               expected
+    end
+
+    test "prefix schema" do
+      expected = %FacetedSearch.SearchViewDescription{
+        sources: [
+          %FacetedSearch.Source{
+            table_name: :categories,
+            scopes: nil,
+            prefix: "classifications",
+            fields: [
+              %FacetedSearch.Field{
+                table_name: :source,
+                prefix: nil,
+                name: :source,
+                ecto_type: :string,
+                binding: nil,
+                column: :source_name
+              },
+              %FacetedSearch.Field{
+                table_name: :categories,
+                prefix: "classifications",
+                name: :category_name,
+                ecto_type: :string,
+                binding: nil,
+                column: :name
+              },
+              %FacetedSearch.Field{
+                table_name: :categories,
+                prefix: "classifications",
+                name: :article_title,
+                ecto_type: :string,
+                binding: :articles,
+                column: :title
+              }
+            ],
+            joins: [
+              %FacetedSearch.Join{
+                table: :article_categories,
+                on: "article_categories.category_id = categories.id",
+                as: nil,
+                prefix: "public"
+              },
+              %FacetedSearch.Join{
+                table: :articles,
+                on: "articles.id = article_categories.article_id",
+                as: nil,
+                prefix: "public"
+              }
+            ],
+            data_fields: [
+              %FacetedSearch.DataField{name: :article_title, entries: nil},
+              %FacetedSearch.DataField{name: :category_name, entries: nil}
+            ],
+            text_fields: [:article_title, :category_name],
+            facet_fields: nil,
+            sort_fields: [
+              %FacetedSearch.SortField{name: :article_title, cast: nil},
+              %FacetedSearch.SortField{name: :category_name, cast: nil}
+            ]
+          }
+        ]
+      }
+
+      assert FacetedSearch.search_view_description(PrefixFacetSchema) ==
                expected
     end
   end
