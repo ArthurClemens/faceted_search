@@ -178,22 +178,28 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
       expected = [
         %{
+          "author" => "Helena van Dijk",
+          "indicators" => [
+            %{"type" => "history", "word_count" => "3473"},
+            %{
+              "type" => "language_analysis",
+              "word_count" => "3473"
+            },
+            %{"type" => "politics", "word_count" => "3473"}
+          ],
           "publish_date" => "datetime",
-          "title" =>
-            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
-          "tags" => ["history", "language_analysis", "politics"],
           "tag_titles" => [
             "History",
             "Language analysis: Critical reading",
             "Politics"
           ],
-          "author" => "Helena van Dijk",
-          "word_count" => 3473,
-          "indicators" => [
-            %{"type" => "history"},
-            %{"type" => "language_analysis"},
-            %{"type" => "politics"}
-          ]
+          "tags" => [
+            "history",
+            "language_analysis",
+            "politics"
+          ],
+          "title" =>
+            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
         }
       ]
 
