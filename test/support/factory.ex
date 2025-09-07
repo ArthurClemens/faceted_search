@@ -4,9 +4,11 @@ defmodule FacetedSearch.Test.Factory do
   use ExMachina.Ecto, repo: FacetedSearch.Test.Repo
 
   alias FacetedSearch.Test.MyApp.Article
+  alias FacetedSearch.Test.MyApp.ArticleCategory
   alias FacetedSearch.Test.MyApp.ArticleTag
   alias FacetedSearch.Test.MyApp.Author
   alias FacetedSearch.Test.MyApp.AuthorArticle
+  alias FacetedSearch.Test.MyApp.Category
   alias FacetedSearch.Test.MyApp.Role
   alias FacetedSearch.Test.MyApp.Tag
   alias FacetedSearch.Test.MyApp.TagText
@@ -66,7 +68,8 @@ defmodule FacetedSearch.Test.Factory do
         "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood.",
       tags: ["politics", "history", "language_analysis"],
       author: "Helena van Dijk",
-      word_count: 3473
+      word_count: 3473,
+      categories: ["paper"]
     },
     %{
       title:
@@ -75,7 +78,8 @@ defmodule FacetedSearch.Test.Factory do
         "Analyzes the layered temporal structures present in oral testimonies from post-war societies, integrating insights from history, psychology, and narratology.",
       tags: ["memory", "oral-history", "interdisciplinary"],
       author: "Helena van Dijk",
-      word_count: 2871
+      word_count: 2871,
+      categories: ["paper"]
     },
     %{
       title:
@@ -84,7 +88,8 @@ defmodule FacetedSearch.Test.Factory do
         "Explores how symbolic motifs circulated through manuscript production, illuminating networks of cultural exchange in medieval Europe.",
       tags: ["semiotics", "manuscripts", "history"],
       author: "Mateo Alvarez",
-      word_count: 5591
+      word_count: 5591,
+      categories: ["paper"]
     },
     %{
       title:
@@ -93,7 +98,8 @@ defmodule FacetedSearch.Test.Factory do
         "Investigates how unconventional syntax and grammar functioned as tools of political resistance in literary works tied to protest movements.",
       tags: ["literature", "politics", "language_analysis"],
       author: "Mateo Alvarez",
-      word_count: 3627
+      word_count: 3627,
+      categories: ["editorial"]
     },
     %{
       title:
@@ -102,7 +108,8 @@ defmodule FacetedSearch.Test.Factory do
         "Charts the representation of emotions in Victorian travel narratives to show how writers spatialized feelings in relation to foreign landscapes.",
       tags: ["literature", "emotion", "travel-writing"],
       author: "Aisha Rahman",
-      word_count: 6131
+      word_count: 6131,
+      categories: ["review"]
     },
     %{
       title:
@@ -111,7 +118,8 @@ defmodule FacetedSearch.Test.Factory do
         "Traces the transformation of the book as a material and symbolic object from antiquity to the digital age, emphasizing shifts in reading practices.",
       tags: ["books", "materiality", "history"],
       author: "Aisha Rahman",
-      word_count: 2198
+      word_count: 2198,
+      categories: ["paper"]
     },
     %{
       title: "Spectral Agency: Ghost Narratives as Cultural Memory Archives",
@@ -119,7 +127,8 @@ defmodule FacetedSearch.Test.Factory do
         "Considers ghost stories as repositories of collective memory, revealing their role in preserving suppressed or marginalized histories.",
       tags: ["memory", "literature", "culture"],
       author: "Sven Olsson",
-      word_count: 4898
+      word_count: 4898,
+      categories: ["review"]
     },
     %{
       title:
@@ -128,7 +137,8 @@ defmodule FacetedSearch.Test.Factory do
         "Applies principles from chaos theory to explain the apparent disorder and hidden patterning in selected modernist novels.",
       tags: ["literature", "modernism", "theory"],
       author: "Sven Olsson",
-      word_count: 6581
+      word_count: 6581,
+      categories: ["paper"]
     },
     %{
       title:
@@ -137,7 +147,8 @@ defmodule FacetedSearch.Test.Factory do
         "Combines acoustic modeling and musicology to reconstruct the sonic environment of medieval chant within cathedral spaces.",
       tags: ["music", "religion", "history"],
       author: "Jean-Marie Leclerc",
-      word_count: 3352
+      word_count: 3352,
+      categories: ["review"]
     },
     %{
       title:
@@ -146,7 +157,8 @@ defmodule FacetedSearch.Test.Factory do
         "Explores computational methods for indexing, visualizing, and analyzing large-scale Holocaust testimony datasets.",
       tags: ["digital-humanities", "memory", "archives"],
       author: "Jean-Marie Leclerc",
-      word_count: 7643
+      word_count: 7643,
+      categories: ["editorial"]
     }
   ]
 
@@ -179,10 +191,20 @@ defmodule FacetedSearch.Test.Factory do
     :assistant
   ]
 
+  @categories [
+    "paper",
+    "review",
+    "editorial"
+  ]
+
   def init_resources(opts) do
     ExMachina.Sequence.reset()
 
     article_count = Keyword.get(opts, :article_count)
+
+    Enum.each(@categories, fn name ->
+      insert(%Category{name: name})
+    end)
 
     Enum.each(@tags, fn name ->
       tag = insert(%Tag{name: name})
@@ -230,6 +252,16 @@ defmodule FacetedSearch.Test.Factory do
       insert(%ArticleTag{
         article_id: article.id,
         tag_id: tag.id
+      })
+    end)
+
+    article_data.categories
+    |> Enum.each(fn name ->
+      category = apply(Repo, :get_by, [Category, %{name: name}])
+
+      insert(%ArticleCategory{
+        article_id: article.id,
+        category_id: category.id
       })
     end)
 

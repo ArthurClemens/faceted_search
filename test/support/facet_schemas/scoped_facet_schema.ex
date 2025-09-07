@@ -29,7 +29,7 @@ defmodule FacetedSearch.Test.MyApp.ScopedFacetSchema do
 
   def scope_by(:word_count, %{word_count: word_count}) do
     %{
-      field: :word_count,
+      column: :word_count,
       comparison: ">",
       value: word_count
     }
@@ -37,7 +37,7 @@ defmodule FacetedSearch.Test.MyApp.ScopedFacetSchema do
 
   def scope_by(:publish_date, %{publish_date: publish_date}) do
     %{
-      field: :publish_date,
+      column: :publish_date,
       comparison: ">",
       value: publish_date |> DateTime.to_iso8601(:basic)
     }

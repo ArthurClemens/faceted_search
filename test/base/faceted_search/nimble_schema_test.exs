@@ -32,7 +32,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
               ],
               genre: [
                 binding: :genres,
-                field: :title,
+                column: :title,
                 ecto_type: :string
               ]
             ],
@@ -47,7 +47,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
                 ],
                 definition: [
                   binding: :genres,
-                  field: :definition
+                  column: :definition
                 ]
               ]
             ],
@@ -126,7 +126,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
             fields: [
               genre: [
                 binding: :genres,
-                field: :title,
+                column: :title,
                 ecto_type: :string
               ]
             ]
@@ -222,7 +222,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
       ]
 
       assert_raise FacetedSearch.InvalidOptionsError,
-                   "    \n    Module: Elixir.FacetedSearch.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.data_fields.custom_data\n        Key \"xxx\" is not supported.\n        Supported keys are: \"binding\", \"field\", \"cast\".",
+                   "    \n    Module: Elixir.FacetedSearch.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.data_fields.custom_data\n        Key \"xxx\" is not supported.\n        Supported keys are: \"binding\", \"column\", \"cast\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),
@@ -272,7 +272,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
             fields: [
               genre: [
                 binding: :genres,
-                field: :title,
+                column: :title,
                 ecto_type: :string
               ]
             ],
@@ -310,7 +310,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
             fields: [
               genre: [
                 binding: :genres,
-                field: :title,
+                column: :title,
                 ecto_type: :string
               ]
             ],
@@ -348,7 +348,7 @@ defmodule FacetedSearch.Test.NimbleSchemaTest do
             fields: [
               genre_title: [
                 binding: :genres,
-                field: :title,
+                column: :title,
                 ecto_type: :string
               ]
             ],

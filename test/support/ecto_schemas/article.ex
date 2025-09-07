@@ -3,6 +3,7 @@ defmodule FacetedSearch.Test.MyApp.Article do
 
   use FacetedSearch.Test.EctoSchemaExtension
 
+  alias FacetedSearch.Test.MyApp.ArticleCategory
   alias FacetedSearch.Test.MyApp.ArticleTag
   alias FacetedSearch.Test.MyApp.AuthorArticle
 
@@ -14,5 +15,6 @@ defmodule FacetedSearch.Test.MyApp.Article do
 
     has_many :author_articles, AuthorArticle
     has_many :article_tags, ArticleTag
+    has_many :article_categories, ArticleCategory
   end
 end

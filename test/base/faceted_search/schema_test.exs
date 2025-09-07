@@ -23,7 +23,7 @@ defmodule FacetedSearch.Test.SchemaTest do
                {:summary, [ecto_type: :string]},
                {:publish_date, [ecto_type: :utc_datetime]},
                {:author,
-                [binding: :authors, field: :full_name, ecto_type: :string]}
+                [binding: :authors, column: :full_name, ecto_type: :string]}
              ]},
             data_fields: [:title, :publish_date, :author],
             text_fields: [:title, :summary],
@@ -53,15 +53,15 @@ defmodule FacetedSearch.Test.SchemaTest do
               {:publish_date, [ecto_type: :utc_datetime]},
               {:word_count, [ecto_type: :integer]},
               {:tags,
-               [binding: :tags, field: :name, ecto_type: {:array, :string}]},
+               [binding: :tags, column: :name, ecto_type: {:array, :string}]},
               {:tag_titles,
                [
                  binding: :tag_texts,
-                 field: :title,
+                 column: :title,
                  ecto_type: {:array, :string}
                ]},
               {:author,
-               [binding: :authors, field: :full_name, ecto_type: :string]}
+               [binding: :authors, column: :full_name, ecto_type: :string]}
             ],
             data_fields: [
               :title,
@@ -129,7 +129,11 @@ defmodule FacetedSearch.Test.SchemaTest do
           authors: [
             {:scope_keys, [:source]},
             fields: [
-              author: [binding: :authors, field: :full_name, ecto_type: :string],
+              author: [
+                binding: :authors,
+                column: :full_name,
+                ecto_type: :string
+              ],
               birthdate: [ecto_type: :date]
             ],
             data_fields: [:author, :birthdate, :source],
@@ -147,7 +151,11 @@ defmodule FacetedSearch.Test.SchemaTest do
               title: [ecto_type: :string],
               summary: [ecto_type: :string],
               publish_date: [ecto_type: :utc_datetime],
-              author: [binding: :authors, field: :full_name, ecto_type: :string]
+              author: [
+                binding: :authors,
+                column: :full_name,
+                ecto_type: :string
+              ]
             ],
             data_fields: [:author, :publish_date, :title],
             text_fields: [:title, :summary],
