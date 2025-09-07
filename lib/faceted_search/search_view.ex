@@ -220,14 +220,15 @@ defmodule FacetedSearch.SearchView do
     DROP MATERIALIZED VIEW IF EXISTS #{view_name_with_prefix};
     """
 
-    create_view_sql = """
-    CREATE MATERIALIZED VIEW #{view_name_with_prefix}
-    AS
+    create_view_sql =
+      """
+      CREATE MATERIALIZED VIEW #{view_name_with_prefix}
+      AS
 
-    #{build_search_view_columns(search_view_description, config)}
+      #{build_search_view_columns(search_view_description, config)}
 
-    WITH NO DATA;
-    """
+      WITH NO DATA;
+      """
 
     create_indexes_sql = [
       ([
@@ -317,11 +318,25 @@ defmodule FacetedSearch.SearchView do
       columns,
       "FROM #{table_name_with_prefix}",
       joins,
+      "INNER JOIN source ON #{table_name}.id = source.id",
       where_filters,
       "GROUP BY #{table_name}.id"
     ]
     |> Enum.filter(&(!!&1))
     |> Enum.map_join("\n", &String.trim/1)
+    |> wrap_with_source(table_name, table_name_with_prefix)
+  end
+
+  defp wrap_with_source(column_data, table_name, table_name_with_prefix) do
+    """
+    (
+      WITH source AS (
+        SELECT id, '#{table_name}' AS source_name
+        FROM #{table_name_with_prefix}
+      )
+      #{column_data}
+    )
+    """
   end
 
   defp get_sort_column_names(search_view_description) do
@@ -356,28 +371,29 @@ defmodule FacetedSearch.SearchView do
   # Where filters
 
   defp create_where_filters(
-         %{scopes: scopes, table_name: table_name} = _source,
+         %{scopes: scopes} = source,
          %{current_scope: current_scope} = _config
        )
        when is_list(scopes) and scopes != [] and not is_nil(current_scope) do
-    current_scope_keys = Map.keys(current_scope)
-
     filters =
       scopes
-      |> Enum.filter(&(&1.key in current_scope_keys))
-      |> Enum.map_join(
-        " AND ",
-        &create_where_filter(&1, table_name, current_scope)
-      )
+      |> Enum.map(&create_where_filter(&1, source, current_scope))
+      |> Enum.filter(&(!!&1))
+      |> Enum.join(" AND ")
 
-    """
-    WHERE #{filters}
-    """
+    if filters != "" do
+      """
+      WHERE #{filters}
+      """
+    else
+      nil
+    end
   end
 
   defp create_where_filters(_source, _config), do: nil
 
-  defp create_where_filter(scope, table_name, current_scope) do
+  defp create_where_filter(scope, source, current_scope) do
+    %{fields: fields, joins: joins} = source
     %{key: key, module: module} = scope
 
     if module.__info__(:attributes)
@@ -394,18 +410,23 @@ defmodule FacetedSearch.SearchView do
     scope_by_result =
       apply(module, Constants.scope_callback(), [key, current_scope])
 
-    %{
-      field: field,
-      comparison: comparison,
-      value: value
-    } = scope_by_result
+    if scope_by_result do
+      %{
+        field: field_name,
+        comparison: comparison,
+        value: value
+      } = scope_by_result
 
-    table_name = scope_by_result[:table] || table_name
-    table_and_column = table_and_column_string(table_name, field)
+      field = Enum.find(fields, &(&1.name == field_name))
+      {table_name, column_name} = get_table_and_column(field, joins)
+      table_and_column = table_and_column_string(table_name, column_name)
 
-    """
-    #{table_and_column} #{comparison} '#{value}'
-    """
+      """
+      #{table_and_column} #{comparison} '#{value}'
+      """
+    else
+      nil
+    end
   end
 
   # ID columns
@@ -857,6 +878,9 @@ defmodule FacetedSearch.SearchView do
 
   @spec get_table_and_column(Field.t(), list(Join.t()) | nil) ::
           {atom(), atom()} | nil
+  defp get_table_and_column(%Field{name: :source} = _field, _joins),
+    do: {:source, :source_name}
+
   defp get_table_and_column(%Field{binding: binding} = field, joins)
        when is_list(joins) and joins != [] and not is_nil(binding) do
     %{binding: binding, field: join_field, table_name: table_name} = field

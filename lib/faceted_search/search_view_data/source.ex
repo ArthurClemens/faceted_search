@@ -38,8 +38,15 @@ defmodule FacetedSearch.Source do
           sort_fields: list(SortField.t()) | nil
         }
 
-  @spec new({atom(), Keyword.t()}, atom()) :: t()
+  @source_field %FacetedSearch.Field{
+    table_name: :source,
+    name: :source,
+    ecto_type: :string,
+    binding: nil,
+    field: :source_name
+  }
 
+  @spec new({atom(), Keyword.t()}, atom()) :: t()
   def new({table_name, options}, module) do
     %__MODULE__{
       table_name: table_name,
@@ -63,10 +70,12 @@ defmodule FacetedSearch.Source do
 
   defp collect_fields(fields, table_name)
        when is_list(fields) and fields != [] do
-    fields
-    |> Enum.map(fn {name, field_options} ->
-      Field.new(name, field_options, table_name)
-    end)
+    [
+      @source_field
+      | Enum.map(fields, fn {name, field_options} ->
+          Field.new(name, field_options, table_name)
+        end)
+    ]
   end
 
   defp collect_fields(_fields, _table_name), do: nil

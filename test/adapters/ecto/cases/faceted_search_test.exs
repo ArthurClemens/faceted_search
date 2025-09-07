@@ -144,7 +144,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     test "multiple terms using ilike_and" do
       search_params = %{
         filters: [
-          %{field: :text, op: :ilike_and, value: "political treatises"}
+          %{field: :text, op: :ilike, value: "political treatises"}
         ]
       }
 
@@ -816,26 +816,26 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
         %FacetedSearch.Option{
           count: 1,
           label: "last year",
-          value: 1,
-          selected: false
+          selected: false,
+          value: 1
         },
         %FacetedSearch.Option{
           count: 1,
           label: "last quarter",
-          value: 2,
-          selected: false
+          selected: false,
+          value: 2
         },
         %FacetedSearch.Option{
           count: 3,
           label: "last month",
-          value: 3,
-          selected: false
+          selected: false,
+          value: 3
         },
         %FacetedSearch.Option{
           count: 2,
-          label: "today",
-          value: 5,
-          selected: false
+          label: "last week",
+          selected: false,
+          value: 4
         }
       ]
 
@@ -859,19 +859,53 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
       expected = %{
         author: %{
-          count: 3,
+          count: 4,
           first_2_options: [
+            %FacetedSearch.Option{
+              count: 1,
+              label: "Helena van Dijk",
+              value: "Helena van Dijk",
+              selected: false
+            },
             %FacetedSearch.Option{
               count: 1,
               label: "Jean-Marie Leclerc",
               selected: false,
               value: "Jean-Marie Leclerc"
+            }
+          ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %FacetedSearch.Option{
+              count: 2,
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
             },
             %FacetedSearch.Option{
               count: 1,
-              label: "Mateo Alvarez",
-              value: "Mateo Alvarez",
-              selected: false
+              label: "Helena van Dijk",
+              selected: false,
+              value: "Helena van Dijk"
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %FacetedSearch.Option{
+              count: 1,
+              label: "archives",
+              selected: false,
+              value: "archives"
+            },
+            %FacetedSearch.Option{
+              count: 1,
+              label: "books",
+              selected: false,
+              value: "books"
             }
           ]
         },
@@ -893,7 +927,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
           ]
         },
         tags: %{
-          count: 8,
+          count: 12,
           first_2_options: [
             %FacetedSearch.Option{
               count: 1,
@@ -913,7 +947,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
           count: 2,
           first_2_options: [
             %FacetedSearch.Option{
-              count: 1,
+              count: 3,
               label: "2000-4000",
               selected: false,
               value: 1
@@ -925,44 +959,10 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
               value: 2
             }
           ]
-        },
-        category_author: %{
-          count: 5,
-          first_2_options: [
-            %FacetedSearch.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
-              count: 2,
-              selected: false
-            },
-            %FacetedSearch.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
-              count: 2,
-              selected: false
-            }
-          ]
-        },
-        category_tags: %{
-          count: 20,
-          first_2_options: [
-            %FacetedSearch.Option{
-              value: "archives",
-              label: "archives",
-              count: 1,
-              selected: false
-            },
-            %FacetedSearch.Option{
-              value: "books",
-              label: "books",
-              count: 1,
-              selected: false
-            }
-          ]
         }
       }
 
-      assert meta.total_count == 3
+      assert meta.total_count == 5
       assert facet_result_subset(facets) == expected
 
       expected_publish_date_options = [
@@ -986,9 +986,9 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
         },
         %FacetedSearch.Option{
           count: 2,
-          label: "today",
-          selected: false,
-          value: 5
+          label: "last week",
+          selected: true,
+          value: 4
         }
       ]
 
@@ -1404,7 +1404,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       assert results |> Enum.map(& &1.source) |> Enum.sort() == expected
     end
 
-    test "filter on shared data field" do
+    test "filter on shared data field (author)" do
       search_params = %{
         filters: [
           %{field: :author, op: :==, value: "Helena van Dijk"}
@@ -1415,7 +1415,8 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
         %{
           data: %{
             "author" => "Helena van Dijk",
-            "birthdate" => "1977-01-25"
+            "birthdate" => "1977-01-25",
+            "source" => "authors"
           },
           source: "authors"
         },
@@ -1447,6 +1448,81 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
              |> Enum.sort() == expected
     end
 
+    test "filter on shared data field (source)" do
+      search_params = %{
+        filters: [
+          %{field: :source, op: :==, value: "authors"}
+        ]
+      }
+
+      expected = [
+        %{
+          data: %{
+            "author" => "Aisha Rahman",
+            "birthdate" => "1967-10-22",
+            "source" => "authors"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "birthdate" => "1977-01-25",
+            "source" => "authors"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Jean-Marie Leclerc",
+            "birthdate" => "1985-12-01",
+            "source" => "authors"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Mateo Alvarez",
+            "birthdate" => "1998-06-02",
+            "source" => "authors"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Sven Olsson",
+            "birthdate" => "1947-10-22",
+            "source" => "authors"
+          },
+          source: "authors"
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", MultipleSourcesFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(&%{source: &1.source, data: &1.data})
+             |> Enum.sort() == expected
+    end
+
+    test "filter on shared text field (source)" do
+      search_params = %{
+        filters: [
+          %{field: :text, op: :ilike_and, value: "authors Sven Olsson"}
+        ]
+      }
+
+      expected = ["authors Sven Olsson 1947-10-22"]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", MultipleSourcesFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(& &1.text)
+             |> Enum.sort() == expected
+    end
+
     test "sort on field from 1 source" do
       search_params =
         %{
@@ -1458,35 +1534,40 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
         %{
           data: %{
             "author" => "Sven Olsson",
-            "birthdate" => "1947-10-22"
+            "birthdate" => "1947-10-22",
+            "source" => "authors"
           },
           source: "authors"
         },
         %{
           data: %{
             "author" => "Aisha Rahman",
-            "birthdate" => "1967-10-22"
+            "birthdate" => "1967-10-22",
+            "source" => "authors"
           },
           source: "authors"
         },
         %{
           data: %{
             "author" => "Helena van Dijk",
-            "birthdate" => "1977-01-25"
+            "birthdate" => "1977-01-25",
+            "source" => "authors"
           },
           source: "authors"
         },
         %{
           data: %{
             "author" => "Jean-Marie Leclerc",
-            "birthdate" => "1985-12-01"
+            "birthdate" => "1985-12-01",
+            "source" => "authors"
           },
           source: "authors"
         },
         %{
           data: %{
             "author" => "Mateo Alvarez",
-            "birthdate" => "1998-06-02"
+            "birthdate" => "1998-06-02",
+            "source" => "authors"
           },
           source: "authors"
         }
@@ -1500,6 +1581,145 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
       assert results
              |> Enum.map(&%{source: &1.source, data: &1.data})
              |> Enum.filter(&(&1.source == "authors")) == expected
+    end
+
+    test "sort on shared column (source)" do
+      search_params = %{
+        order_by: [:sort_source, :sort_author],
+        order_directions: [:asc]
+      }
+
+      expected = [
+        %{
+          sort_author: "Aisha Rahman",
+          sort_source: "articles"
+        },
+        %{
+          sort_author: "Helena van Dijk",
+          sort_source: "articles"
+        },
+        %{
+          sort_author: "Jean-Marie Leclerc",
+          sort_source: "articles"
+        },
+        %{
+          sort_author: "Mateo Alvarez",
+          sort_source: "articles"
+        },
+        %{sort_author: "Sven Olsson", sort_source: "articles"},
+        %{sort_author: "Aisha Rahman", sort_source: "authors"},
+        %{
+          sort_author: "Helena van Dijk",
+          sort_source: "authors"
+        },
+        %{
+          sort_author: "Jean-Marie Leclerc",
+          sort_source: "authors"
+        },
+        %{
+          sort_author: "Mateo Alvarez",
+          sort_source: "authors"
+        },
+        %{sort_author: "Sven Olsson", sort_source: "authors"}
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", MultipleSourcesFacetSchema, search_params,
+          page_size: 20
+        )
+
+      assert results
+             |> Enum.map(
+               &%{sort_source: &1.sort_source, sort_author: &1.sort_author}
+             )
+             |> Enum.uniq() ==
+               expected
+    end
+
+    test "facet search" do
+      search_params = %{
+        filters: [
+          %{field: :facet_author, op: :==, value: ["Helena van Dijk"]}
+        ]
+      }
+
+      expected = [
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "birthdate" => "1977-01-25",
+            "source" => "authors"
+          },
+          source: "authors"
+        },
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "publish_date" => "2025-07-06T23:13:46",
+            "title" =>
+              "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
+          },
+          source: "articles"
+        },
+        %{
+          data: %{
+            "author" => "Helena van Dijk",
+            "publish_date" => "2025-09-05T23:13:46",
+            "title" =>
+              "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
+          },
+          source: "articles"
+        }
+      ]
+
+      {:ok, {results, _meta}, facets} =
+        facet_search("articles", MultipleSourcesFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(&%{source: &1.source, data: &1.data})
+             |> Enum.sort() == expected
+
+      expected_source_options = [
+        %FacetedSearch.Option{
+          value: "articles",
+          label: "articles",
+          count: 2,
+          selected: false
+        },
+        %FacetedSearch.Option{
+          value: "authors",
+          label: "authors",
+          count: 1,
+          selected: false
+        }
+      ]
+
+      assert Enum.find(facets, &(&1.field == :source))
+             |> get_in([Access.key(:options)]) == expected_source_options
+    end
+  end
+
+  describe "scopes with sources" do
+    setup do
+      init_resources(article_count: 10)
+
+      FacetedSearch.create_search_view(MultipleSourcesFacetSchema, "articles",
+        scopes: %{source: "authors"}
+      )
+
+      :ok
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = ["authors", "authors", "authors", "authors", "authors"]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ScopedFacetSchema, search_params)
+
+      assert results |> Enum.map(& &1.source) ==
+               expected
     end
   end
 

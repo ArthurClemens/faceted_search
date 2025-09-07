@@ -127,21 +127,18 @@ defmodule FacetedSearch.Test.SchemaTest do
         module: FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema,
         sources: [
           authors: [
-            {:fields,
-             [
-               author: [
-                 binding: :authors,
-                 field: :full_name,
-                 ecto_type: :string
-               ],
-               birthdate: [ecto_type: :date]
-             ]},
-            {:data_fields, [:author, :birthdate]},
-            {:text_fields, [:author, :birthdate]},
-            {:sort_fields, [:author, :birthdate]},
+            {:scope_keys, [:source]},
+            fields: [
+              author: [binding: :authors, field: :full_name, ecto_type: :string],
+              birthdate: [ecto_type: :date]
+            ],
+            data_fields: [:author, :birthdate, :source],
+            text_fields: [:author, :birthdate, :source],
+            sort_fields: [:author, :birthdate, :source],
             facet_fields: [:author, :source]
           ],
           articles: [
+            {:scope_keys, [:source]},
             joins: [
               author_articles: [on: "author_articles.article_id = articles.id"],
               authors: [on: "authors.id = author_articles.author_id"]
@@ -154,7 +151,7 @@ defmodule FacetedSearch.Test.SchemaTest do
             ],
             data_fields: [:author, :publish_date, :title],
             text_fields: [:title, :summary],
-            sort_fields: [:publish_date, :author],
+            sort_fields: [:publish_date, :author, :source],
             facet_fields: [:author, :source]
           ]
         ]

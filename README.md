@@ -819,93 +819,6 @@ def search_media(search_params \\ %{}) do
 end
 ```
 
-## Scoping data
-
-Scoping is the method of filtering search view data upfront, in order to create multiple search views.
-
-This is useful:
-
-- When working with large datasets, where data can be split up in separate logical parts, for example items filtered by category, source or date.
-- In multi-tenant applications, where each user or tenant should only have access to a specific subset of the data.
-
-A scope is created in three steps:
-
-1. By providing the schema option `scope_keys` with a list of scope identifiers.
-2. By writing callback function `scope_by/2`, defined in the same schema module where `use FacetedSearch` is called. The first parameter is the scope identifier.
-3. By calling `FacetedSearch.create_search_view/3` with option `scopes`, containing any value that `scope_by/2` should handle.
-
-### Example: scoping to the current user
-
-#### 1. Pass `scope_keys` to the `source` option:
-
-```elixir
-scope_keys: [:current_user],
-```
-
-#### 2. Define the callback:
-
-```elixir
-def scope_by(:current_user, %{current_user: current_user} = _scopes) do
-  %{
-    field: :user_id,
-    comparison: "=",
-    value: current_user.id
-  }
-end
-```
-
-The value at key `field` should reference either a column from the sources table, or a field listed in `fields`.
-
-#### 3. Pass the scope to `FacetedSearch.create_search_view/3`:
-
-```elixir
-FacetedSearch.create_search_view(MyApp.FacetSchema, "books",
-  scopes: %{current_user: current_user})
-```
-
-### Combining scopes
-
-Using a list of scope keys, scope evaluation is AND-ed
-
-Scopes can be created using any column in the source table — that is, the default view columns combined
-with the columns defined in the [`data_fields`](documentation/schema_configuration.md#data_fields) option.
-
-For example, to scope by publication year, limiting the table to the current user and to books published after 2018, add both scope keys:
-
-```elixir
-scope_keys: [:current_user, :publication_year],
-```
-
-Define the filter callbacks:
-
-```elixir
-def scope_by(:current_user, scopes) do
-  %{
-    field: :user_id,
-    comparison: "=",
-    value: scopes.user.id
-  }
-end
-
-def scope_by(:publication_year, scopes) do
-  %{
-    field: :publication_year,
-    comparison: ">",
-    value: scopes.publication_year
-  }
-end
-```
-
-Create the scoped search view:
-
-```elixir
-FacetedSearch.create_search_view(
-  MyApp.FacetSchema,
-  "user-books-after-2018",
-  scopes: %{user: current_user, publication_year: 2018}
-)
-```
-
 ## Multiple sources
 
 When multiple resources share common attributes, a unified search interface allows users to search across all of them and use the resource type itself as a facet. For example, in a media library containing books, movies, and music, each item has a title, author or creator, publishing date, and genre. The media type can then serve as one of the filters in the search.
@@ -979,6 +892,115 @@ params = %{filters: [
   %{field: :genres, op: :ilike_or, value: ["fantasy"]},
   %{field: :publication_year, op: :<=, value: 2000}
 ]}
+```
+
+## Scoping data
+
+Scoping is the method of filtering search view data upfront. Possible use cases:
+
+- When working with large datasets, where data can be split up in separate logical parts, for example items filtered by category, source or date.
+- For performance reasons it could be better to split up source data to create multiple "parametrized" search views.
+- Extending parametrized search views to multi-tenant applications, where each user or tenant should only have access to a specific subset of the data.
+- The source table contains columns with unwanted values that should be cleaned up.
+
+A scope is created in three steps:
+
+1. By providing the schema option `scope_keys` with a list of scope identifiers.
+2. By writing callback function `scope_by/2`, defined in the same schema module where `use FacetedSearch` is called. The first parameter is the scope identifier.
+3. By calling `FacetedSearch.create_search_view/3` with option `scopes`, containing any value that `scope_by/2` should handle.
+
+### Example: scoping to the current user
+
+#### 1. Pass `scope_keys` to the `sources` option:
+
+```elixir
+scope_keys: [:current_user],
+```
+
+#### 2. Define the callback:
+
+```elixir
+def scope_by(:current_user, %{current_user: current_user} = _scopes) do
+  %{
+    field: :user_id,
+    comparison: "=",
+    value: current_user.id
+  }
+end
+```
+
+The value at key `field` should reference a field listed in `fields`.
+
+#### 3. Pass the scope to `FacetedSearch.create_search_view/3`:
+
+```elixir
+view_id = "books"
+
+FacetedSearch.create_search_view(MyApp.FacetSchema, view_id,
+  scopes: %{current_user: current_user})
+```
+
+### Combining scopes
+
+When passing multiple scope keys, each result from the `scope_by` callback is "AND"-ed in the search view creation.
+
+For example, to scope by publication year, limiting the table to the current user and to books published after 2018, add both scope keys:
+
+```elixir
+scope_keys: [:current_user, :publication_year],
+```
+
+Define both filter callbacks:
+
+```elixir
+def scope_by(:current_user, scopes) do
+  %{
+    field: :user_id,
+    comparison: "=",
+    value: scopes.user.id
+  }
+end
+
+def scope_by(:publication_year, scopes) do
+  %{
+    field: :publication_year,
+    comparison: ">",
+    value: scopes.publication_year
+  }
+end
+```
+
+Create the scoped search view:
+
+```elixir
+view_id = "user-books-after-2018"
+
+FacetedSearch.create_search_view(
+  MyApp.FacetSchema,
+  view_id,
+  scopes: %{user: current_user, publication_year: 2018}
+)
+```
+
+### Scoping with multiple sources
+
+The `scope_keys` option must be set separately for each source.
+
+```elixir
+@shared_scope_keys [:author]
+
+@options [
+ sources: [
+   authors: [
+     scope_keys: @shared_scope_keys,
+     ...
+   ],
+   articles: [
+     scope_keys: @shared_scope_keys,
+     ...
+   ]
+ ]
+]
 ```
 
 ## Multi-tenancy and prefix

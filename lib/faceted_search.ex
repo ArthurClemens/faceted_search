@@ -222,7 +222,6 @@ defmodule FacetedSearch do
             ...
   """
   @callback scope_by(scope_key(), scope() | nil) :: %{
-              table: atom() | nil,
               field: atom(),
               comparison: String.t(),
               value: term()
