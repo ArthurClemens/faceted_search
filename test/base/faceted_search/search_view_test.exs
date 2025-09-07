@@ -118,6 +118,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
 
     test "extended schema" do
       expected = %FacetedSearch.SearchViewDescription{
+        id: %{ecto_type: :binary_id},
         sources: [
           %FacetedSearch.Source{
             data_fields: [

@@ -439,13 +439,19 @@ defmodule FacetedSearch.SearchView do
   # ID columns
 
   @spec create_id_columns(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_id_columns(source, _) do
+  defp create_id_columns(source, search_view_description) do
     %{table_name: table_name} = source
+    id_ecto_type = search_view_description.id |> get_in([:ecto_type])
 
-    """
-    CAST(#{table_name}.id AS text) AS id,
-    '#{table_name}' AS source
-    """
+    [
+      if id_ecto_type do
+        "CAST(#{table_name}.id AS #{to_postgres_type(id_ecto_type)}) AS id"
+      else
+        "#{table_name}.id AS id"
+      end,
+      "'#{table_name}' AS source"
+    ]
+    |> Enum.join(",\n")
   end
 
   # Data column
@@ -972,4 +978,10 @@ defmodule FacetedSearch.SearchView do
 
   defp line_indent(level) when level == 0, do: ""
   defp line_indent(level), do: "  " <> line_indent(level - 1)
+
+  defp to_postgres_type(:string), do: "text"
+  defp to_postgres_type(:binary_id), do: "uuid"
+  defp to_postgres_type(:uuid), do: "uuid"
+  defp to_postgres_type(:integer), do: "integer"
+  defp to_postgres_type(type), do: type
 end

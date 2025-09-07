@@ -44,9 +44,33 @@ use FacetedSearch,
   ]
 ```
 
+## id
+
+Optional setting that defines the type of the ID column. If not configured, the search view will infer the type from the sources.
+When multiple sources use different ID types, this setting can be used to cast them to a common type.
+
+The provide Ecto type will be converted to a Postgres type.
+
+- Type: `list(Keyword.t())`
+- Path: `id` (schema root)
+
+### Example
+
+Casting the ID to text:
+
+```
+use FacetedSearch,
+  id: [
+    ecto_type: :string
+  ],
+  sources: [
+    ...
+  ]
+```
+
 ## sources
 
-Settings per source. The source key refers to the name of a source table in your repo.
+Settings per resource. The source key refers to the name of a resource table in your repo.
 
 - Type: `list(Keyword.t())`
 - Path: `sources` (schema root)

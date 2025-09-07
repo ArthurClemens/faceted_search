@@ -39,6 +39,7 @@ defmodule FacetedSearch.Test.SchemaTest do
     test "extended schema" do
       expected = [
         module: ExpandedFacetSchema,
+        id: [ecto_type: :binary_id],
         sources: [
           articles: [
             joins: [

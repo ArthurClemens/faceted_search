@@ -7,6 +7,9 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
   """
 
   @options [
+    id: [
+      ecto_type: :binary_id
+    ],
     sources: [
       articles: [
         joins: [

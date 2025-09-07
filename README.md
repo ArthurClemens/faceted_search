@@ -59,7 +59,7 @@ Data from one or more database tables and columns is aggregated into a "search v
 
 The search view contains these base columns:
 
-- `id` - A `string` column that contains the data source record ID - useful for navigation or performing additional database lookups.
+- `id` - The column that contains the data source record ID - useful for navigation or performing additional database lookups.
 - `source` - A `string` column that contains the data source table name.
 - `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
 - `text` - A `text` column that contains a "bag of words" per row, used for text searches.
