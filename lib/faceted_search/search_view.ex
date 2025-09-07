@@ -413,12 +413,12 @@ defmodule FacetedSearch.SearchView do
 
     if scope_by_result do
       %{
-        column: column,
+        field: field,
         comparison: comparison,
         value: value
       } = scope_by_result
 
-      field = Enum.find(fields, &(&1.name == column))
+      field = Enum.find(fields, &(&1.name == field))
       {table_name, column_name} = get_table_and_column(field, joins)
       table_and_column = table_and_column_string(table_name, column_name)
 

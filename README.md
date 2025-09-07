@@ -922,7 +922,7 @@ scope_keys: [:current_user],
 ```elixir
 def scope_by(:current_user, %{current_user: current_user} = _scopes) do
   %{
-    column: :user_id,
+    field: :user_id,
     comparison: "=",
     value: current_user.id
   }
@@ -955,7 +955,7 @@ Define both filter callbacks:
 ```elixir
 def scope_by(:current_user, scopes) do
   %{
-    column: :user_id,
+    field: :user_id,
     comparison: "=",
     value: scopes.user.id
   }
@@ -963,7 +963,7 @@ end
 
 def scope_by(:publication_year, scopes) do
   %{
-    column: :publication_year,
+    field: :publication_year,
     comparison: ">",
     value: scopes.publication_year
   }

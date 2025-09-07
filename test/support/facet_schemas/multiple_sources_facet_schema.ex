@@ -98,7 +98,7 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
 
   def scope_by(:source, %{source: source}) do
     %{
-      column: :source,
+      field: :source,
       comparison: "=",
       value: source
     }
