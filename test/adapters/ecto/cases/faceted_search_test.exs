@@ -8,6 +8,7 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
   alias FacetedSearch.Test.MyApp.ExpandedFacetSchema
   alias FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema
+  alias FacetedSearch.Test.MyApp.PrefixFacetSchema
   alias FacetedSearch.Test.MyApp.ScopedFacetSchema
   alias FacetedSearch.Test.Repo
 
@@ -1723,6 +1724,50 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
     end
   end
 
+  describe "prefixes" do
+    setup do
+      init_resources(article_count: 10)
+
+      FacetedSearch.create_search_view(PrefixFacetSchema, "articles",
+        prefix: "classifications"
+      )
+
+      :ok
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = [
+        %{
+          "article_title" =>
+            "Datafied Memory: Digital Humanities Approaches to Holocaust Testimony Archives, The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
+          "category_name" => "editorial"
+        },
+        %{
+          "article_title" =>
+            "Emotional Cartography: Mapping Affective Landscapes in Victorian Travel Writing, Soundscapes of Faith: Acoustic Analysis of Medieval Cathedral Chant, Spectral Agency: Ghost Narratives as Cultural Memory Archives",
+          "category_name" => "review"
+        },
+        %{
+          "article_title" =>
+            "From Papyrus to Pixel: Materiality and Meaning in the Evolution of the Book, Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises, Narrative Entropy: Chaos Theory and Structure in Modernist Fiction, Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture, Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+          "category_name" => "paper"
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", PrefixFacetSchema, search_params,
+          page_size: 100,
+          query_opts: [prefix: "classifications"]
+        )
+
+      assert results
+             |> Enum.map(& &1.data)
+             |> Enum.sort() == expected
+    end
+  end
+
   defp search_all(view_id, schema) do
     ecto_schema = FacetedSearch.ecto_schema(schema, view_id)
 
@@ -1732,23 +1777,35 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
   defp filtered_search(view_id, schema, search_params, opts \\ []) do
     page_size = Keyword.get(opts, :page_size, 10)
+    query_opts = Keyword.get(opts, :query_opts, [])
+
     ecto_schema = FacetedSearch.ecto_schema(schema, view_id)
     query = from(ecto_schema)
     search_params = Map.put(search_params, :page_size, page_size)
 
-    Flop.validate_and_run(query, search_params, for: schema)
+    Flop.validate_and_run(query, search_params,
+      for: schema,
+      query_opts: query_opts
+    )
   end
 
   defp facet_search(view_id, schema, search_params, opts \\ []) do
     page_size = Keyword.get(opts, :page_size, 10)
+    query_opts = Keyword.get(opts, :query_opts, [])
+
     ecto_schema = FacetedSearch.ecto_schema(schema, view_id)
     query = from(ecto_schema)
     search_params = Map.put(search_params, :page_size, page_size)
 
     with {:ok, search_results} <-
-           Flop.validate_and_run(query, search_params, for: schema),
+           Flop.validate_and_run(query, search_params,
+             for: schema,
+             query_opts: query_opts
+           ),
          {:ok, facets} <-
-           FacetedSearch.search(ecto_schema, search_params) do
+           FacetedSearch.search(ecto_schema, search_params,
+             query_opts: query_opts
+           ) do
       {:ok, search_results, facets}
     else
       error ->

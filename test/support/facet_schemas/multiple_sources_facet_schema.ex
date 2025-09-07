@@ -12,7 +12,7 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
         fields: [
           author: [
             binding: :authors,
-            field: :full_name,
+            column: :full_name,
             ecto_type: :string
           ],
           birthdate: [
@@ -61,7 +61,7 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
           ],
           author: [
             binding: :authors,
-            field: :full_name,
+            column: :full_name,
             ecto_type: :string
           ]
         ],
@@ -89,7 +89,7 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
 
   def scope_by(:source, %{source: source}) do
     %{
-      field: :source,
+      column: :source,
       comparison: "=",
       value: source
     }

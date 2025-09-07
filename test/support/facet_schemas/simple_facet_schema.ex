@@ -29,7 +29,7 @@ defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
           ],
           author: [
             binding: :authors,
-            field: :full_name,
+            column: :full_name,
             ecto_type: :string
           ]
         ],

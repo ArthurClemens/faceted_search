@@ -855,7 +855,7 @@ use FacetedSearch,
         ...
         genres: [
           binding: :genres,
-          field: :name,
+          column: :name,
           ecto_type: {:array, :string}
         ]
       ],
@@ -922,7 +922,7 @@ scope_keys: [:current_user],
 ```elixir
 def scope_by(:current_user, %{current_user: current_user} = _scopes) do
   %{
-    field: :user_id,
+    column: :user_id,
     comparison: "=",
     value: current_user.id
   }
@@ -955,7 +955,7 @@ Define both filter callbacks:
 ```elixir
 def scope_by(:current_user, scopes) do
   %{
-    field: :user_id,
+    column: :user_id,
     comparison: "=",
     value: scopes.user.id
   }
@@ -963,7 +963,7 @@ end
 
 def scope_by(:publication_year, scopes) do
   %{
-    field: :publication_year,
+    column: :publication_year,
     comparison: ">",
     value: scopes.publication_year
   }
@@ -1005,20 +1005,18 @@ The `scope_keys` option must be set separately for each source.
 
 ## Multi-tenancy and prefix
 
-Pass the `prefix` option to the schema and to create, refresh, and search functions.
+Pass the schema `prefix` option to the schema and to create, refresh, and search functions.
 
-### Examples
-
-#### Creating the search view schema
+### Search view schema with prefix
 
 ```elixir
 use FacetedSearch,
   sources: [
     books: [
-      prefix: "catalog",
+      prefix: "catalog", # defines where the search view is created
       joins: [
         book_genres: [
-          prefix: "catalog",
+          prefix: "catalog", # defines where the joined table is found
           on: "book_genres.book_id = books.id"
         ],
         genres: [
@@ -1031,20 +1029,28 @@ use FacetedSearch,
   ]
 ```
 
-#### Creating a view
+### Creating and updating a view
 
 ```elixir
 FacetedSearch.create_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
-FacetedSearch.create_search_view(MyApp.FacetSchema, user.id, [scopes: %{current_user: user}, prefix: "user_catalogs"])
 ```
 
-#### Refreshing a view
+To store user views in database schema "user_catalogs":
+
+```elixir
+FacetedSearch.create_search_view(MyApp.FacetSchema, user.id,
+  scopes: %{current_user: user},
+  prefix: "user_catalogs"
+)
+```
+
+To refresh the view:
 
 ```elixir
 FacetedSearch.refresh_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
 ```
 
-#### Searching
+### Searching
 
 To align with Flop options, the `prefix` option is wrapped inside `query_opts`:
 
@@ -1052,17 +1058,22 @@ To align with Flop options, the `prefix` option is wrapped inside `query_opts`:
 {:ok, facets} <- FacetedSearch.search(ecto_schema, params, query_opts: [prefix: prefix])
 ```
 
-Example search function with prefix options:
+#### Example search function with prefix options
 
 ```elixir
-def search_media(params \\ %{}, opts \\ []) do
+def search_media(search_params \\ %{}, opts \\ []) do
   prefix = Keyword.get(opts, :prefix)
   ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
   query = from(ecto_schema)
 
   with {:ok, flop_results} <-
-         Flop.validate_and_run(query, params, for: MyApp.FacetSchema, query_opts: [prefix: prefix]),
-       {:ok, facets} <- FacetedSearch.search(ecto_schema, params, query_opts: [prefix: prefix]) do
+         Flop.validate_and_run(query, search_params,
+          for: FacetSchema, query_opts: [prefix: prefix]
+         ),
+       {:ok, facets} <-
+         FacetedSearch.search(ecto_schema, search_params,
+           query_opts: [prefix: prefix]
+         ) do
     {:ok, flop_results, facets}
   else
     error -> error

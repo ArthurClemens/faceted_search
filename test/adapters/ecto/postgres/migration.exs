@@ -1,7 +1,25 @@
 defmodule FacetedSearch.Test.Repo.Postgres.Migration do
   use Ecto.Migration
 
+  alias Ecto.Adapters.SQL
+
+  @schema_prefixes ["classifications"]
+
   def change do
+    Enum.each(@schema_prefixes, fn schema_prefix ->
+      sql = ~s(CREATE SCHEMA "#{schema_prefix}")
+      SQL.query(FacetedSearch.Test.Repo, sql, [])
+    end)
+
+    # schema_prefix classifications
+
+    create table(:categories, primary_key: false, prefix: "classifications") do
+      add(:id, :uuid, primary_key: true)
+      add(:name, :string)
+    end
+
+    # schema_prefix public
+
     create table(:authors, primary_key: false) do
       add(:id, :uuid, primary_key: true)
       add(:full_name, :string)
@@ -43,6 +61,17 @@ defmodule FacetedSearch.Test.Repo.Postgres.Migration do
       add(:id, :uuid, primary_key: true)
       add(:title, :string)
       add(:tag_id, references(:tags, type: :uuid))
+    end
+
+    create table(:article_categories, primary_key: false) do
+      add(:id, :uuid, primary_key: true)
+
+      add(:article_id, references(:articles, type: :uuid))
+
+      add(
+        :category_id,
+        references(:categories, prefix: "classifications", type: :uuid)
+      )
     end
   end
 end

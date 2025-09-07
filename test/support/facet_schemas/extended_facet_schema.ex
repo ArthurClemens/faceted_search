@@ -41,17 +41,17 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           ],
           tags: [
             binding: :tags,
-            field: :name,
+            column: :name,
             ecto_type: {:array, :string}
           ],
           tag_titles: [
             binding: :tag_texts,
-            field: :title,
+            column: :title,
             ecto_type: {:array, :string}
           ],
           author: [
             binding: :authors,
-            field: :full_name,
+            column: :full_name,
             ecto_type: :string
           ]
         ],
