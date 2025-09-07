@@ -1,19 +1,19 @@
-# FacetedSearch
+# Fase
+
+Fase integrates Faceted Search into your application with [Flop ⤴](https://hexdocs.pm/flop) as the underlying search library.
 
 > **WARNING**
 > This library is in its early stages: tests are not yet in place, and breaking changes are expected.
 
-FacetedSearch integrates faceting into your application with [Flop ⤴](https://hexdocs.pm/flop) as the underlying search library.
-
 ## Installation
 
-Add `faceted_search` to your list of dependencies in `mix.exs`:
+Add `fase` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:faceted_search,
-      git: "https://github.com/ArthurClemens/faceted_search.git",
+    {:fase,
+      git: "https://github.com/ArthurClemens/fase.git",
       branch: "development"
     }
   ]
@@ -34,7 +34,7 @@ While faceted search was popularized by e-commerce platforms, many other types o
 - Fansites
 - Admin interfaces
 
-This FacetedSearch library aims to provide the tooling to bring faceted search to your Elixir application, using Elixir code and a Postgres database.
+This Fase library aims to provide the tooling to bring faceted search to your Elixir application, using Elixir code and a Postgres database.
 
 This brings the following benefits:
 
@@ -73,7 +73,7 @@ Data from other tables can be included using join statements.
 
 ### Creating the search view
 
-Set up the search view by passing a schema to `use FacetedSearch`.
+Set up the search view by passing a schema to `use Fase`.
 
 The schema defines:
 
@@ -82,7 +82,7 @@ The schema defines:
 
 See [Schema configuration](documentation/schema_configuration.md) for documentation and examples.
 
-When the schema is defined, create the view with `FacetedSearch.create_search_view/3`.
+When the schema is defined, create the view with `Fase.create_search_view/3`.
 
 ### Updating the search view
 
@@ -90,12 +90,12 @@ A materialized view is essentially a cache: it provides faster search performanc
 
 Updates could be performed periodically, or after after changes to the source tables - this should be decided at the application level.
 
-Refreshing the view is done using `FacetedSearch.refresh_search_view/3`.
+Refreshing the view is done using `Fase.refresh_search_view/3`.
 
 See also:
 
-- `FacetedSearch.create_search_view_if_not_exists/3`.
-- `FacetedSearch.drop_search_view/3`.
+- `Fase.create_search_view_if_not_exists/3`.
+- `Fase.drop_search_view/3`.
 
 ## Searching and filtering
 
@@ -109,7 +109,7 @@ params = %{filters: [
   %{field: :publication_year, op: :<=, value: 2000}
 ]}
 
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "books")
+ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "books")
 Flop.validate_and_run(ecto_schema, params, for: MyApp.FacetSchema)
 ```
 
@@ -138,7 +138,7 @@ Example result:
 You may need only a subset of the view columns. For example, to only return the data column, add a `select` statement:
 
 ```elixir
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "books")
+ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "books")
 
 from(ecto_schema)
 |> select([schema], %{data: schema.data})
@@ -161,7 +161,7 @@ However, Flop requires that the specified fields refer to existing database colu
 Schema example:
 
 ```elixir
-use FacetedSearch,
+use Fase,
   sources: [
     books: [
       ...
@@ -220,7 +220,7 @@ This can be implemented in the Ecto query that is passed to `Flop.validate_and_r
 Example to sort on a value stored in the `data` JSON:
 
 ```elixir
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "books")
+ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "books")
 
 from(ecto_schema)
 |> order_by([schema],
@@ -257,7 +257,7 @@ So far, we've seen how to search, filter, and sort data from the search view usi
 Getting facet results, and filtering using facets, involve the following steps:
 
 1. Configure the schema with option `facet_fields`
-2. Use `FacetedSearch.search` to perform the search.
+2. Use `Fase.search` to perform the search.
 3. Handle the facet results in the application.
 4. Refine the search with facet selection
 
@@ -276,17 +276,17 @@ facet_fields: [
 
 ### 2. Performing a facet search
 
-`FacetedSearch.search/3` takes a reference to the schema and search parameters:
+`Fase.search/3` takes a reference to the schema and search parameters:
 
 ```elixir
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
-{:ok, facets} = FacetedSearch.search(ecto_schema, params)
+ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
+{:ok, facets} = Fase.search(ecto_schema, params)
 ```
 
-The utility function `FacetedSearch.ecto_schema/2` creates the reference using the schema and the view ID:
+The utility function `Fase.ecto_schema/2` creates the reference using the schema and the view ID:
 
 ```elixir
-iex> ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+iex> ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
 {"fv_media", MyApp.FacetSchema}
 ```
 
@@ -296,26 +296,26 @@ The `ecto_schema` variable is an `Ecto.Queryable` and is used in building an Ect
 An Ecto query can be initialized with:
 
 ```elixir
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
 query = from(ecto_schema)
 ```
 
 #### Combining Flop and facets
 
 Facet search is typically combined with filters and text search. So it makes sense to combine both `Flop.validate_and_run` and
-`FacetedSearch.search` in a single search function.
+`Fase.search` in a single search function.
 
 Note that this function returns a three-element tuple that includes the facet results.
 
 ```elixir
 def search_media(search_params \\ %{}) do
-  ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+  ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
   query = from(ecto_schema)
 
   with {:ok, flop_results} <-
          Flop.validate_and_run(query, search_params, for: FacetSchema),
        {:ok, facets} <-
-         FacetedSearch.search(ecto_schema, search_params) do
+         Fase.search(ecto_schema, search_params) do
     {:ok, flop_results, facets}
   else
     error -> error
@@ -343,13 +343,13 @@ The returned facet results will look like this:
 ```elixir
 [
   ...
-  %FacetedSearch.Facet{
+  %Fase.Facet{
     field: :publication_year,
     options: [
-      %FacetedSearch.Option{value: 1964, label: "1964", count: 2, selected: false},
-      %FacetedSearch.Option{value: 1966, label: "1966", count: 2, selected: false},
-      %FacetedSearch.Option{value: 1967, label: "1967", count: 1, selected: false},
-      %FacetedSearch.Option{value: 1968, label: "1968", count: 1, selected: false},
+      %Fase.Option{value: 1964, label: "1964", count: 2, selected: false},
+      %Fase.Option{value: 1966, label: "1966", count: 2, selected: false},
+      %Fase.Option{value: 1967, label: "1967", count: 1, selected: false},
+      %Fase.Option{value: 1968, label: "1968", count: 1, selected: false},
       ...
     ],
     ...
@@ -367,10 +367,10 @@ UI controls are outside of the scope of this library; this section describes the
 
 ```elixir
 [
-  %FacetedSearch.Facet{
+  %Fase.Facet{
     field: :publication_year,
     options: [
-      %FacetedSearch.Option{value: 1964, label: "1964", count: 2, selected: false},
+      %Fase.Option{value: 1964, label: "1964", count: 2, selected: false},
       ...
     ],
     ...
@@ -429,13 +429,13 @@ The returned facet results will look like this:
 
 ```elixir
 [
-  %FacetedSearch.Facet{
+  %Fase.Facet{
     field: :publication_year,
     options: [
-      %FacetedSearch.Option{value: 1964, label: "1964", count: 2, selected: true},
-      %FacetedSearch.Option{value: 1966, label: "1966", count: 2, selected: true},
-      %FacetedSearch.Option{value: 1967, label: "1967", count: 1, selected: false},
-      %FacetedSearch.Option{value: 1968, label: "1968", count: 1, selected: false},
+      %Fase.Option{value: 1964, label: "1964", count: 2, selected: true},
+      %Fase.Option{value: 1966, label: "1966", count: 2, selected: true},
+      %Fase.Option{value: 1967, label: "1967", count: 1, selected: false},
+      %Fase.Option{value: 1968, label: "1968", count: 1, selected: false},
       ...
     ],
     ...
@@ -498,7 +498,7 @@ defmodule MyApp.FacetSchema do
   ...
 ```
 
-- See [Callbacks: option_label/3](FacetedSearch.html#c:option_label/3) for details
+- See [Callbacks: option_label/3](Fase.html#c:option_label/3) for details
 - See [Ranges ↓](#ranges) for an example with range values
 
 ## Ranges
@@ -710,7 +710,7 @@ When using facets, retrieving facet data takes up the bulk of the query time: it
 
 ### Built-in optimizations
 
-FacetedSearch contains two optimizations:
+Fase contains two optimizations:
 
 - All columns in the search view are indexed.
 - If no facet filters are applied, the second query on the `tsv` column for retrieving filtered facet results is skipped. This should make the initial search page load slightly faster when no facets are selected.
@@ -755,7 +755,7 @@ One way is to translate a text query to a filtered query. For example, “blue t
 
 GenServer `FacetSearch.Cache` handles caching of facet results. Data is cached in an [ETS table ⤴](https://hexdocs.pm/elixir/main/ets.html), where the cache key is the combination of the search view name and the used filters.
 
-When the search view is updated, any exsisting cache that contains a key with the search view name is automatically cleared. Alternatively, call `FacetedSearch.clear_facets_cache/1`.
+When the search view is updated, any exsisting cache that contains a key with the search view name is automatically cleared. Alternatively, call `Fase.clear_facets_cache/1`.
 
 The cache is only written and read when option `cache_facets` is `true` - see below.
 
@@ -772,11 +772,11 @@ The cache is only written and read when option `cache_facets` is `true` - see be
    Supervisor.start_link(children, options)
    ```
 
-2. Enable caching of results from filter parameters by calling `FacetedSearch.search/3` with option `cache_facets` set to `true`.
+2. Enable caching of results from filter parameters by calling `Fase.search/3` with option `cache_facets` set to `true`.
 
 ### Cache warming
 
-Caches can be created upfront, by passing a list of filters to `FacetedSearch.warm_cache/2`.
+Caches can be created upfront, by passing a list of filters to `Fase.warm_cache/2`.
 
 For example:
 
@@ -788,8 +788,8 @@ search_params_to_cache = [
   %{filters: [%{field: :facet_colors, value: ["blue"], op: :==}]},
 ]
 
-ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, view_id)
-FacetedSearch.warm_cache(ecto_schema, search_params_to_cache)
+ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, view_id)
+Fase.warm_cache(ecto_schema, search_params_to_cache)
 ```
 
 Note: cached data, including from a warmed cache, is only returned when option `cache_facets` is set to `true`.
@@ -803,7 +803,7 @@ Builing upon the example search function from before, we add conditional caching
 
 ```elixir
 def search_media(search_params \\ %{}) do
-  ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+  ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
   query = from(ecto_schema)
   is_text_search = Enum.any?(search_params.filters, &(&1.field == :text))
 
@@ -811,7 +811,7 @@ def search_media(search_params \\ %{}) do
          Flop.validate_and_run(query, search_params, for: FacetSchema),
        cache_facets <- not is_text_search and meta.total_count > 1_000,
        {:ok, facets} <-
-         FacetedSearch.search(ecto_schema, search_params, cache_facets: cache_facets) do
+         Fase.search(ecto_schema, search_params, cache_facets: cache_facets) do
     {:ok, flop_results, facets}
   else
     error -> error
@@ -840,7 +840,7 @@ To continue with the books example, we would like to add genres to the search ta
 Let's add these with the options `joins` and `field`.
 
 ```elixir
-use FacetedSearch,
+use Fase,
   sources: [
     books: [
       joins: [
@@ -906,8 +906,8 @@ Scoping is the method of filtering search view data upfront. Possible use cases:
 A scope is created in three steps:
 
 1. By providing the schema option `scope_keys` with a list of scope identifiers.
-2. By writing callback function `scope_by/2`, defined in the same schema module where `use FacetedSearch` is called. The first parameter is the scope identifier.
-3. By calling `FacetedSearch.create_search_view/3` with option `scopes`, containing any value that `scope_by/2` should handle.
+2. By writing callback function `scope_by/2`, defined in the same schema module where `use Fase` is called. The first parameter is the scope identifier.
+3. By calling `Fase.create_search_view/3` with option `scopes`, containing any value that `scope_by/2` should handle.
 
 ### Example: scoping to the current user
 
@@ -931,12 +931,12 @@ end
 
 The value at key `field` should reference a field listed in `fields`, or a column in the source table.
 
-#### 3. Pass the scope to `FacetedSearch.create_search_view/3`:
+#### 3. Pass the scope to `Fase.create_search_view/3`:
 
 ```elixir
 view_id = "books"
 
-FacetedSearch.create_search_view(MyApp.FacetSchema, view_id,
+Fase.create_search_view(MyApp.FacetSchema, view_id,
   scopes: %{current_user: current_user})
 ```
 
@@ -975,7 +975,7 @@ Create the scoped search view:
 ```elixir
 view_id = "user-books-after-2018"
 
-FacetedSearch.create_search_view(
+Fase.create_search_view(
   MyApp.FacetSchema,
   view_id,
   scopes: %{user: current_user, publication_year: 2018}
@@ -1010,7 +1010,7 @@ Pass the schema `prefix` option to the schema and to create, refresh, and search
 ### Search view schema with prefix
 
 ```elixir
-use FacetedSearch,
+use Fase,
   sources: [
     books: [
       prefix: "catalog", # defines where the search view is created
@@ -1032,13 +1032,13 @@ use FacetedSearch,
 ### Creating and updating a view
 
 ```elixir
-FacetedSearch.create_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
+Fase.create_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
 ```
 
 To store user views in database schema "user_catalogs":
 
 ```elixir
-FacetedSearch.create_search_view(MyApp.FacetSchema, user.id,
+Fase.create_search_view(MyApp.FacetSchema, user.id,
   scopes: %{current_user: user},
   prefix: "user_catalogs"
 )
@@ -1047,7 +1047,7 @@ FacetedSearch.create_search_view(MyApp.FacetSchema, user.id,
 To refresh the view:
 
 ```elixir
-FacetedSearch.refresh_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
+Fase.refresh_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
 ```
 
 ### Searching
@@ -1055,7 +1055,7 @@ FacetedSearch.refresh_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
 To align with Flop options, the `prefix` option is wrapped inside `query_opts`:
 
 ```elixir
-{:ok, facets} <- FacetedSearch.search(ecto_schema, params, query_opts: [prefix: prefix])
+{:ok, facets} <- Fase.search(ecto_schema, params, query_opts: [prefix: prefix])
 ```
 
 #### Example search function with prefix options
@@ -1063,7 +1063,7 @@ To align with Flop options, the `prefix` option is wrapped inside `query_opts`:
 ```elixir
 def search_media(search_params \\ %{}, opts \\ []) do
   prefix = Keyword.get(opts, :prefix)
-  ecto_schema = FacetedSearch.ecto_schema(MyApp.FacetSchema, "media")
+  ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
   query = from(ecto_schema)
 
   with {:ok, flop_results} <-
@@ -1071,7 +1071,7 @@ def search_media(search_params \\ %{}, opts \\ []) do
           for: FacetSchema, query_opts: [prefix: prefix]
          ),
        {:ok, facets} <-
-         FacetedSearch.search(ecto_schema, search_params,
+         Fase.search(ecto_schema, search_params,
            query_opts: [prefix: prefix]
          ) do
     {:ok, flop_results, facets}

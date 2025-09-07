@@ -1,5 +1,5 @@
 import Config
 
-config :faceted_search, mode: nil
+config :fase, mode: nil
 
 import_config "#{Mix.env()}.exs"

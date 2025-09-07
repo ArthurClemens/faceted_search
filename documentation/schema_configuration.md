@@ -1,13 +1,13 @@
 # Schema configuration
 
-Defines the database schema for the search view. Pass the schema configuration via the options of `use FacetedSearch`.
+Defines the database schema for the search view. Pass the schema configuration via the options of `use Fase`.
 
 Create a module to contain the schema, for example `MyApp.FacetSchema`:
 
 ```
 defmodule MyApp.FacetSchema do
 
-  use FacetedSearch, [
+  use Fase, [
     # configuration options
   ]
 
@@ -19,7 +19,7 @@ end
 Minimal schema example:
 
 ```
-use FacetedSearch,
+use Fase,
   sources: [
     books: [
       fields: [
@@ -59,7 +59,7 @@ The provide Ecto type will be converted to a Postgres type.
 Casting the ID to text:
 
 ```
-use FacetedSearch,
+use Fase,
   id: [
     ecto_type: :string
   ],
@@ -81,7 +81,7 @@ When using multiple sources, the source ID's must be unique.
 ### Example
 
 ```
-use FacetedSearch,
+use Fase,
   sources: [
     books: [
        # options for the books table

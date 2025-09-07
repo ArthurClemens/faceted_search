@@ -1,18 +1,18 @@
-defmodule FacetedSearch.Test.Factory do
+defmodule Fase.Test.Factory do
   @moduledoc false
 
-  use ExMachina.Ecto, repo: FacetedSearch.Test.Repo
+  use ExMachina.Ecto, repo: Fase.Test.Repo
 
-  alias FacetedSearch.Test.MyApp.Article
-  alias FacetedSearch.Test.MyApp.ArticleCategory
-  alias FacetedSearch.Test.MyApp.ArticleTag
-  alias FacetedSearch.Test.MyApp.Author
-  alias FacetedSearch.Test.MyApp.AuthorArticle
-  alias FacetedSearch.Test.MyApp.Category
-  alias FacetedSearch.Test.MyApp.Role
-  alias FacetedSearch.Test.MyApp.Tag
-  alias FacetedSearch.Test.MyApp.TagText
-  alias FacetedSearch.Test.Repo
+  alias Fase.Test.MyApp.Article
+  alias Fase.Test.MyApp.ArticleCategory
+  alias Fase.Test.MyApp.ArticleTag
+  alias Fase.Test.MyApp.Author
+  alias Fase.Test.MyApp.AuthorArticle
+  alias Fase.Test.MyApp.Category
+  alias Fase.Test.MyApp.Role
+  alias Fase.Test.MyApp.Tag
+  alias Fase.Test.MyApp.TagText
+  alias Fase.Test.Repo
 
   @tags [
     "archives",

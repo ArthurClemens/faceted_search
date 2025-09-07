@@ -1,4 +1,4 @@
-defmodule FacetedSearch.Test.EctoSchemaExtension do
+defmodule Fase.Test.EctoSchemaExtension do
   @moduledoc """
   Macro used to employ a uuid for both primary and foreign keys.
   """

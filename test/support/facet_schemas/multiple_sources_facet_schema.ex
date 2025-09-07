@@ -1,4 +1,4 @@
-defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
+defmodule Fase.Test.MyApp.MultipleSourcesFacetSchema do
   @moduledoc """
   A facet schema with multiple sources.
   """
@@ -104,7 +104,7 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
     }
   end
 
-  use FacetedSearch, @options
+  use Fase, @options
 
   def schema_options, do: @options
 end

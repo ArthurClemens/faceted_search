@@ -1,11 +1,11 @@
-defmodule FacetedSearch.Test.MyApp.Article do
+defmodule Fase.Test.MyApp.Article do
   @moduledoc false
 
-  use FacetedSearch.Test.EctoSchemaExtension
+  use Fase.Test.EctoSchemaExtension
 
-  alias FacetedSearch.Test.MyApp.ArticleCategory
-  alias FacetedSearch.Test.MyApp.ArticleTag
-  alias FacetedSearch.Test.MyApp.AuthorArticle
+  alias Fase.Test.MyApp.ArticleCategory
+  alias Fase.Test.MyApp.ArticleTag
+  alias Fase.Test.MyApp.AuthorArticle
 
   schema "articles" do
     field :title, :string

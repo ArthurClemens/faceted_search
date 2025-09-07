@@ -1,9 +1,9 @@
-defmodule FacetedSearch.Test.MyApp.TagText do
+defmodule Fase.Test.MyApp.TagText do
   @moduledoc false
 
-  use FacetedSearch.Test.EctoSchemaExtension
+  use Fase.Test.EctoSchemaExtension
 
-  alias FacetedSearch.Test.MyApp.Tag
+  alias Fase.Test.MyApp.Tag
 
   schema "tag_texts" do
     field :title, :string

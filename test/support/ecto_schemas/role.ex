@@ -1,9 +1,9 @@
-defmodule FacetedSearch.Test.MyApp.Role do
+defmodule Fase.Test.MyApp.Role do
   @moduledoc false
 
-  use FacetedSearch.Test.EctoSchemaExtension
+  use Fase.Test.EctoSchemaExtension
 
-  alias FacetedSearch.Test.MyApp.Author
+  alias Fase.Test.MyApp.Author
 
   schema "roles" do
     field :name, Ecto.Enum, values: [:author, :editor, :assistant]
