@@ -1,9 +1,9 @@
-defmodule FacetedSearch.Test.MyApp.Category do
+defmodule Fase.Test.MyApp.Category do
   @moduledoc false
 
-  use FacetedSearch.Test.EctoSchemaExtension
+  use Fase.Test.EctoSchemaExtension
 
-  alias FacetedSearch.Test.MyApp.ArticleCategory
+  alias Fase.Test.MyApp.ArticleCategory
 
   @schema_prefix "classifications"
 

@@ -1,13 +1,13 @@
-defmodule FacetedSearch.MixProject do
+defmodule Fase.MixProject do
   use Mix.Project
 
-  @source_url "https://github.com/ArthurClemens/faceted_search"
+  @source_url "https://github.com/ArthurClemens/fase"
   @adapters ~w(postgres)
 
   def project do
     [
-      app: :faceted_search,
-      name: "FacetedSearch",
+      app: :fase,
+      name: "Fase",
       version: "0.1.0",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,

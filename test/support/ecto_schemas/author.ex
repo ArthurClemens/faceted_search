@@ -1,10 +1,10 @@
-defmodule FacetedSearch.Test.MyApp.Author do
+defmodule Fase.Test.MyApp.Author do
   @moduledoc false
 
-  use FacetedSearch.Test.EctoSchemaExtension
+  use Fase.Test.EctoSchemaExtension
 
-  alias FacetedSearch.Test.MyApp.AuthorArticle
-  alias FacetedSearch.Test.MyApp.Role
+  alias Fase.Test.MyApp.AuthorArticle
+  alias Fase.Test.MyApp.Role
 
   schema "authors" do
     field :full_name, :string

@@ -1,4 +1,4 @@
-defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
+defmodule Fase.Test.MyApp.ExpandedFacetSchema do
   @moduledoc """
   A facet schema that includes:
   - joined tables
@@ -119,7 +119,7 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
     ]
   ]
 
-  use FacetedSearch, @options
+  use Fase, @options
 
   def schema_options, do: @options
 

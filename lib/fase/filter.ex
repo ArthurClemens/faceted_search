@@ -1,0 +1,266 @@
+defmodule Fase.Filter do
+  @moduledoc false
+
+  # Filters for custom fields
+  # Adds support for searching the `data` JSON column and the `tsv` TSVector column in the document view table.
+
+  import Ecto.Query, warn: false
+
+  require Logger
+
+  alias Fase.Constants
+
+  def filter(query, %Flop.Filter{field: field, value: value, op: op}, opts) do
+    ecto_type = Keyword.get(opts, :ecto_type)
+    source_is_array = Keyword.get(opts, :source_is_array, false)
+
+    value_type =
+      case ecto_type do
+        {:array, type} -> type
+        type -> type
+      end
+
+    cast_value = Ecto.Type.cast(ecto_type, value)
+
+    case cast_value do
+      {:ok, query_value} ->
+        name = Keyword.get(opts, :field_reference, field) |> to_string()
+
+        source_is_array_value = is_list(value)
+        is_facet_search = Keyword.get(opts, :is_facet_search, false)
+        is_range_facet = Keyword.get(opts, :is_range_facet, false)
+
+        expr =
+          dynamic_expr(name, ecto_type, %{
+            source_is_array: source_is_array,
+            is_facet_search: is_facet_search,
+            is_range_facet: is_range_facet
+          })
+
+        conditions =
+          cond do
+            is_facet_search ->
+              get_facet_conditions(
+                name,
+                op,
+                expr,
+                query_value
+              )
+
+            source_is_array_value ->
+              get_array_conditions(op, value_type, expr, query_value)
+
+            true ->
+              get_conditions(op, expr, query_value)
+          end
+
+        where(query, ^conditions)
+
+      :error ->
+        Logger.error("Error casting value #{value} for field '#{field}'")
+        query
+    end
+  end
+
+  defp get_conditions(:==, expr, query_value),
+    do: dynamic([r], ^expr == ^query_value)
+
+  defp get_conditions(:!=, expr, query_value),
+    do: dynamic([r], ^expr != ^query_value)
+
+  defp get_conditions(:>, expr, query_value),
+    do: dynamic([r], ^expr > ^query_value)
+
+  defp get_conditions(:<, expr, query_value),
+    do: dynamic([r], ^expr < ^query_value)
+
+  defp get_conditions(:>=, expr, query_value),
+    do: dynamic([r], ^expr >= ^query_value)
+
+  defp get_conditions(:<=, expr, query_value),
+    do: dynamic([r], ^expr <= ^query_value)
+
+  defp get_conditions(op, expr, query_value)
+       when op in [
+              :like,
+              :ilike,
+              :like_and,
+              :ilike_and,
+              :like_or,
+              :ilike_or,
+              :not_like,
+              :not_ilike
+            ],
+       do: collect_string_conditions(op, expr, query_value)
+
+  defp get_conditions(op, expr, query_value) do
+    Logger.error(
+      "Operator #{op} for query value '#{query_value}' is not supported"
+    )
+
+    expr
+  end
+
+  defp get_array_conditions(:==, :string, expr, query_value) do
+    dynamic(
+      [r],
+      fragment(
+        "? \\?& STRING_TO_ARRAY(?, ',')",
+        ^expr,
+        ^(query_value |> Enum.join(","))
+      )
+    )
+  end
+
+  defp get_facet_conditions(name, :==, expr, facet_values)
+       when is_list(facet_values) do
+    values = Enum.map(facet_values, &"#{name}#{Constants.tsv_separator()}#{&1}")
+
+    dynamic(
+      [r],
+      fragment("? @@ (SELECT array_to_string(
+  ARRAY(
+    SELECT quote_literal(v) || ':*'
+    FROM unnest(ARRAY[?]) AS t(v)
+  ),
+  ' | '
+))::tsquery", ^expr, splice(^values))
+    )
+  end
+
+  defp get_facet_conditions(
+         name,
+         op,
+         expr,
+         query_value
+       ) do
+    Logger.error(
+      "Operator #{op} for '#{name}' and query value '#{query_value}' is not supported"
+    )
+
+    expr
+  end
+
+  def dynamic_expr(_name, _, %{
+        is_facet_search: is_facet_search
+      })
+      when is_facet_search do
+    dynamic(
+      [r],
+      fragment(
+        "?",
+        field(r, :tsv)
+      )
+    )
+  end
+
+  def dynamic_expr(name, :integer, _props) do
+    dynamic(
+      [r],
+      fragment(
+        "CAST((?->>?) AS int)",
+        field(r, :data),
+        ^name
+      )
+    )
+  end
+
+  def dynamic_expr(name, :boolean, _props) do
+    dynamic(
+      [r],
+      fragment(
+        "CAST((?->>?) AS boolean)",
+        field(r, :data),
+        ^name
+      )
+    )
+  end
+
+  def dynamic_expr(name, {:array, _}, %{source_is_array: source_is_array})
+      when source_is_array do
+    dynamic(
+      [r],
+      fragment(
+        "CAST((?->>?) AS jsonb)",
+        field(r, :data),
+        ^name
+      )
+    )
+  end
+
+  def dynamic_expr(name, {:array, _}, _props) do
+    dynamic(
+      [r],
+      fragment(
+        "CAST((?->>?) AS jsonb)",
+        field(r, :data),
+        ^name
+      )
+    )
+  end
+
+  def dynamic_expr(name, _ecto_type, _props) do
+    dynamic(
+      [r],
+      fragment(
+        "?->>?",
+        field(r, :data),
+        ^name
+      )
+    )
+  end
+
+  defp collect_string_conditions(op, expr, query_value) do
+    op_combinator = combinator(op)
+    op_operator_fn = operator_query_fn(op)
+
+    query_value
+    |> Flop.Misc.split_search_text()
+    |> Enum.map(&op_operator_fn.(&1, expr))
+    |> dynamic_reducer(op_combinator)
+  end
+
+  defp combinator(:like_or), do: :or
+  defp combinator(:ilike_or), do: :or
+  defp combinator(_), do: :and
+
+  defp operator_query_fn(op) when op in [:like, :like_or, :like_and],
+    do: &like_operator_query/2
+
+  defp operator_query_fn(op) when op in [:ilike, :ilike_or, :ilike_and],
+    do: &ilike_operator_query/2
+
+  defp operator_query_fn(op) when op in [:not_like],
+    do: &not_like_operator_query/2
+
+  defp operator_query_fn(op) when op in [:not_ilike],
+    do: &not_ilike_operator_query/2
+
+  defp operator_query_fn(op) do
+    Logger.error("Operator query #{op} is not supported")
+  end
+
+  defp like_operator_query(term, expr),
+    do: dynamic([r], fragment("? LIKE ?", ^expr, ^term))
+
+  defp ilike_operator_query(term, expr),
+    do: dynamic([r], fragment("? ILIKE ?", ^expr, ^term))
+
+  defp not_like_operator_query(term, expr),
+    do: dynamic([r], fragment("? NOT LIKE ?", ^expr, ^term))
+
+  defp not_ilike_operator_query(term, expr),
+    do: dynamic([r], fragment("? NOT ILIKE ?", ^expr, ^term))
+
+  defp dynamic_reducer(dynamic, :and) do
+    Enum.reduce(dynamic, fn dynamic, acc ->
+      dynamic([r], ^acc and ^dynamic)
+    end)
+  end
+
+  defp dynamic_reducer(dynamic, :or) do
+    Enum.reduce(dynamic, fn dynamic, acc ->
+      dynamic([r], ^acc or ^dynamic)
+    end)
+  end
+end

@@ -1,4 +1,4 @@
-defmodule FacetedSearch.Test.MyApp.ScopedFacetSchema do
+defmodule Fase.Test.MyApp.ScopedFacetSchema do
   @moduledoc """
   A facet schema with a scope and scope callback.
   """
@@ -45,7 +45,7 @@ defmodule FacetedSearch.Test.MyApp.ScopedFacetSchema do
 
   def scope_by(_, _), do: nil
 
-  use FacetedSearch, @options
+  use Fase, @options
 
   def schema_options, do: @options
 end

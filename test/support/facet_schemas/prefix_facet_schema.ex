@@ -1,4 +1,4 @@
-defmodule FacetedSearch.Test.MyApp.PrefixFacetSchema do
+defmodule Fase.Test.MyApp.PrefixFacetSchema do
   @moduledoc """
   A facet schema that includes schema prefixes.
   """
@@ -44,7 +44,7 @@ defmodule FacetedSearch.Test.MyApp.PrefixFacetSchema do
     ]
   ]
 
-  use FacetedSearch, @options
+  use Fase, @options
 
   def schema_options, do: @options
 end

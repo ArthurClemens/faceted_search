@@ -1,4 +1,4 @@
-defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
+defmodule Fase.Test.MyApp.SimpleFacetSchema do
   @moduledoc """
   A simple facet schema:
   - a single source
@@ -50,7 +50,7 @@ defmodule FacetedSearch.Test.MyApp.SimpleFacetSchema do
     ]
   ]
 
-  use FacetedSearch, @options
+  use Fase, @options
 
   def schema_options, do: @options
 end

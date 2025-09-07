@@ -1,10 +1,10 @@
-defmodule FacetedSearch.Test.MyApp.ArticleTag do
+defmodule Fase.Test.MyApp.ArticleTag do
   @moduledoc false
 
-  use FacetedSearch.Test.EctoSchemaExtension
+  use Fase.Test.EctoSchemaExtension
 
-  alias FacetedSearch.Test.MyApp.Article
-  alias FacetedSearch.Test.MyApp.Tag
+  alias Fase.Test.MyApp.Article
+  alias Fase.Test.MyApp.Tag
 
   schema "article_tags" do
     belongs_to :article, Article
