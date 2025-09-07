@@ -7,16 +7,20 @@ defmodule FacetedSearch.FlopSchema do
   alias FacetedSearch.Filter
 
   @default_filterable_fields [:source, :text]
-
+  @source_field [
+    source: [
+      ecto_type: :string
+    ]
+  ]
   @spec create_flop_custom_fields_option(schema_options()) :: Keyword.t()
   def create_flop_custom_fields_option(options) do
     %{fields: fields, facet_fields: facet_fields} =
       options
       |> Keyword.get_values(:sources)
       |> List.flatten()
-      |> Enum.reduce(%{fields: [], facet_fields: []}, fn {_source,
-                                                          source_options},
-                                                         acc ->
+      |> Enum.reduce(%{fields: [@source_field], facet_fields: []}, fn {_source,
+                                                                       source_options},
+                                                                      acc ->
         fields = Keyword.get_values(source_options, :fields) |> List.flatten()
 
         facet_fields =

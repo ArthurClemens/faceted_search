@@ -3,9 +3,12 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
   A facet schema with multiple sources.
   """
 
+  @shared_scope_keys [:source]
+
   @options [
     sources: [
       authors: [
+        scope_keys: @shared_scope_keys,
         fields: [
           author: [
             binding: :authors,
@@ -18,15 +21,18 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
         ],
         data_fields: [
           :author,
-          :birthdate
+          :birthdate,
+          :source
         ],
         text_fields: [
           :author,
-          :birthdate
+          :birthdate,
+          :source
         ],
         sort_fields: [
           :author,
-          :birthdate
+          :birthdate,
+          :source
         ],
         facet_fields: [
           :author,
@@ -34,6 +40,7 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
         ]
       ],
       articles: [
+        scope_keys: @shared_scope_keys,
         joins: [
           author_articles: [
             on: "author_articles.article_id = articles.id"
@@ -69,7 +76,8 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
         ],
         sort_fields: [
           :publish_date,
-          :author
+          :author,
+          :source
         ],
         facet_fields: [
           :author,
@@ -78,6 +86,14 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
       ]
     ]
   ]
+
+  def scope_by(:source, %{source: source}) do
+    %{
+      field: :source,
+      comparison: "=",
+      value: source
+    }
+  end
 
   use FacetedSearch, @options
 
