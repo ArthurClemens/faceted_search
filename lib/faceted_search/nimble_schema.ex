@@ -56,7 +56,7 @@ defmodule FacetedSearch.NimbleSchema do
                   type: :keyword_list,
                   keys: [
                     binding: [type: :atom],
-                    field: [type: :atom],
+                    column: [type: :atom],
                     ecto_type: [
                       type: :any,
                       required: true
@@ -137,7 +137,7 @@ defmodule FacetedSearch.NimbleSchema do
               when is_list(raw_values) ->
                 cond do
                   MapSet.equal?(
-                    MapSet.new([:binding, :field]),
+                    MapSet.new([:binding, :column]),
                     MapSet.new(Keyword.keys(raw_values))
                   ) ->
                     :ok
@@ -154,7 +154,7 @@ defmodule FacetedSearch.NimbleSchema do
                     %{
                       error: :unlisted,
                       key: key,
-                      supported_keys: [:binding, :field, :cast]
+                      supported_keys: [:binding, :column, :cast]
                     }
                 end
 

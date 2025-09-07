@@ -152,10 +152,10 @@ A unique name used as reference in field definitions `data_fields`, `text_fields
   - Type: `any()`
   - Required
 - `binding`
-  - Name of a joined table or the source table. Use togeter with option `field`.
+  - Name of a joined table or the source table. Use togeter with option `column`. If not specified, the source table is assumed.
   - Type: `atom()`
-- `field`
-  - Referenced field of the joined table or the source table.
+- `column`
+  - Referenced column of the joined table or the source table.
   - Type: `atom()`
   - Required: when using `binding`
 - `filter`
@@ -186,7 +186,7 @@ sources: [
 ]
 ```
 
-When extracting a value from a joined table, pass `binding` and `field`:
+When extracting a value from a joined table, pass `binding` and `column`:
 
 ```
 sources: [
@@ -202,7 +202,7 @@ sources: [
     fields: [
       genre: [
         binding: :genres,
-        field: :title,
+        column: :title,
         ecto_type: :string
       ]
     ],
@@ -211,7 +211,7 @@ sources: [
 ]
 ```
 
-Also pass `binding` and `field` when creating an alias for a source table column. In this example we
+Also pass `binding` and `column` when creating an alias for a source table column. In this example we
 create the alias `author_name` from `books.author`, so that we can reference it in `data_fields` and so on.
 
 ```
@@ -220,7 +220,7 @@ sources: [
     fields: [
       author_name: [
         binding: :books,
-        field: :author,
+        column: :author,
         ecto_type: :string
       ]
     ],
@@ -256,11 +256,11 @@ Entry options are either:
   - Type: `atom()`
 - A keyword list with keys:
   - `binding`
-    - Name or alias of a joined table. Use togeter with option `field`.
-    - If no binding is used, they entry key is used to look up the field from the `fields` option.
+    - Name or alias of a joined table. Use togeter with option `column`.
+    - If no binding is used, they entry key is used to look up the column from the `fields` option.
     - Type: `atom()`
-  - `field`
-    - Referenced field of the joined table.
+  - `column`
+    - Referenced column of the joined table.
     - Type: `atom()`
     - Required: when using `binding`
   - `cast`
@@ -298,7 +298,7 @@ fields: [
   ...
   genre: [
     binding: :genres,
-    field: :title,
+    column: :title,
     ecto_type: :string
   ]
 ],
@@ -323,7 +323,7 @@ data_fields: [
 ]
 ```
 
-To create references to joined tables, use keys `binding` and `field`, similar to `fields`:
+To create references to joined tables, use keys `binding` and `column`, similar to `fields`:
 
 ```
 data_fields: [
@@ -331,7 +331,7 @@ data_fields: [
   my_custom_data: [
     definition: [
       binding: :genres,
-      field: :definition
+      column: :definition
     ]
   ]
 ]
@@ -359,7 +359,7 @@ sources: [
       ],
       genre: [
         binding: :genres,
-        field: :title,
+        column: :title,
         ecto_type: :string
       ],
       publication_year: [
@@ -376,7 +376,7 @@ sources: [
         ],
         definition: [
           binding: :genres,
-          field: :definition
+          column: :definition
         ]
       ]
     ]
@@ -487,7 +487,7 @@ sources: [
       ...
       genre_title: [
         binding: :genres,
-        field: :title,
+        column: :title,
         ecto_type: :string
       ],
     ]

@@ -229,6 +229,7 @@ defmodule FacetedSearch.SearchView do
 
       WITH NO DATA;
       """
+      |> String.trim()
 
     create_indexes_sql = [
       ([
@@ -412,12 +413,12 @@ defmodule FacetedSearch.SearchView do
 
     if scope_by_result do
       %{
-        field: field_name,
+        column: column,
         comparison: comparison,
         value: value
       } = scope_by_result
 
-      field = Enum.find(fields, &(&1.name == field_name))
+      field = Enum.find(fields, &(&1.name == column))
       {table_name, column_name} = get_table_and_column(field, joins)
       table_and_column = table_and_column_string(table_name, column_name)
 
@@ -510,9 +511,9 @@ defmodule FacetedSearch.SearchView do
     table_and_columns =
       entries
       |> Enum.map(fn
-        %{name: name, cast: cast, field_ref: field_ref}
-        when not is_nil(field_ref) ->
-          field = fields |> Enum.find(&(&1.name == field_ref))
+        %{name: name, cast: cast, field_name: field_name}
+        when not is_nil(field_name) ->
+          field = fields |> Enum.find(&(&1.name == field_name))
 
           case get_table_and_column(field, joins) do
             {table_name, column_name} ->
@@ -878,18 +879,23 @@ defmodule FacetedSearch.SearchView do
 
   @spec get_table_and_column(Field.t(), list(Join.t()) | nil) ::
           {atom(), atom()} | nil
-  defp get_table_and_column(%Field{name: :source} = _field, _joins),
+  defp get_table_and_column(%Field{name: :source}, _joins),
     do: {:source, :source_name}
 
   defp get_table_and_column(%Field{binding: binding} = field, joins)
        when is_list(joins) and joins != [] and not is_nil(binding) do
-    %{binding: binding, field: join_field, table_name: table_name} = field
+    %{
+      binding: binding,
+      column: column,
+      table_name: table_name
+    } = field
+
     join = Enum.find(joins, &(&1.as == binding || &1.table == binding))
 
     if join do
-      {join.as || join.table, join_field}
+      {join.as || join.table, column}
     else
-      {table_name, field.field}
+      {table_name, field.column}
     end
   end
 
@@ -898,18 +904,19 @@ defmodule FacetedSearch.SearchView do
          %Field{
            table_name: table_name,
            binding: binding,
-           field: field
+           column: column
          },
          _joins
        )
-       when not is_nil(binding) and not is_nil(field),
-       do: {table_name, field}
+       when not is_nil(binding) and not is_nil(column),
+       do: {table_name, column}
 
   defp get_table_and_column(
-         %Field{table_name: table_name, name: column_name},
+         %Field{table_name: table_name, column: column},
          _joins
-       ),
-       do: {table_name, column_name}
+       ) do
+    {table_name, column}
+  end
 
   defp get_table_and_column(_, _), do: nil
 

@@ -42,18 +42,20 @@ defmodule FacetedSearch.Source do
     table_name: :source,
     name: :source,
     ecto_type: :string,
-    binding: nil,
-    field: :source_name
+    column: :source_name
   }
 
   @spec new({atom(), Keyword.t()}, atom()) :: t()
   def new({table_name, options}, module) do
+    prefix = Keyword.get(options, :prefix, nil)
+
     %__MODULE__{
       table_name: table_name,
       prefix: Keyword.get(options, :prefix),
       scopes: Keyword.get(options, :scope_keys) |> collect_scopes(module),
       joins: Keyword.get(options, :joins) |> collect_joins(),
-      fields: Keyword.get(options, :fields) |> collect_fields(table_name),
+      fields:
+        Keyword.get(options, :fields) |> collect_fields(table_name, prefix),
       data_fields: Keyword.get(options, :data_fields) |> collect_data_fields(),
       text_fields: Keyword.get(options, :text_fields),
       facet_fields:
@@ -68,17 +70,17 @@ defmodule FacetedSearch.Source do
 
   defp collect_joins(_joins), do: nil
 
-  defp collect_fields(fields, table_name)
+  defp collect_fields(fields, table_name, prefix)
        when is_list(fields) and fields != [] do
     [
       @source_field
       | Enum.map(fields, fn {name, field_options} ->
-          Field.new(name, field_options, table_name)
+          Field.new(name, field_options, table_name, prefix)
         end)
     ]
   end
 
-  defp collect_fields(_fields, _table_name), do: nil
+  defp collect_fields(_, _, _), do: nil
 
   defp collect_data_fields(fields) when is_list(fields) and fields != [] do
     Enum.map(fields, fn
