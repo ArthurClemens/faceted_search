@@ -118,6 +118,7 @@ defmodule FacetedSearch.Test.SearchViewTest do
 
     test "extended schema" do
       expected = %FacetedSearch.SearchViewDescription{
+        id: %{ecto_type: :binary_id},
         sources: [
           %FacetedSearch.Source{
             data_fields: [
@@ -126,7 +127,25 @@ defmodule FacetedSearch.Test.SearchViewTest do
               %FacetedSearch.DataField{entries: nil, name: :tags},
               %FacetedSearch.DataField{entries: nil, name: :tag_titles},
               %FacetedSearch.DataField{entries: nil, name: :publish_date},
-              %FacetedSearch.DataField{entries: nil, name: :word_count}
+              %FacetedSearch.DataField{
+                entries: [
+                  %FacetedSearch.DataFieldEntry{
+                    name: :word_count,
+                    binding: nil,
+                    column: nil,
+                    field_name: :word_count,
+                    cast: :text
+                  },
+                  %FacetedSearch.DataFieldEntry{
+                    name: :type,
+                    binding: :tags,
+                    column: :name,
+                    field_name: nil,
+                    cast: nil
+                  }
+                ],
+                name: :indicators
+              }
             ],
             facet_fields: [
               %FacetedSearch.FacetField{
@@ -556,6 +575,33 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 hierarchy: nil,
                 parent: nil,
                 path: nil
+              },
+              %FacetedSearch.FacetField{
+                name: :publish_date,
+                parent: nil,
+                path: nil,
+                hide_when_selected: false,
+                hierarchy: nil,
+                label_field: nil,
+                range_bounds: [
+                  "now() - interval '1 year'",
+                  "now() - interval '3 month'",
+                  "now() - interval '1 month'",
+                  "now() - interval '1 week'",
+                  "now() - interval '1 day'"
+                ],
+                range_buckets: [
+                  {[:lower, "now() - interval '1 year'"], 0},
+                  {["now() - interval '1 year'", "now() - interval '3 month'"],
+                   1},
+                  {["now() - interval '3 month'", "now() - interval '1 month'"],
+                   2},
+                  {["now() - interval '1 month'", "now() - interval '1 week'"],
+                   3},
+                  {["now() - interval '1 week'", "now() - interval '1 day'"],
+                   4},
+                  {["now() - interval '1 day'", :upper], 5}
+                ]
               }
             ],
             table_name: :articles,

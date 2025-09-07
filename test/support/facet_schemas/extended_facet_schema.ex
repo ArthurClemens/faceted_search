@@ -7,6 +7,9 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
   """
 
   @options [
+    id: [
+      ecto_type: :binary_id
+    ],
     sources: [
       articles: [
         joins: [
@@ -61,7 +64,15 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           :tags,
           :tag_titles,
           :publish_date,
-          :word_count
+          indicators: [
+            word_count: [
+              cast: :text
+            ],
+            type: [
+              binding: :tags,
+              column: :name
+            ]
+          ]
         ],
         text_fields: [
           :author,

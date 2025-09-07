@@ -39,6 +39,7 @@ defmodule FacetedSearch.Test.SchemaTest do
     test "extended schema" do
       expected = [
         module: ExpandedFacetSchema,
+        id: [ecto_type: :binary_id],
         sources: [
           articles: [
             joins: [
@@ -70,7 +71,11 @@ defmodule FacetedSearch.Test.SchemaTest do
               :tags,
               :tag_titles,
               :publish_date,
-              :word_count
+              {:indicators,
+               [
+                 word_count: [cast: :text],
+                 type: [binding: :tags, column: :name]
+               ]}
             ],
             text_fields: [:author, :title, :summary],
             sort_fields: [:author, :publish_date],
@@ -161,7 +166,20 @@ defmodule FacetedSearch.Test.SchemaTest do
             data_fields: [:author, :publish_date, :title],
             text_fields: [:title, :summary],
             sort_fields: [:publish_date, :author, :source],
-            facet_fields: [:author, :source]
+            facet_fields: [
+              :author,
+              :source,
+              {:publish_date,
+               [
+                 date_range_bounds: [
+                   "now() - interval '1 year'",
+                   "now() - interval '3 month'",
+                   "now() - interval '1 month'",
+                   "now() - interval '1 week'",
+                   "now() - interval '1 day'"
+                 ]
+               ]}
+            ]
           ]
         ]
       ]

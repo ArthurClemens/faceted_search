@@ -59,7 +59,7 @@ Data from one or more database tables and columns is aggregated into a "search v
 
 The search view contains these base columns:
 
-- `id` - A `string` column that contains the data source record ID - useful for navigation or performing additional database lookups.
+- `id` - The column that contains the data source record ID - useful for navigation or performing additional database lookups.
 - `source` - A `string` column that contains the data source table name.
 - `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
 - `text` - A `text` column that contains a "bag of words" per row, used for text searches.
@@ -922,14 +922,14 @@ scope_keys: [:current_user],
 ```elixir
 def scope_by(:current_user, %{current_user: current_user} = _scopes) do
   %{
-    column: :user_id,
+    field: :user_id,
     comparison: "=",
     value: current_user.id
   }
 end
 ```
 
-The value at key `field` should reference a field listed in `fields`.
+The value at key `field` should reference a field listed in `fields`, or a column in the source table.
 
 #### 3. Pass the scope to `FacetedSearch.create_search_view/3`:
 
@@ -942,9 +942,9 @@ FacetedSearch.create_search_view(MyApp.FacetSchema, view_id,
 
 ### Combining scopes
 
-When passing multiple scope keys, each result from the `scope_by` callback is "AND"-ed in the search view creation.
+When passing multiple scope keys, each result from the `scope_by` callback is combined with a logical AND in the search view creation.
 
-For example, to scope by publication year, limiting the table to the current user and to books published after 2018, add both scope keys:
+For example, to scope by publication year, limiting the table to the current user AND books published after 2018, add both scope keys:
 
 ```elixir
 scope_keys: [:current_user, :publication_year],
@@ -955,7 +955,7 @@ Define both filter callbacks:
 ```elixir
 def scope_by(:current_user, scopes) do
   %{
-    column: :user_id,
+    field: :user_id,
     comparison: "=",
     value: scopes.user.id
   }
@@ -963,7 +963,7 @@ end
 
 def scope_by(:publication_year, scopes) do
   %{
-    column: :publication_year,
+    field: :publication_year,
     comparison: ">",
     value: scopes.publication_year
   }

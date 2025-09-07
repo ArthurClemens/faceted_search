@@ -683,13 +683,18 @@ defmodule FacetedSearch.Facets do
       Enum.map(facet_configs, fn {_, facet_config} -> facet_config end)
 
     facet_rows
-    |> Enum.map(fn {name, raw_value, database_label, count} ->
+    |> Enum.map(fn {name, _, _, _} = row ->
       facet_config =
         Enum.find(facet_config_list, &(&1.name == name))
 
-      if is_nil(facet_config) do
-        raise "FacetedSearch: facet_field '#{name}' is not configured."
-      end
+      %{
+        facet_config: facet_config,
+        row: row
+      }
+    end)
+    |> Enum.filter(&(not is_nil(&1.facet_config)))
+    |> Enum.map(fn %{facet_config: facet_config, row: row} ->
+      {name, raw_value, database_label, count} = row
 
       value = cast_value(raw_value, facet_config)
 

@@ -11,18 +11,28 @@ defmodule FacetedSearch.SearchViewDescription do
     :sources
   ]
 
-  defstruct sources: nil
+  defstruct sources: nil, id: nil
 
   @type t() :: %__MODULE__{
           # required
-          sources: list(Source.t())
+          sources: list(Source.t()),
+          # optional
+          id: map() | nil
         }
 
   @spec new(schema_options()) :: t()
   def new(options) do
     module = Keyword.get(options, :module)
 
+    id_config =
+      if Keyword.has_key?(options, :id) do
+        Keyword.get(options, :id, []) |> Enum.into(%{})
+      else
+        nil
+      end
+
     struct(__MODULE__, %{
+      id: id_config,
       sources:
         options
         |> Keyword.get(:sources)

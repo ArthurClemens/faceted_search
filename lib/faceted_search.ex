@@ -204,7 +204,7 @@ defmodule FacetedSearch do
 
           def scope_by(:current_user, scope) do
             %{
-              column: :user_id,
+              field: :user_id,
               comparison: "=",
               value: scope.user.id
             }
@@ -212,7 +212,7 @@ defmodule FacetedSearch do
 
           def scope_by(:publication_year, scope) do
             %{
-              column: :publication_year,
+              field: :publication_year,
               comparison: ">",
               value: scope.publication_year
             }
@@ -222,7 +222,7 @@ defmodule FacetedSearch do
             ...
   """
   @callback scope_by(scope_key(), scope() | nil) :: %{
-              column: atom(),
+              field: atom(),
               comparison: String.t(),
               value: term()
             }

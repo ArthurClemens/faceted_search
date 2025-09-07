@@ -81,7 +81,16 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
         ],
         facet_fields: [
           :author,
-          :source
+          :source,
+          publish_date: [
+            date_range_bounds: [
+              "now() - interval '1 year'",
+              "now() - interval '3 month'",
+              "now() - interval '1 month'",
+              "now() - interval '1 week'",
+              "now() - interval '1 day'"
+            ]
+          ]
         ]
       ]
     ]
@@ -89,7 +98,7 @@ defmodule FacetedSearch.Test.MyApp.MultipleSourcesFacetSchema do
 
   def scope_by(:source, %{source: source}) do
     %{
-      column: :source,
+      field: :source,
       comparison: "=",
       value: source
     }

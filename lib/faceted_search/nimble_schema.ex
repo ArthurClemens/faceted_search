@@ -19,6 +19,15 @@ defmodule FacetedSearch.NimbleSchema do
       doc:
         "The schema module that calls `use FacetedSearch`. This is inserted automatically."
     ],
+    id: [
+      type: :keyword_list,
+      keys: [
+        ecto_type: [
+          type: :any,
+          required: true
+        ]
+      ]
+    ],
     sources: [
       type: :keyword_list,
       required: true,

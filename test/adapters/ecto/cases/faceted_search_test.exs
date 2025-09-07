@@ -178,17 +178,28 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
       expected = [
         %{
+          "author" => "Helena van Dijk",
+          "indicators" => [
+            %{"type" => "history", "word_count" => "3473"},
+            %{
+              "type" => "language_analysis",
+              "word_count" => "3473"
+            },
+            %{"type" => "politics", "word_count" => "3473"}
+          ],
           "publish_date" => "datetime",
-          "title" =>
-            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
-          "tags" => ["history", "language_analysis", "politics"],
           "tag_titles" => [
             "History",
             "Language analysis: Critical reading",
             "Politics"
           ],
-          "author" => "Helena van Dijk",
-          "word_count" => 3473
+          "tags" => [
+            "history",
+            "language_analysis",
+            "politics"
+          ],
+          "title" =>
+            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
         }
       ]
 
@@ -1697,6 +1708,125 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
 
       assert Enum.find(facets, &(&1.field == :source))
              |> get_in([Access.key(:options)]) == expected_source_options
+    end
+
+    test "search facets: date_range_bounds (only 1 of the sources has this specified)" do
+      search_params = %{
+        filters: [
+          %{
+            value: [3, 4],
+            op: :==,
+            field: :facet_publish_date
+          }
+        ]
+      }
+
+      {:ok, {results, meta}, facets} =
+        facet_search("articles", ExpandedFacetSchema, search_params)
+
+      assert meta.total_count == 5
+
+      expected_results = [
+        %{
+          title:
+            "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture",
+          source: "articles"
+        },
+        %{
+          source: "articles",
+          title:
+            "Soundscapes of Faith: Acoustic Analysis of Medieval Cathedral Chant"
+        },
+        %{
+          title:
+            "Spectral Agency: Ghost Narratives as Cultural Memory Archives",
+          source: "articles"
+        },
+        %{
+          source: "articles",
+          title:
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
+        },
+        %{
+          source: "articles",
+          title:
+            "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature"
+        }
+      ]
+
+      assert results
+             |> Enum.map(&%{source: &1.source, title: &1.data["title"]})
+             |> Enum.sort() ==
+               expected_results
+
+      expected_facets = %{
+        author: %{
+          count: 4,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: "Helena van Dijk",
+              label: "Helena van Dijk",
+              count: 1,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: "Jean-Marie Leclerc",
+              label: "Jean-Marie Leclerc",
+              count: 1,
+              selected: false
+            }
+          ]
+        },
+        publish_date: %{
+          count: 4,
+          first_2_options: [
+            %FacetedSearch.Option{
+              value: 1,
+              label: "last year",
+              count: 3,
+              selected: false
+            },
+            %FacetedSearch.Option{
+              value: 2,
+              label: "last quarter",
+              count: 2,
+              selected: false
+            }
+          ]
+        }
+      }
+
+      assert facet_result_subset(facets) == expected_facets
+
+      expected_publish_date_options = [
+        %FacetedSearch.Option{
+          count: 3,
+          label: "last year",
+          selected: false,
+          value: 1
+        },
+        %FacetedSearch.Option{
+          count: 2,
+          label: "last quarter",
+          selected: false,
+          value: 2
+        },
+        %FacetedSearch.Option{
+          count: 3,
+          label: "last month",
+          selected: true,
+          value: 3
+        },
+        %FacetedSearch.Option{
+          count: 2,
+          label: "last week",
+          selected: true,
+          value: 4
+        }
+      ]
+
+      assert Enum.find(facets, &(&1.field == :publish_date))
+             |> get_in([Access.key(:options)]) == expected_publish_date_options
     end
   end
 
