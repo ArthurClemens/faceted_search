@@ -165,7 +165,20 @@ defmodule FacetedSearch.Test.SchemaTest do
             data_fields: [:author, :publish_date, :title],
             text_fields: [:title, :summary],
             sort_fields: [:publish_date, :author, :source],
-            facet_fields: [:author, :source]
+            facet_fields: [
+              :author,
+              :source,
+              {:publish_date,
+               [
+                 date_range_bounds: [
+                   "now() - interval '1 year'",
+                   "now() - interval '3 month'",
+                   "now() - interval '1 month'",
+                   "now() - interval '1 week'",
+                   "now() - interval '1 day'"
+                 ]
+               ]}
+            ]
           ]
         ]
       ]

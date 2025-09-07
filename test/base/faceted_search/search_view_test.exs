@@ -574,6 +574,33 @@ defmodule FacetedSearch.Test.SearchViewTest do
                 hierarchy: nil,
                 parent: nil,
                 path: nil
+              },
+              %FacetedSearch.FacetField{
+                name: :publish_date,
+                parent: nil,
+                path: nil,
+                hide_when_selected: false,
+                hierarchy: nil,
+                label_field: nil,
+                range_bounds: [
+                  "now() - interval '1 year'",
+                  "now() - interval '3 month'",
+                  "now() - interval '1 month'",
+                  "now() - interval '1 week'",
+                  "now() - interval '1 day'"
+                ],
+                range_buckets: [
+                  {[:lower, "now() - interval '1 year'"], 0},
+                  {["now() - interval '1 year'", "now() - interval '3 month'"],
+                   1},
+                  {["now() - interval '3 month'", "now() - interval '1 month'"],
+                   2},
+                  {["now() - interval '1 month'", "now() - interval '1 week'"],
+                   3},
+                  {["now() - interval '1 week'", "now() - interval '1 day'"],
+                   4},
+                  {["now() - interval '1 day'", :upper], 5}
+                ]
               }
             ],
             table_name: :articles,
