@@ -126,7 +126,19 @@ defmodule FacetedSearch.Test.SearchViewTest do
               %FacetedSearch.DataField{entries: nil, name: :tags},
               %FacetedSearch.DataField{entries: nil, name: :tag_titles},
               %FacetedSearch.DataField{entries: nil, name: :publish_date},
-              %FacetedSearch.DataField{entries: nil, name: :word_count}
+              %FacetedSearch.DataField{entries: nil, name: :word_count},
+              %FacetedSearch.DataField{
+                name: :indicators,
+                entries: [
+                  %FacetedSearch.DataFieldEntry{
+                    name: :type,
+                    binding: :tags,
+                    column: :name,
+                    field_name: nil,
+                    cast: nil
+                  }
+                ]
+              }
             ],
             facet_fields: [
               %FacetedSearch.FacetField{

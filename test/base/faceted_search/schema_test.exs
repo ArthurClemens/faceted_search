@@ -70,7 +70,8 @@ defmodule FacetedSearch.Test.SchemaTest do
               :tags,
               :tag_titles,
               :publish_date,
-              :word_count
+              :word_count,
+              {:indicators, [type: [binding: :tags, column: :name]]}
             ],
             text_fields: [:author, :title, :summary],
             sort_fields: [:author, :publish_date],

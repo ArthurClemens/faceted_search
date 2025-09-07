@@ -61,7 +61,13 @@ defmodule FacetedSearch.Test.MyApp.ExpandedFacetSchema do
           :tags,
           :tag_titles,
           :publish_date,
-          :word_count
+          :word_count,
+          indicators: [
+            type: [
+              binding: :tags,
+              column: :name
+            ]
+          ]
         ],
         text_fields: [
           :author,

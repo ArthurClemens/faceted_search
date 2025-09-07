@@ -188,7 +188,12 @@ defmodule FacetedSearch.Test.Adapters.Ecto.FacetedSearchTest do
             "Politics"
           ],
           "author" => "Helena van Dijk",
-          "word_count" => 3473
+          "word_count" => 3473,
+          "indicators" => [
+            %{"type" => "history"},
+            %{"type" => "language_analysis"},
+            %{"type" => "politics"}
+          ]
         }
       ]
 
