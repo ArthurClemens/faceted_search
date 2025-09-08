@@ -7,9 +7,7 @@ defmodule Fase.Test.MyApp.ExpandedFacetSchema do
   """
 
   @options [
-    id: [
-      ecto_type: :binary_id
-    ],
+    id: [cast: "text"],
     sources: [
       articles: [
         joins: [
@@ -66,7 +64,7 @@ defmodule Fase.Test.MyApp.ExpandedFacetSchema do
           :publish_date,
           indicators: [
             word_count: [
-              cast: :text
+              cast: "text"
             ],
             type: [
               binding: :tags,

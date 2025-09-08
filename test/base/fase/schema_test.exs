@@ -39,7 +39,7 @@ defmodule Fase.Test.SchemaTest do
     test "extended schema" do
       expected = [
         module: ExpandedFacetSchema,
-        id: [ecto_type: :binary_id],
+        id: [cast: "text"],
         sources: [
           articles: [
             joins: [
@@ -73,7 +73,7 @@ defmodule Fase.Test.SchemaTest do
               :publish_date,
               {:indicators,
                [
-                 word_count: [cast: :text],
+                 word_count: [cast: "text"],
                  type: [binding: :tags, column: :name]
                ]}
             ],

@@ -198,7 +198,7 @@ To define a cast operation, add `cast` to the sort field entry:
 ```elixir
 sort_fields: [
   category: [
-    cast: :float
+    cast: "float"
   ]
 ]
 ```

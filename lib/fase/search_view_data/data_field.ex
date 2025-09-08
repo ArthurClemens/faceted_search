@@ -68,6 +68,6 @@ defmodule Fase.DataFieldEntry do
           binding: atom() | nil,
           column: atom() | nil,
           field_name: atom() | nil,
-          cast: atom() | nil
+          cast: String.t() | nil
         }
 end

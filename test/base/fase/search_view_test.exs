@@ -118,23 +118,125 @@ defmodule Fase.Test.SearchViewTest do
 
     test "extended schema" do
       expected = %Fase.SearchViewDescription{
-        id: %{ecto_type: :binary_id},
+        id: %{cast: "text"},
         sources: [
           %Fase.Source{
+            table_name: :articles,
+            scopes: nil,
+            prefix: nil,
+            fields: [
+              %Fase.Field{
+                table_name: :source,
+                prefix: nil,
+                name: :source,
+                ecto_type: :string,
+                binding: nil,
+                column: :source_name
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :title,
+                ecto_type: :string,
+                binding: nil,
+                column: :title
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :summary,
+                ecto_type: :string,
+                binding: nil,
+                column: :summary
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :publish_date,
+                ecto_type: :utc_datetime,
+                binding: nil,
+                column: :publish_date
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :word_count,
+                ecto_type: :integer,
+                binding: nil,
+                column: :word_count
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :tags,
+                ecto_type: {:array, :string},
+                binding: :tags,
+                column: :name
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :tag_titles,
+                ecto_type: {:array, :string},
+                binding: :tag_texts,
+                column: :title
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :author,
+                ecto_type: :string,
+                binding: :authors,
+                column: :full_name
+              }
+            ],
+            joins: [
+              %Fase.Join{
+                table: :author_articles,
+                on: "author_articles.article_id = articles.id",
+                as: nil,
+                prefix: nil
+              },
+              %Fase.Join{
+                table: :authors,
+                on: "authors.id = author_articles.author_id",
+                as: nil,
+                prefix: nil
+              },
+              %Fase.Join{
+                table: :article_tags,
+                on: "article_tags.article_id = articles.id",
+                as: nil,
+                prefix: nil
+              },
+              %Fase.Join{
+                table: :tags,
+                on: "tags.id = article_tags.tag_id",
+                as: nil,
+                prefix: nil
+              },
+              %Fase.Join{
+                table: :tag_texts,
+                on: "tag_texts.tag_id = tags.id",
+                as: nil,
+                prefix: nil
+              }
+            ],
             data_fields: [
-              %Fase.DataField{entries: nil, name: :title},
-              %Fase.DataField{entries: nil, name: :author},
-              %Fase.DataField{entries: nil, name: :tags},
-              %Fase.DataField{entries: nil, name: :tag_titles},
-              %Fase.DataField{entries: nil, name: :publish_date},
+              %Fase.DataField{name: :title, entries: nil},
+              %Fase.DataField{name: :author, entries: nil},
+              %Fase.DataField{name: :tags, entries: nil},
+              %Fase.DataField{name: :tag_titles, entries: nil},
+              %Fase.DataField{name: :publish_date, entries: nil},
               %Fase.DataField{
+                name: :indicators,
                 entries: [
                   %Fase.DataFieldEntry{
                     name: :word_count,
                     binding: nil,
                     column: nil,
                     field_name: :word_count,
-                    cast: :text
+                    cast: "text"
                   },
                   %Fase.DataFieldEntry{
                     name: :type,
@@ -143,38 +245,35 @@ defmodule Fase.Test.SearchViewTest do
                     field_name: nil,
                     cast: nil
                   }
-                ],
-                name: :indicators
+                ]
               }
             ],
+            text_fields: [:author, :title, :summary],
             facet_fields: [
               %Fase.FacetField{
-                hide_when_selected: false,
-                hierarchy: nil,
-                label_field: nil,
                 name: :author,
-                parent: nil,
-                path: nil,
-                range_bounds: nil,
-                range_buckets: nil
-              },
-              %Fase.FacetField{
                 hide_when_selected: false,
-                hierarchy: nil,
-                label_field: :tag_titles,
-                name: :tags,
-                parent: nil,
-                path: nil,
-                range_bounds: nil,
-                range_buckets: nil
-              },
-              %Fase.FacetField{
-                hide_when_selected: false,
-                hierarchy: nil,
                 label_field: nil,
-                name: :word_count,
+                range_bounds: nil,
+                range_buckets: nil,
+                hierarchy: nil,
                 parent: nil,
-                path: nil,
+                path: nil
+              },
+              %Fase.FacetField{
+                name: :tags,
+                hide_when_selected: false,
+                label_field: :tag_titles,
+                range_bounds: nil,
+                range_buckets: nil,
+                hierarchy: nil,
+                parent: nil,
+                path: nil
+              },
+              %Fase.FacetField{
+                name: :word_count,
+                hide_when_selected: false,
+                label_field: nil,
                 range_bounds: [2000, 4000, 6000, 8000],
                 range_buckets: [
                   {[:lower, 2000], 0},
@@ -182,15 +281,15 @@ defmodule Fase.Test.SearchViewTest do
                   {[4000, 6000], 2},
                   {[6000, 8000], 3},
                   {[8000, :upper], 4}
-                ]
+                ],
+                hierarchy: nil,
+                parent: nil,
+                path: nil
               },
               %Fase.FacetField{
-                hide_when_selected: false,
-                hierarchy: nil,
-                label_field: nil,
                 name: :publish_date,
-                parent: nil,
-                path: nil,
+                hide_when_selected: false,
+                label_field: nil,
                 range_bounds: [
                   "now() - interval '1 year'",
                   "now() - interval '3 month'",
@@ -209,155 +308,56 @@ defmodule Fase.Test.SearchViewTest do
                   {["now() - interval '1 week'", "now() - interval '1 day'"],
                    4},
                   {["now() - interval '1 day'", :upper], 5}
-                ]
+                ],
+                hierarchy: nil,
+                parent: nil,
+                path: nil
               },
               %Fase.FacetField{
-                hide_when_selected: false,
-                hierarchy: true,
-                label_field: nil,
                 name: :category_tags_author,
+                hide_when_selected: false,
+                label_field: nil,
+                range_bounds: nil,
+                range_buckets: nil,
+                hierarchy: true,
                 parent: :category_tags,
-                path: [:tags, :author],
-                range_bounds: nil,
-                range_buckets: nil
+                path: [:tags, :author]
               },
               %Fase.FacetField{
-                hide_when_selected: false,
-                hierarchy: true,
-                label_field: nil,
                 name: :category_tags,
-                parent: nil,
-                path: [:tags],
+                hide_when_selected: false,
+                label_field: nil,
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                hierarchy: true,
+                parent: nil,
+                path: [:tags]
               },
               %Fase.FacetField{
-                hide_when_selected: false,
-                hierarchy: true,
-                label_field: nil,
                 name: :category_author_tags,
-                parent: :category_author,
-                path: [:author, :tags],
+                hide_when_selected: false,
+                label_field: nil,
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                hierarchy: true,
+                parent: :category_author,
+                path: [:author, :tags]
               },
               %Fase.FacetField{
-                hide_when_selected: false,
-                hierarchy: true,
-                label_field: nil,
                 name: :category_author,
-                parent: nil,
-                path: [:author],
+                hide_when_selected: false,
+                label_field: nil,
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                hierarchy: true,
+                parent: nil,
+                path: [:author]
               }
             ],
-            fields: [
-              %Fase.Field{
-                binding: nil,
-                column: :source_name,
-                ecto_type: :string,
-                name: :source,
-                prefix: nil,
-                table_name: :source
-              },
-              %Fase.Field{
-                binding: nil,
-                column: :title,
-                ecto_type: :string,
-                name: :title,
-                prefix: nil,
-                table_name: :articles
-              },
-              %Fase.Field{
-                binding: nil,
-                column: :summary,
-                ecto_type: :string,
-                name: :summary,
-                prefix: nil,
-                table_name: :articles
-              },
-              %Fase.Field{
-                binding: nil,
-                column: :publish_date,
-                ecto_type: :utc_datetime,
-                name: :publish_date,
-                prefix: nil,
-                table_name: :articles
-              },
-              %Fase.Field{
-                binding: nil,
-                column: :word_count,
-                ecto_type: :integer,
-                name: :word_count,
-                prefix: nil,
-                table_name: :articles
-              },
-              %Fase.Field{
-                binding: :tags,
-                column: :name,
-                ecto_type: {:array, :string},
-                name: :tags,
-                prefix: nil,
-                table_name: :articles
-              },
-              %Fase.Field{
-                binding: :tag_texts,
-                column: :title,
-                ecto_type: {:array, :string},
-                name: :tag_titles,
-                prefix: nil,
-                table_name: :articles
-              },
-              %Fase.Field{
-                binding: :authors,
-                column: :full_name,
-                ecto_type: :string,
-                name: :author,
-                prefix: nil,
-                table_name: :articles
-              }
-            ],
-            joins: [
-              %Fase.Join{
-                as: nil,
-                on: "author_articles.article_id = articles.id",
-                prefix: nil,
-                table: :author_articles
-              },
-              %Fase.Join{
-                as: nil,
-                on: "authors.id = author_articles.author_id",
-                prefix: nil,
-                table: :authors
-              },
-              %Fase.Join{
-                as: nil,
-                on: "article_tags.article_id = articles.id",
-                prefix: nil,
-                table: :article_tags
-              },
-              %Fase.Join{
-                as: nil,
-                on: "tags.id = article_tags.tag_id",
-                prefix: nil,
-                table: :tags
-              },
-              %Fase.Join{
-                as: nil,
-                on: "tag_texts.tag_id = tags.id",
-                prefix: nil,
-                table: :tag_texts
-              }
-            ],
-            prefix: nil,
-            scopes: nil,
             sort_fields: [
-              %Fase.SortField{cast: nil, name: :author},
-              %Fase.SortField{cast: nil, name: :publish_date}
-            ],
-            table_name: :articles,
-            text_fields: [:author, :title, :summary]
+              %Fase.SortField{name: :author, cast: nil},
+              %Fase.SortField{name: :publish_date, cast: nil}
+            ]
           }
         ]
       }

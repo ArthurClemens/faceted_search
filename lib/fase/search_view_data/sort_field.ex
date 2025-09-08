@@ -13,7 +13,7 @@ defmodule Fase.SortField do
           # required
           name: atom(),
           # optional
-          cast: :integer | :float | :text | nil
+          cast: String.t() | nil
         }
 
   def new(field_options) do
