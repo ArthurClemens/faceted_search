@@ -54,6 +54,13 @@ The provide Ecto type will be converted to a Postgres type.
 - Type: `list(Keyword.t())`
 - Path: `id` (schema root)
 
+### List entries
+- A keyword list with key:
+  - `cast`
+    - Type to casts the value to
+    - Type: `String.t()`
+    - The cast value can be any valid [Postgres data type ⤴](https://www.postgresql.org/docs/current/datatype.html).
+
 ### Example
 
 Casting the ID to text:
@@ -61,7 +68,7 @@ Casting the ID to text:
 ```
 use Fase,
   id: [
-    ecto_type: :string
+    cast: "text"
   ],
   sources: [
     ...
@@ -289,7 +296,7 @@ Entry options are either:
     - Required: when using `binding`
   - `cast`
     - Type to casts the value to
-    - Type: `atom()`
+    - Type: `String.t()`
 
 ### Examples
 
@@ -341,7 +348,7 @@ data_fields: [
   ...
   my_custom_data: [
     publication_year: [
-      cast: :integer
+      cast: "integer"
     ],
   ]
 ]
@@ -396,7 +403,7 @@ sources: [
       my_custom_data: [
         :title,
         publication_year: [
-          cast: :integer
+          cast: "integer"
         ],
         definition: [
           binding: :genres,
@@ -618,6 +625,7 @@ Either:
   - Type: `atom()`
 - A keyword list containing key `cast` to cast the orginal value to a sort value - see examples below.
   - Type: `{atom(), Keyword.t()}`
+  - The cast value can be any valid [Postgres data type ⤴](https://www.postgresql.org/docs/current/datatype.html).
 
 ### Examples
 
@@ -644,7 +652,7 @@ sources: [
     sort_fields: [
       :title,
       publication_year: [
-        cast: :float
+        cast: "float"
       ]
     ]
   ]

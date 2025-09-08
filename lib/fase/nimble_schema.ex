@@ -22,8 +22,8 @@ defmodule Fase.NimbleSchema do
     id: [
       type: :keyword_list,
       keys: [
-        ecto_type: [
-          type: :any,
+        cast: [
+          type: :string,
           required: true
         ]
       ]

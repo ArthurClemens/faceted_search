@@ -43,7 +43,7 @@ defmodule Fase.Test.NimbleSchemaTest do
               my_custom_data: [
                 :title,
                 draft: [
-                  cast: :integer
+                  cast: "integer"
                 ],
                 definition: [
                   binding: :genres,
