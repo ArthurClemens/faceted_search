@@ -1,6 +1,6 @@
 # Fase
 
-Fase integrates Faceted Search into your application with [Flop ⤴](https://hexdocs.pm/flop) as the underlying search library.
+Fase is a library that adds **faceted search** into your application, using Postgres with [Flop ⤴](https://hexdocs.pm/flop) as the underlying search library.
 
 > **WARNING**
 > This library is in its early stages: tests are not yet in place, and breaking changes are expected.
@@ -1080,3 +1080,16 @@ def search_media(search_params \\ %{}, opts \\ []) do
   end
 end
 ```
+
+## Credits
+
+- Mathias Polligkeit for providing the excellent search library [Flop ⤴](https://hexdocs.pm/flop).
+- Anne Teresa De Keersmaeker and Rosas for creating and performing the namesake dance piece Fase.
+
+<figure>
+   <img src="https://www.rosas.be/picture/1979/fancybox/rosas-fase-four-movements-to-the-music-of-steve-reich---dancers-laura-bachman-soa-ratsifandrihana-c-anne-van-aerschot-fase2018-c-anne-van-aerschot7jpg.jpg" />
+   <caption>
+      <small>Fase, Four Movements to the Music of Steve Reich - dancers Laura Bachman, Soa Ratsifandrihana - © Anne Van Aerschot. Choreography Anne Teresa De Keersmaeker/Rosas 1982-2018.</small>
+   </caption>
+</figure>
+
