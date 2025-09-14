@@ -23,7 +23,7 @@ defmodule Fase.NimbleSchema do
       type: :keyword_list,
       keys: [
         cast: [
-          type: :string,
+          type: :atom,
           required: true
         ]
       ]
@@ -135,7 +135,10 @@ defmodule Fase.NimbleSchema do
           )
           |> validate_options(module, opts, :data_fields,
             get_supported_keyword_list_options: fn
-              %{path: [_, _, :data_fields]}, _keys_map ->
+              %{
+                path: [_, _, :data_fields]
+              },
+              _keys_map ->
                 :ok
 
               %{
@@ -165,14 +168,6 @@ defmodule Fase.NimbleSchema do
                       key: key,
                       supported_keys: [:binding, :column, :cast]
                     }
-                end
-
-              %{path: [_, _, :data_fields, _], key: key},
-              %{field_keys: field_keys} ->
-                if key in field_keys do
-                  :ok
-                else
-                  %{error: :unlisted, key: key, supported_keys: field_keys}
                 end
 
               _, _ ->

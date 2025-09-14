@@ -38,6 +38,7 @@ defmodule Fase.Test.Repo.Postgres.Migration do
       add(:summary, :text)
       add(:word_count, :integer)
       add(:publish_date, :utc_datetime)
+      add(:draft, :boolean)
 
       timestamps(type: :utc_datetime)
     end

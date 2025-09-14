@@ -104,13 +104,15 @@ See also:
 We can query the search view using Flop filters. For example, to perform a text search on author name and filter by publication year:
 
 ```elixir
-params = %{filters: [
-  %{field: :text, op: :ilike, value: "Le Guin"},
-  %{field: :publication_year, op: :<=, value: 2000}
-]}
+search_params = %{
+  filters: [
+    %{field: :text, op: :ilike, value: "Le Guin"},
+    %{field: :publication_year, op: :<=, value: 2000}
+  ]
+}
 
 ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "books")
-Flop.validate_and_run(ecto_schema, params, for: MyApp.FacetSchema)
+Flop.validate_and_run(ecto_schema, search_params, for: MyApp.FacetSchema)
 ```
 
 Example result:
@@ -133,6 +135,50 @@ Example result:
 }
 ```
 
+The values inside the returned `data` map can be used for the display of search results.
+
+#### Casting filter fields and results data
+
+Data fields can be cast to a different type. For example, to change the type of `draft` from boolean to integer, we add a `cast` entry to the data field:
+
+```elixir
+use Fase,
+  sources: [
+    books: [
+      fields: [
+        ...
+        draft: [
+          ecto_type: :boolean
+        ]
+      ],
+      data_fields: [
+        ...
+        draft: [
+          cast: :integer
+        ]
+      ]
+    ]
+  ]
+```
+
+The cast value can be any valid type that is supported by `Ecto.Type.cast/2`.
+
+Then we can use the integer value in the filter search parameters:
+
+```elixir
+search_params = %{
+  filters: [
+    %{
+      field: :draft,
+      op: :==,
+      value: 1
+    }
+  ]
+}
+```
+
+The data map will also contain integer values for "draft".
+
 ### Limiting results data
 
 You may need only a subset of the view columns. For example, to only return the data column, add a `select` statement:
@@ -142,7 +188,7 @@ ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "books")
 
 from(ecto_schema)
 |> select([schema], %{data: schema.data})
-|> Flop.validate_and_run(params, for: MyApp.FacetSchema)
+|> Flop.validate_and_run(search_params, for: MyApp.FacetSchema)
 ```
 
 ### Filtering on timestamps
@@ -213,7 +259,7 @@ To prevent conflicts with Flop (since custom fields, which are used internally, 
 the generated column names are prefixed with `sort_`. For example, a field `title` will have a corresponding sort column `sort_title` which should be used in the Flop params. Note that the field names in the schema don't use the prefix.
 
 ```elixir
-params = %{
+search_params = %{
   filters: [...],
   order_by: [:sort_publication_year, :sort_title],
   order_directions: [:desc, :asc]
@@ -265,12 +311,12 @@ To define a cast operation, add `cast` to the sort field entry:
 ```elixir
 sort_fields: [
   category: [
-    cast: "float"
+    cast: :float
   ]
 ]
 ```
 
-The cast value can be any valid [Postgres data type ⤴](https://www.postgresql.org/docs/current/datatype.html).
+The cast value can be any valid type that is supported by `Ecto.Type.cast/2`.
 
 As with Flop, multiple fields can be passed to `order_by` and `order_directions`.
 
@@ -293,7 +339,7 @@ from(ecto_schema)
 |> order_by([schema],
   asc: fragment("?::jsonb->>'genre_title'", schema.data)
 )
-|> Flop.validate_and_run(params, for: MyApp.FacetSchema)
+|> Flop.validate_and_run(search_params, for: MyApp.FacetSchema)
 ```
 
 Similarly, to sort on matches in titles:
@@ -347,7 +393,7 @@ facet_fields: [
 
 ```elixir
 ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
-{:ok, facets} = Fase.search(ecto_schema, params)
+{:ok, facets} = Fase.search(ecto_schema, search_params)
 ```
 
 The utility function `Fase.ecto_schema/2` creates the reference using the schema and the view ID:
@@ -486,10 +532,12 @@ To achieve this behavior using Flop, we need to create filters using the followi
 If we provide a checkbox group to the search page to select the publication year (not the best UI - see [Ranges](#ranges) for a better alternative), and the user has typed "Le Guin" in the search box, and selected the years 1964 and 1966, the Flop search parameters will look like this:
 
 ```elixir
-%{filters: [
-  %{field: :text, op: :ilike, value: "Le Guin"},
-  %{field: :facet_publication_year, op: :==, value: [1964, 1966]},
-]}
+%{
+  filters: [
+    %{field: :text, op: :ilike, value: "Le Guin"},
+    %{field: :facet_publication_year, op: :==, value: [1964, 1966]},
+  ]
+}
 ```
 
 The returned facet results will look like this:
@@ -618,9 +666,11 @@ facet_fields: [
 For a range facet, the option value in the facet results contains the bucket number. Bucket numbers starts at 0, so values 2 and 3 correspond to the range bounds "1 week" and "1 day" above.
 
 ```elixir
-%{filters: [
-  %{field: :facet_publication_year, op: :==, value: [2, 3]},
-]}
+%{
+  filters: [
+    %{field: :facet_publication_year, op: :==, value: [2, 3]},
+  ]
+}
 ```
 
 ### Range labels
@@ -733,17 +783,21 @@ facet_fields: [
 To get modern artworks, filter on facet `periods`:
 
 ```elixir
-%{filters: [
-  %{field: :facet_periods, op: :==, value: ["modern_art"]}
-]}
+%{
+  filters: [
+    %{field: :facet_periods, op: :==, value: ["modern_art"]}
+  ]
+}
 ```
 
 To get pop art works, filter on facet `movements` and its option value - in this case "modern_art>pop_art". The parent facet `periods` with value "modern_art" will be selected automatically.
 
 ```elixir
-%{filters: [
-  %{field: :facet_movements, op: :==, value: ["modern_art>pop_art"]},
-]}
+%{
+  filters: [
+    %{field: :facet_movements, op: :==, value: ["modern_art>pop_art"]},
+  ]
+}
 ```
 
 To remove parent facet `periods` from the facet results, set its option `hide_when_selected` to `true`
@@ -955,10 +1009,12 @@ joins: [
 The genres data contains an array of strings. To find matches, we use `ilike_or`:
 
 ```elixir
-params = %{filters: [
-  %{field: :genres, op: :ilike_or, value: ["fantasy"]},
-  %{field: :publication_year, op: :<=, value: 2000}
-]}
+search_params = %{
+  filters: [
+    %{field: :genres, op: :ilike_or, value: ["fantasy"]},
+    %{field: :publication_year, op: :<=, value: 2000}
+  ]
+}
 ```
 
 ## Scoping data
@@ -1122,7 +1178,7 @@ Fase.refresh_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
 To align with Flop options, the `prefix` option is wrapped inside `query_opts`:
 
 ```elixir
-{:ok, facets} <- Fase.search(ecto_schema, params, query_opts: [prefix: prefix])
+{:ok, facets} <- Fase.search(ecto_schema, search_params, query_opts: [prefix: prefix])
 ```
 
 #### Example search function with prefix options

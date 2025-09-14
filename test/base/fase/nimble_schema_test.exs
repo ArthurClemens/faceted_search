@@ -39,11 +39,13 @@ defmodule Fase.Test.NimbleSchemaTest do
             data_fields: [
               :title,
               :draft,
-              :publish_date,
+              publish_date: [
+                cast: :string
+              ],
               my_custom_data: [
                 :title,
                 draft: [
-                  cast: "integer"
+                  cast: :integer
                 ],
                 definition: [
                   binding: :genres,

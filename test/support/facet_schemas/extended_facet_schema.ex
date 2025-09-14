@@ -1,4 +1,4 @@
-defmodule Fase.Test.MyApp.ExpandedFacetSchema do
+defmodule Fase.Test.MyApp.ExtendedFacetSchema do
   @moduledoc """
   A facet schema that includes:
   - joined tables
@@ -7,7 +7,7 @@ defmodule Fase.Test.MyApp.ExpandedFacetSchema do
   """
 
   @options [
-    id: [cast: "text"],
+    id: [cast: :string],
     sources: [
       articles: [
         joins: [
@@ -37,6 +37,9 @@ defmodule Fase.Test.MyApp.ExpandedFacetSchema do
           publish_date: [
             ecto_type: :utc_datetime
           ],
+          draft: [
+            ecto_type: :boolean
+          ],
           word_count: [
             ecto_type: :integer
           ],
@@ -61,10 +64,12 @@ defmodule Fase.Test.MyApp.ExpandedFacetSchema do
           :author,
           :tags,
           :tag_titles,
-          :publish_date,
+          draft: [
+            cast: :integer
+          ],
           indicators: [
             word_count: [
-              cast: "text"
+              cast: :string
             ],
             type: [
               binding: :tags,
