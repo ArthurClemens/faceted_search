@@ -336,7 +336,7 @@ defmodule Fase.SearchView do
 
   defp get_sort_column_names(search_view_description) do
     get_all_sort_fields(search_view_description)
-    |> Enum.map(&"sort_#{&1.name}")
+    |> Enum.map(&"#{Constants.sort_field_prefix()}#{&1.name}")
   end
 
   # Joins
@@ -798,7 +798,7 @@ defmodule Fase.SearchView do
     |> Enum.map_join(",\n", fn %{sort_field: sort_field, field: field} ->
       %{name: name, ecto_type: ecto_type} = field
 
-      sort_column_name = "sort_#{name}"
+      sort_column_name = "#{Constants.sort_field_prefix()}#{name}"
 
       create_sort_statement(
         %{

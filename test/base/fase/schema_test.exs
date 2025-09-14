@@ -6,6 +6,7 @@ defmodule Fase.Test.SchemaTest do
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
   alias Fase.Test.MyApp.SimpleFacetSchema
+  alias Fase.Test.MyApp.TimestampsFacetSchema
 
   describe "the options/1 function" do
     test "simple schema" do
@@ -220,6 +221,26 @@ defmodule Fase.Test.SchemaTest do
       ]
 
       assert Fase.options(PrefixFacetSchema) == expected
+    end
+
+    test "timestamps schema" do
+      expected = [
+        {:module, Fase.Test.MyApp.TimestampsFacetSchema},
+        {:sources,
+         [
+           articles: [
+             fields: [
+               title: [ecto_type: :string],
+               inserted_at: [ecto_type: :utc_datetime],
+               updated_at: [ecto_type: :utc_datetime]
+             ],
+             data_fields: [:title, :inserted_at, :updated_at],
+             sort_fields: [:inserted_at, :updated_at]
+           ]
+         ]}
+      ]
+
+      assert Fase.options(TimestampsFacetSchema) == expected
     end
   end
 

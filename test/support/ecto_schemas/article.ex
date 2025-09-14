@@ -16,5 +16,7 @@ defmodule Fase.Test.MyApp.Article do
     has_many :author_articles, AuthorArticle
     has_many :article_tags, ArticleTag
     has_many :article_categories, ArticleCategory
+
+    timestamps(type: :utc_datetime)
   end
 end

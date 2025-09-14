@@ -145,6 +145,42 @@ from(ecto_schema)
 |> Flop.validate_and_run(params, for: MyApp.FacetSchema)
 ```
 
+### Filtering on timestamps
+
+Add timestamp fields to the `fields` and `data_fields` options:
+
+```elixir
+use Fase,
+  sources: [
+    books: [
+      fields: [
+        updated_at: [
+          ecto_type: :utc_datetime
+        ]
+      ],
+      data_fields: [
+        :updated_at
+      ],
+    ]
+  ]
+```
+
+After creating the search view, query on the date field: 
+
+```elixir
+last_week = DateTime.now!("Etc/UTC") |> DateTime.add(-7, :day)
+
+search_params = %{
+  filters: [
+    %{
+      field: :updated_at,
+      op: :>=,
+      value: last_week
+    }
+  ]
+}
+```
+
 ## Sorting
 
 Sorting search results can be done in 2 ways:
@@ -156,7 +192,7 @@ Sorting search results can be done in 2 ways:
 
 Using Flop sort params is the simplest way to implement sorting, as the configuration can easily be defined in the application code and passed around as part of a Flop params map.
 
-However, Flop requires that the specified fields refer to existing database columns. By using the [`sort_fields`](documentation/schema_configuration.md#sort_fields) schema option, additional columns are generated in the search view to facilitate this.
+By using the [`sort_fields`](documentation/schema_configuration.md#sort_fields) schema option, additional columns are generated in the search view to facilitate this.
 
 Schema example:
 
@@ -181,6 +217,37 @@ params = %{
   filters: [...],
   order_by: [:sort_publication_year, :sort_title],
   order_directions: [:desc, :asc]
+}
+```
+
+#### Sorting on timestamps
+
+Add timestamp fields to the `fields` and `sort_fields` options:
+
+```elixir
+use Fase,
+  sources: [
+    books: [
+      fields: [
+        updated_at: [
+          ecto_type: :utc_datetime
+        ]
+        # Same for inserted_at
+      ],
+      sort_fields: [
+        :updated_at
+        # Same for inserted_at
+      ],
+    ]
+  ]
+```
+
+Then add sort options to the search parameters. Note that sort fields use prefix "sort_" when used in search parameters.
+
+```elixir
+search_params = %{
+  order_by: [:sort_updated_at],
+  order_directions: [:desc]
 }
 ```
 
