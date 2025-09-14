@@ -244,6 +244,7 @@ defmodule Fase.Test.Factory do
       title: article_data.title,
       summary: article_data.summary,
       word_count: article_data.word_count,
+      draft: article_data.word_count < 3500,
       publish_date: publish_date_offset_by_title(article_data.title)
     }
 

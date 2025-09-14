@@ -12,6 +12,7 @@ defmodule Fase.Test.MyApp.Article do
     field :summary, :string
     field :word_count, :integer
     field :publish_date, :utc_datetime
+    field :draft, :boolean
 
     has_many :author_articles, AuthorArticle
     has_many :article_tags, ArticleTag

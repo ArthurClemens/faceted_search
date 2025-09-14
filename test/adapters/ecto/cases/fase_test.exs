@@ -5,7 +5,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
   import Ecto.Query
   import Fase.Test.Factory
 
-  alias Fase.Test.MyApp.ExpandedFacetSchema
+  alias Fase.Test.MyApp.ExtendedFacetSchema
   alias Fase.Test.MyApp.MultipleSourcesFacetSchema
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
@@ -22,70 +22,70 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
     test "the create_search_view/3 function" do
       expected = {:ok, "articles"}
 
-      assert Fase.create_search_view(ExpandedFacetSchema, "articles") ==
+      assert Fase.create_search_view(ExtendedFacetSchema, "articles") ==
                expected
     end
 
     test "the search_view_exists?/3 function" do
       expected = false
 
-      assert Fase.search_view_exists?(ExpandedFacetSchema, "articles") ==
+      assert Fase.search_view_exists?(ExtendedFacetSchema, "articles") ==
                expected
 
-      Fase.create_search_view(ExpandedFacetSchema, "articles")
+      Fase.create_search_view(ExtendedFacetSchema, "articles")
 
       expected = true
 
-      assert Fase.search_view_exists?(ExpandedFacetSchema, "articles") ==
+      assert Fase.search_view_exists?(ExtendedFacetSchema, "articles") ==
                expected
     end
 
     test "the create_search_view_if_not_exists/3 function" do
       expected = false
 
-      assert Fase.search_view_exists?(ExpandedFacetSchema, "articles") ==
+      assert Fase.search_view_exists?(ExtendedFacetSchema, "articles") ==
                expected
 
       Fase.create_search_view_if_not_exists(
-        ExpandedFacetSchema,
+        ExtendedFacetSchema,
         "articles"
       )
 
       expected = true
 
-      assert Fase.search_view_exists?(ExpandedFacetSchema, "articles") ==
+      assert Fase.search_view_exists?(ExtendedFacetSchema, "articles") ==
                expected
     end
 
     test "the refresh_search_view/3 function" do
       # Initial view has 2 items
-      Fase.create_search_view(ExpandedFacetSchema, "articles")
+      Fase.create_search_view(ExtendedFacetSchema, "articles")
 
-      results = search_all("articles", ExpandedFacetSchema)
+      results = search_all("articles", ExtendedFacetSchema)
       expected = 2
       assert Enum.count(results) == expected
 
       # Add 3 more items and refresh the view
       build_list(3, :insert_article)
-      Fase.refresh_search_view(ExpandedFacetSchema, "articles")
-      results = search_all("articles", ExpandedFacetSchema)
+      Fase.refresh_search_view(ExtendedFacetSchema, "articles")
+      results = search_all("articles", ExtendedFacetSchema)
       expected = 5
       assert Enum.count(results) == expected
     end
 
     test "the drop_search_view/3 function" do
       # Initial view has 2 items
-      Fase.create_search_view(ExpandedFacetSchema, "articles")
+      Fase.create_search_view(ExtendedFacetSchema, "articles")
 
       expected = true
 
-      assert Fase.search_view_exists?(ExpandedFacetSchema, "articles") ==
+      assert Fase.search_view_exists?(ExtendedFacetSchema, "articles") ==
                expected
 
-      Fase.drop_search_view(ExpandedFacetSchema, "articles")
+      Fase.drop_search_view(ExtendedFacetSchema, "articles")
       expected = false
 
-      assert Fase.search_view_exists?(ExpandedFacetSchema, "articles") ==
+      assert Fase.search_view_exists?(ExtendedFacetSchema, "articles") ==
                expected
     end
   end
@@ -94,7 +94,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
     setup do
       init_resources(article_count: 10)
 
-      Fase.create_search_view(ExpandedFacetSchema, "articles")
+      Fase.create_search_view(ExtendedFacetSchema, "articles")
       :ok
     end
 
@@ -108,7 +108,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       ]
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert results |> Enum.map(& &1.text) == expected
     end
@@ -121,7 +121,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 2
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
@@ -137,7 +137,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 1
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
@@ -152,7 +152,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 1
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
@@ -162,11 +162,11 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
     setup do
       init_resources(article_count: 10)
 
-      Fase.create_search_view(ExpandedFacetSchema, "articles")
+      Fase.create_search_view(ExtendedFacetSchema, "articles")
       :ok
     end
 
-    test "data field result" do
+    test "data field result (including casts of field 'draft' and 'word_count')" do
       search_params = %{
         filters: [
           %{field: :title, op: :ilike, value: "political"}
@@ -174,11 +174,12 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       expected = [
         %{
           "author" => "Helena van Dijk",
+          "draft" => 1,
           "indicators" => [
             %{"type" => "history", "word_count" => "3473"},
             %{
@@ -187,7 +188,6 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
             },
             %{"type" => "politics", "word_count" => "3473"}
           ],
-          "publish_date" => "datetime",
           "tag_titles" => [
             "History",
             "Language analysis: Critical reading",
@@ -206,7 +206,6 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       assert results
              |> Enum.map(fn %{data: data} ->
                data
-               |> Map.replace("draft", "indeterminate")
                |> Map.replace("publish_date", "datetime")
              end) == expected
     end
@@ -221,7 +220,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 1
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
@@ -236,7 +235,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       expected = 2
 
       {:ok, {_results, meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert meta.total_count == expected
     end
@@ -256,7 +255,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       ]
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert get_in(results, [Access.all(), Access.key(:data), "tag_titles"])
              |> Enum.sort() ==
@@ -279,9 +278,52 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       ]
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       assert get_in(results, [Access.all(), Access.key(:data), "tag_titles"]) ==
+               expected
+    end
+
+    test "search on cast value" do
+      search_params = %{
+        filters: [
+          %{
+            field: :draft,
+            op: :==,
+            value: 1
+          }
+        ]
+      }
+
+      expected = [
+        %{
+          "draft" => 1,
+          "title" =>
+            "From Papyrus to Pixel: Materiality and Meaning in the Evolution of the Book"
+        },
+        %{
+          "draft" => 1,
+          "title" =>
+            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
+        },
+        %{
+          "draft" => 1,
+          "title" =>
+            "Soundscapes of Faith: Acoustic Analysis of Medieval Cathedral Chant"
+        },
+        %{
+          "draft" => 1,
+          "title" =>
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ExtendedFacetSchema, search_params)
+
+      assert get_in(results, [Access.all(), Access.key(:data)])
+             |> Enum.map(&Map.take(&1, ["title", "draft"]))
+             |> Enum.sort() ==
                expected
     end
   end
@@ -289,7 +331,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
   describe "sorting" do
     setup do
       init_resources(article_count: 10)
-      Fase.create_search_view(ExpandedFacetSchema, "articles")
+      Fase.create_search_view(ExtendedFacetSchema, "articles")
       :ok
     end
 
@@ -300,7 +342,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       entries = Enum.map(results, & &1.sort_publish_date)
       expected = Enum.sort(entries, {:desc, DateTime})
@@ -314,7 +356,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       entries = Enum.map(results, & &1.sort_author)
       expected = Enum.sort(entries, :asc)
@@ -328,7 +370,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", ExpandedFacetSchema, search_params)
+        filtered_search("articles", ExtendedFacetSchema, search_params)
 
       entries = Enum.map(results, &{&1.sort_author, &1.sort_publish_date})
 
@@ -343,7 +385,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
   describe "facets" do
     setup do
       init_resources(article_count: 10)
-      Fase.create_search_view(ExpandedFacetSchema, "articles")
+      Fase.create_search_view(ExtendedFacetSchema, "articles")
 
       :ok
     end
@@ -352,7 +394,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       search_params = %{}
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -475,7 +517,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -603,7 +645,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -714,7 +756,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -867,7 +909,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -1020,7 +1062,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -1160,7 +1202,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       expected = %{
         author: %{
@@ -1738,7 +1780,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       }
 
       {:ok, {results, meta}, facets} =
-        facet_search("articles", ExpandedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params)
 
       assert meta.total_count == 3
 

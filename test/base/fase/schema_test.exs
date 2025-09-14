@@ -1,7 +1,7 @@
 defmodule Fase.Test.SchemaTest do
   use ExUnit.Case, async: true
 
-  alias Fase.Test.MyApp.ExpandedFacetSchema
+  alias Fase.Test.MyApp.ExtendedFacetSchema
   alias Fase.Test.MyApp.MultipleSourcesFacetSchema
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
@@ -39,8 +39,8 @@ defmodule Fase.Test.SchemaTest do
 
     test "extended schema" do
       expected = [
-        module: ExpandedFacetSchema,
-        id: [cast: "text"],
+        module: Fase.Test.MyApp.ExtendedFacetSchema,
+        id: [cast: :string],
         sources: [
           articles: [
             joins: [
@@ -51,30 +51,36 @@ defmodule Fase.Test.SchemaTest do
               tag_texts: [on: "tag_texts.tag_id = tags.id"]
             ],
             fields: [
-              {:title, [ecto_type: :string]},
-              {:summary, [ecto_type: :string]},
-              {:publish_date, [ecto_type: :utc_datetime]},
-              {:word_count, [ecto_type: :integer]},
-              {:tags,
-               [binding: :tags, column: :name, ecto_type: {:array, :string}]},
-              {:tag_titles,
-               [
-                 binding: :tag_texts,
-                 column: :title,
-                 ecto_type: {:array, :string}
-               ]},
-              {:author,
-               [binding: :authors, column: :full_name, ecto_type: :string]}
+              title: [ecto_type: :string],
+              summary: [ecto_type: :string],
+              publish_date: [ecto_type: :utc_datetime],
+              draft: [ecto_type: :boolean],
+              word_count: [ecto_type: :integer],
+              tags: [
+                binding: :tags,
+                column: :name,
+                ecto_type: {:array, :string}
+              ],
+              tag_titles: [
+                binding: :tag_texts,
+                column: :title,
+                ecto_type: {:array, :string}
+              ],
+              author: [
+                binding: :authors,
+                column: :full_name,
+                ecto_type: :string
+              ]
             ],
             data_fields: [
               :title,
               :author,
               :tags,
               :tag_titles,
-              :publish_date,
+              {:draft, [cast: :integer]},
               {:indicators,
                [
-                 word_count: [cast: "text"],
+                 word_count: [cast: :string],
                  type: [binding: :tags, column: :name]
                ]}
             ],
@@ -106,7 +112,7 @@ defmodule Fase.Test.SchemaTest do
         ]
       ]
 
-      assert Fase.options(ExpandedFacetSchema) == expected
+      assert Fase.options(ExtendedFacetSchema) == expected
     end
 
     test "scoped schema" do

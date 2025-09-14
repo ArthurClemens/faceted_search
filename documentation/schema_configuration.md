@@ -14,8 +14,6 @@ defmodule MyApp.FacetSchema do
 end
 ```
 
-## Example
-
 Minimal schema example:
 
 ```
@@ -57,9 +55,8 @@ The provide Ecto type will be converted to a Postgres type.
 ### List entries
 - A keyword list with key:
   - `cast`
-    - Type to casts the value to
-    - Type: `String.t()`
-    - The cast value can be any valid [Postgres data type ⤴](https://www.postgresql.org/docs/current/datatype.html).
+    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
+    - Type: `atom()`
 
 ### Example
 
@@ -68,7 +65,7 @@ Casting the ID to text:
 ```
 use Fase,
   id: [
-    cast: "text"
+    cast: :string
   ],
   sources: [
     ...
@@ -279,6 +276,10 @@ Either:
 
 - A field name from option `fields`.
   - Type: `atom()`
+- A keyword list with key:
+  - `cast`
+    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
+    - Type: `atom()`
 - A keyword list of field name/entry options to generate JSON data from joined tables or fields listed in the `fields` option.
 
 Entry options are either:
@@ -295,8 +296,8 @@ Entry options are either:
     - Type: `atom()`
     - Required: when using `binding`
   - `cast`
-    - Type to casts the value to
-    - Type: `String.t()`
+    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
+    - Type: `atom()`
 
 ### Examples
 
@@ -322,6 +323,23 @@ sources: [
 ]
 ```
 
+Use `cast ` to cast data to another type:
+
+```
+fields: [
+  ...
+  draft: [
+    ecto_type: :boolean
+  ]
+],
+data_fields: [
+  ...
+  draft: [
+    cast: :integer
+  ]
+]
+```
+
 To generate custom data, add any new key with a name from the `fields` option:
 
 ```
@@ -341,14 +359,14 @@ data_fields: [
 ]
 ```
 
-Custom data can be cast to a different type:
+Custom data can also be cast to a different type:
 
 ```
 data_fields: [
   ...
   my_custom_data: [
     publication_year: [
-      cast: "integer"
+      cast: :integer
     ],
   ]
 ]
@@ -403,7 +421,7 @@ sources: [
       my_custom_data: [
         :title,
         publication_year: [
-          cast: "integer"
+          cast: :integer
         ],
         definition: [
           binding: :genres,
@@ -623,9 +641,10 @@ Either:
 
 - A field name from option `fields`.
   - Type: `atom()`
-- A keyword list containing key `cast` to cast the orginal value to a sort value - see examples below.
-  - Type: `{atom(), Keyword.t()}`
-  - The cast value can be any valid [Postgres data type ⤴](https://www.postgresql.org/docs/current/datatype.html).
+- A keyword list with key:
+  - `cast`
+    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
+    - Type: `atom()`
 
 ### Examples
 
@@ -652,7 +671,7 @@ sources: [
     sort_fields: [
       :title,
       publication_year: [
-        cast: "float"
+        cast: :float
       ]
     ]
   ]

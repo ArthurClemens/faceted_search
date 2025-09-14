@@ -14,45 +14,55 @@ defmodule Fase.FlopSchema do
   ]
   @spec create_flop_custom_fields_option(schema_options()) :: Keyword.t()
   def create_flop_custom_fields_option(options) do
-    %{fields: fields, facet_fields: facet_fields} =
+    %{fields: fields, data_fields: data_fields, facet_fields: facet_fields} =
       options
       |> Keyword.get_values(:sources)
       |> List.flatten()
-      |> Enum.reduce(%{fields: [@source_field], facet_fields: []}, fn {_source,
-                                                                       source_options},
-                                                                      acc ->
-        fields = Keyword.get_values(source_options, :fields) |> List.flatten()
+      |> Enum.reduce(
+        %{fields: [@source_field], data_fields: [], facet_fields: []},
+        fn {_source, source_options}, acc ->
+          fields = Keyword.get_values(source_options, :fields) |> List.flatten()
 
-        facet_fields =
-          Keyword.get_values(source_options, :facet_fields)
-          |> List.flatten()
-          |> Enum.reduce([], fn
-            {name, options}, acc when name == :hierarchies ->
-              Enum.reduce(options, acc, fn {level_name, level_options}, acc_1 ->
-                level_options = level_options ++ [hierarchy: true]
+          data_fields =
+            Keyword.get_values(source_options, :data_fields)
+            |> List.flatten()
 
-                [{level_name, level_options} | acc_1]
-              end)
+          facet_fields =
+            Keyword.get_values(source_options, :facet_fields)
+            |> List.flatten()
+            |> Enum.reduce([], fn
+              {name, options}, acc when name == :hierarchies ->
+                Enum.reduce(options, acc, fn {level_name, level_options},
+                                             acc_1 ->
+                  level_options = level_options ++ [hierarchy: true]
 
-            {name, options}, acc ->
-              [{name, options} | acc]
+                  [{level_name, level_options} | acc_1]
+                end)
 
-            name, acc ->
-              [{name, []} | acc]
-          end)
+              {name, options}, acc ->
+                [{name, options} | acc]
 
-        %{
-          fields: Enum.concat(acc.fields, fields),
-          facet_fields: Enum.concat(acc.facet_fields, facet_fields)
-        }
-      end)
+              name, acc ->
+                [{name, []} | acc]
+            end)
+
+          %{
+            fields: Enum.concat(acc.fields, fields),
+            data_fields: Enum.concat(acc.data_fields, data_fields),
+            facet_fields: Enum.concat(acc.facet_fields, facet_fields)
+          }
+        end
+      )
       |> Map.update(:fields, [], fn existing -> clean_up_fields(existing) end)
+      |> Map.update(:data_fields, [], fn existing ->
+        clean_up_fields(existing)
+      end)
       |> Map.update(:facet_fields, [], fn existing ->
         clean_up_fields(existing)
       end)
 
     Enum.concat(
-      create_filter_field_options(fields),
+      create_filter_field_options(fields, data_fields),
       create_facet_search_field_options(facet_fields, fields)
     )
   end
@@ -63,10 +73,11 @@ defmodule Fase.FlopSchema do
       |> List.flatten()
       |> Enum.uniq()
 
-  defp create_filter_field_options(fields) do
+  defp create_filter_field_options(fields, data_fields) do
     fields
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
-      ecto_type = Keyword.get(column_options, :ecto_type)
+      cast = get_cast_from_data_fields(data_fields, column_name)
+      ecto_type = cast || Keyword.get(column_options, :ecto_type)
       filter = Keyword.get(column_options, :filter)
 
       operators = column_options[:operators]
@@ -82,6 +93,13 @@ defmodule Fase.FlopSchema do
          ] ++ allowed_operators_option}
 
       [custom_field | acc]
+    end)
+  end
+
+  defp get_cast_from_data_fields(data_fields, column_name) do
+    Enum.find_value(data_fields, fn
+      {name, opts} when name == column_name -> Keyword.get(opts, :cast)
+      _ -> nil
     end)
   end
 

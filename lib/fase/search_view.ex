@@ -439,7 +439,7 @@ defmodule Fase.SearchView do
 
     [
       if id_cast do
-        "CAST(#{table_name}.id AS #{id_cast}) AS id"
+        "CAST(#{table_name}.id AS #{Constants.ecto_type_to_postgres(id_cast)}) AS id"
       else
         "#{table_name}.id AS id"
       end,
@@ -481,19 +481,26 @@ defmodule Fase.SearchView do
        ) do
     data_field_name_lookup =
       Enum.reduce(data_fields, %{}, fn data_field, acc ->
-        Map.put(acc, data_field.name, true)
+        Map.put(acc, data_field.name, data_field)
       end)
 
     fields
     |> Enum.filter(&data_field_name_lookup[&1.name])
-    |> Enum.map(&create_data_column_entry(&1, joins))
+    |> Enum.map(
+      &create_data_column_entry(&1, data_field_name_lookup[&1.name], joins)
+    )
   end
 
-  @spec create_data_column_entry(Field.t(), list(Join.t())) :: String.t()
-  defp create_data_column_entry(field, joins) do
+  @spec create_data_column_entry(Field.t(), DataField.t(), list(Join.t())) ::
+          String.t()
+  defp create_data_column_entry(field, data_field, joins) do
     %{name: name, ecto_type: ecto_type} = field
+
     {table_name, column_name} = get_table_and_column(field, joins)
-    table_and_column = table_and_column_string(table_name, column_name)
+
+    table_and_column =
+      table_and_column_string(table_name, column_name)
+      |> maybe_cast(data_field.cast)
 
     case ecto_type do
       {:array, _} -> "'#{name}', array_agg(DISTINCT #{table_and_column})"
@@ -585,7 +592,7 @@ defmodule Fase.SearchView do
             "  COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
 
           _ ->
-            "  COALESCE(cast(#{table_and_column} AS text), '')"
+            "  COALESCE(CAST(#{table_and_column} AS text), '')"
         end
       end)
 
@@ -853,7 +860,7 @@ defmodule Fase.SearchView do
   # Util functions
 
   defp maybe_cast(value, cast) when not is_nil(cast),
-    do: "CAST(#{value} AS #{cast})"
+    do: "CAST(#{value} AS #{Constants.ecto_type_to_postgres(cast)})"
 
   defp maybe_cast(value, _cast), do: value
 

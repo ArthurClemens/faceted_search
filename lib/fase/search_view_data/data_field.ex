@@ -9,19 +9,23 @@ defmodule Fase.DataField do
     :name
   ]
 
-  defstruct name: nil, entries: nil
+  defstruct name: nil, entries: nil, cast: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
           # optional
-          entries: list(DataFieldEntry.t()) | nil
+          entries: list(DataFieldEntry.t()) | nil,
+          cast: String.t() | nil
         }
 
   @spec new(atom(), Keyword.t() | nil) :: t()
-  def new(name, entry_options \\ []) do
+  def new(name, options \\ []) do
+    {cast_options, entry_options} = Keyword.split(options, [:cast])
+
     struct(__MODULE__, %{
       name: name,
+      cast: Keyword.get(cast_options, :cast),
       entries: collect_entries(entry_options)
     })
   end
