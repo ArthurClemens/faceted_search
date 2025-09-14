@@ -38,6 +38,8 @@ defmodule Fase.Test.Repo.Postgres.Migration do
       add(:summary, :text)
       add(:word_count, :integer)
       add(:publish_date, :utc_datetime)
+
+      timestamps(type: :utc_datetime)
     end
 
     create table(:author_articles, primary_key: false) do

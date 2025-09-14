@@ -6,6 +6,7 @@ defmodule Fase.Test.SearchViewTest do
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
   alias Fase.Test.MyApp.SimpleFacetSchema
+  alias Fase.Test.MyApp.TimestampsFacetSchema
 
   describe "the search_view_name/2 function" do
     test "with a regular name" do
@@ -701,6 +702,68 @@ defmodule Fase.Test.SearchViewTest do
       }
 
       assert Fase.search_view_description(PrefixFacetSchema) ==
+               expected
+    end
+
+    test "timestamps schema" do
+      expected = %Fase.SearchViewDescription{
+        id: nil,
+        sources: [
+          %Fase.Source{
+            table_name: :articles,
+            scopes: nil,
+            prefix: nil,
+            fields: [
+              %Fase.Field{
+                table_name: :source,
+                prefix: nil,
+                name: :source,
+                ecto_type: :string,
+                binding: nil,
+                column: :source_name
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :title,
+                ecto_type: :string,
+                binding: nil,
+                column: :title
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :inserted_at,
+                ecto_type: :utc_datetime,
+                binding: nil,
+                column: :inserted_at
+              },
+              %Fase.Field{
+                table_name: :articles,
+                prefix: nil,
+                name: :updated_at,
+                ecto_type: :utc_datetime,
+                binding: nil,
+                column: :updated_at
+              }
+            ],
+            joins: nil,
+            data_fields: [
+              %Fase.DataField{name: :title, entries: nil},
+              %Fase.DataField{name: :inserted_at, entries: nil},
+              %Fase.DataField{name: :updated_at, entries: nil}
+            ],
+            text_fields: nil,
+            facet_fields: nil,
+            sort_fields: [
+              %Fase.SortField{name: :inserted_at, cast: nil},
+              %Fase.SortField{name: :updated_at, cast: nil}
+            ]
+          }
+        ]
+      }
+
+      assert Fase.search_view_description(TimestampsFacetSchema) ==
                expected
     end
   end

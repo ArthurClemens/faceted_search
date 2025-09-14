@@ -181,7 +181,7 @@ defmodule Fase.FlopSchema do
         if field_data, do: Keyword.get(field_data, :ecto_type), else: :string
 
       %{
-        name: :"sort_#{name}",
+        name: :"#{Constants.sort_field_prefix()}#{name}",
         ecto_type: ecto_type,
         cast: cast
       }

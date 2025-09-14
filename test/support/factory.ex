@@ -201,6 +201,7 @@ defmodule Fase.Test.Factory do
     ExMachina.Sequence.reset()
 
     article_count = Keyword.get(opts, :article_count)
+    insert_delay = Keyword.get(opts, :insert_delay)
 
     Enum.each(@categories, fn name ->
       insert(%Category{name: name})
@@ -224,7 +225,16 @@ defmodule Fase.Test.Factory do
       })
     end)
 
-    build_list(article_count, :insert_article)
+    1..article_count
+    |> Enum.map(fn _ ->
+      article = build(:insert_article)
+
+      if insert_delay do
+        :timer.sleep(insert_delay)
+      end
+
+      article
+    end)
   end
 
   def insert_article_factory do
@@ -234,13 +244,7 @@ defmodule Fase.Test.Factory do
       title: article_data.title,
       summary: article_data.summary,
       word_count: article_data.word_count,
-      publish_date:
-        ~U[2025-09-05 23:13:46.493983Z]
-        |> DateTime.add(
-          -1 * article_publish_date_offset(article_data.title),
-          :day
-        )
-        |> DateTime.truncate(:second)
+      publish_date: publish_date_offset_by_title(article_data.title)
     }
 
     article = insert(article, returning: true)
@@ -282,6 +286,16 @@ defmodule Fase.Test.Factory do
   def author_name_factory do
     sequence(:author_name, @authors)
   end
+
+  def publish_date_offset_by_title(title),
+    do: (-1 * article_publish_date_offset(title)) |> offset_now()
+
+  def offset_now(offset \\ 0, unit \\ :day),
+    do:
+      "Etc/UTC"
+      |> DateTime.now!()
+      |> DateTime.add(offset, unit)
+      |> DateTime.truncate(:second)
 
   defp article_publish_date_offset(title) do
     {min_code, max_code} = article_char_codes() |> min_max_article_char_codes()

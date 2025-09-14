@@ -199,6 +199,17 @@ defmodule Fase.Filter do
     )
   end
 
+  def dynamic_expr(name, :utc_datetime, _props) do
+    dynamic(
+      [r],
+      fragment(
+        "CAST((?->>?) AS timestamp)",
+        field(r, :data),
+        ^name
+      )
+    )
+  end
+
   def dynamic_expr(name, _ecto_type, _props) do
     dynamic(
       [r],

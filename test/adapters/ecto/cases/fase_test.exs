@@ -9,6 +9,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
   alias Fase.Test.MyApp.MultipleSourcesFacetSchema
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
+  alias Fase.Test.MyApp.TimestampsFacetSchema
   alias Fase.Test.Repo
 
   describe "search view" do
@@ -844,9 +845,9 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         },
         %Fase.Option{
           count: 2,
-          label: "last week",
+          label: "today",
           selected: false,
-          value: 4
+          value: 5
         }
       ]
 
@@ -870,19 +871,19 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
 
       expected = %{
         author: %{
-          count: 4,
+          count: 3,
           first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Helena van Dijk",
-              value: "Helena van Dijk",
-              selected: false
-            },
             %Fase.Option{
               count: 1,
               label: "Jean-Marie Leclerc",
               selected: false,
               value: "Jean-Marie Leclerc"
+            },
+            %Fase.Option{
+              count: 1,
+              label: "Mateo Alvarez",
+              value: "Mateo Alvarez",
+              selected: false
             }
           ]
         },
@@ -896,7 +897,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
               value: "Aisha Rahman"
             },
             %Fase.Option{
-              count: 1,
+              count: 2,
               label: "Helena van Dijk",
               selected: false,
               value: "Helena van Dijk"
@@ -938,7 +939,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
           ]
         },
         tags: %{
-          count: 12,
+          count: 8,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -958,7 +959,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
           count: 2,
           first_2_options: [
             %Fase.Option{
-              count: 3,
+              count: 1,
               label: "2000-4000",
               selected: false,
               value: 1
@@ -973,7 +974,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         }
       }
 
-      assert meta.total_count == 5
+      assert meta.total_count == 3
       assert facet_result_subset(facets) == expected
 
       expected_publish_date_options = [
@@ -997,9 +998,9 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         },
         %Fase.Option{
           count: 2,
-          label: "last week",
-          selected: true,
-          value: 4
+          label: "today",
+          selected: false,
+          value: 5
         }
       ]
 
@@ -1298,8 +1299,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
     setup do
       init_resources(article_count: 10)
 
-      now = ~U[2025-09-05 23:13:46.493983Z]
-      last_month = now |> DateTime.add(-30, :day)
+      last_month = offset_now(-30)
 
       Fase.create_search_view(ScopedFacetSchema, "articles",
         scopes: %{publish_date: last_month}
@@ -1311,21 +1311,28 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
     test "results without filters" do
       search_params = %{}
 
+      date_1 = offset_now()
+      date_2 = offset_now(-9)
+
       expected = [
-        "2025-08-27",
-        "2025-08-27",
-        "2025-08-27",
-        "2025-09-05",
-        "2025-09-05"
+        date_1,
+        date_1,
+        date_2,
+        date_2,
+        date_2
       ]
 
       {:ok, {results, _meta}} =
         filtered_search("articles", ScopedFacetSchema, search_params)
 
       assert results
-             |> Enum.map(&(&1.data["publish_date"] |> String.slice(0, 10)))
-             |> Enum.sort() ==
-               expected
+             |> Enum.map(fn result ->
+               {:ok, datetime, _} =
+                 DateTime.from_iso8601(result.data["publish_date"] <> "Z")
+
+               datetime
+             end)
+             |> Enum.sort({:desc, DateTime}) == expected
     end
   end
 
@@ -1348,13 +1355,13 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
 
       expected = [
         %{
-          "publish_date" => "2025-08-27",
+          "publish_date" => "date",
           "title" =>
             "Spectral Agency: Ghost Narratives as Cultural Memory Archives",
           "word_count" => 4898
         },
         %{
-          "publish_date" => "2025-08-27",
+          "publish_date" => "date",
           "title" =>
             "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture",
           "word_count" => 5591
@@ -1369,7 +1376,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
                &Map.replace(
                  &1.data,
                  "publish_date",
-                 &1.data["publish_date"] |> String.slice(0, 10)
+                 "date"
                )
              )
              |> Enum.sort_by(& &1["word_count"]) ==
@@ -1434,7 +1441,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         %{
           data: %{
             "author" => "Helena van Dijk",
-            "publish_date" => "2025-07-06T23:13:46",
+            "publish_date" => "date",
             "title" =>
               "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
           },
@@ -1443,7 +1450,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         %{
           data: %{
             "author" => "Helena van Dijk",
-            "publish_date" => "2025-09-05T23:13:46",
+            "publish_date" => "date",
             "title" =>
               "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
           },
@@ -1455,7 +1462,12 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         filtered_search("articles", MultipleSourcesFacetSchema, search_params)
 
       assert results
-             |> Enum.map(&%{source: &1.source, data: &1.data})
+             |> Enum.map(
+               &%{
+                 source: &1.source,
+                 data: &1.data |> Map.replace("publish_date", "date")
+               }
+             )
              |> Enum.sort() == expected
     end
 
@@ -1666,7 +1678,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         %{
           data: %{
             "author" => "Helena van Dijk",
-            "publish_date" => "2025-07-06T23:13:46",
+            "publish_date" => "date",
             "title" =>
               "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
           },
@@ -1675,7 +1687,7 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         %{
           data: %{
             "author" => "Helena van Dijk",
-            "publish_date" => "2025-09-05T23:13:46",
+            "publish_date" => "date",
             "title" =>
               "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
           },
@@ -1687,7 +1699,12 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         facet_search("articles", MultipleSourcesFacetSchema, search_params)
 
       assert results
-             |> Enum.map(&%{source: &1.source, data: &1.data})
+             |> Enum.map(
+               &%{
+                 source: &1.source,
+                 data: &1.data |> Map.replace("publish_date", "date")
+               }
+             )
              |> Enum.sort() == expected
 
       expected_source_options = [
@@ -1723,13 +1740,13 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       {:ok, {results, meta}, facets} =
         facet_search("articles", ExpandedFacetSchema, search_params)
 
-      assert meta.total_count == 5
+      assert meta.total_count == 3
 
       expected_results = [
         %{
+          source: "articles",
           title:
-            "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture",
-          source: "articles"
+            "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture"
         },
         %{
           source: "articles",
@@ -1737,19 +1754,8 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
             "Soundscapes of Faith: Acoustic Analysis of Medieval Cathedral Chant"
         },
         %{
-          title:
-            "Spectral Agency: Ghost Narratives as Cultural Memory Archives",
-          source: "articles"
-        },
-        %{
           source: "articles",
-          title:
-            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
-        },
-        %{
-          source: "articles",
-          title:
-            "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature"
+          title: "Spectral Agency: Ghost Narratives as Cultural Memory Archives"
         }
       ]
 
@@ -1760,18 +1766,18 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
 
       expected_facets = %{
         author: %{
-          count: 4,
+          count: 3,
           first_2_options: [
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
               count: 1,
-              selected: false
+              label: "Jean-Marie Leclerc",
+              selected: false,
+              value: "Jean-Marie Leclerc"
             },
             %Fase.Option{
-              value: "Jean-Marie Leclerc",
-              label: "Jean-Marie Leclerc",
               count: 1,
+              label: "Mateo Alvarez",
+              value: "Mateo Alvarez",
               selected: false
             }
           ]
@@ -1780,16 +1786,16 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
           count: 4,
           first_2_options: [
             %Fase.Option{
-              value: 1,
-              label: "last year",
               count: 3,
-              selected: false
+              label: "last year",
+              selected: false,
+              value: 1
             },
             %Fase.Option{
-              value: 2,
-              label: "last quarter",
               count: 2,
-              selected: false
+              label: "last quarter",
+              selected: false,
+              value: 2
             }
           ]
         }
@@ -1818,9 +1824,9 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         },
         %Fase.Option{
           count: 2,
-          label: "last week",
-          selected: true,
-          value: 4
+          label: "today",
+          selected: false,
+          value: 5
         }
       ]
 
@@ -1897,6 +1903,173 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
     end
   end
 
+  describe "filtering and sorting on timestamps" do
+    setup do
+      articles = init_resources(article_count: 3, insert_delay: 1_000)
+
+      Fase.create_search_view(TimestampsFacetSchema, "articles",
+        scopes: %{source: "authors"}
+      )
+
+      %{articles: articles}
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = [
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture",
+          "updated_at" => "timestamp"
+        },
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+          "updated_at" => "timestamp"
+        },
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+          "updated_at" => "timestamp"
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", TimestampsFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(fn %{data: data} ->
+               {:ok, updated_at, _} =
+                 DateTime.from_iso8601(data["updated_at"] <> "Z")
+
+               {:ok, inserted_at, _} =
+                 DateTime.from_iso8601(data["inserted_at"] <> "Z")
+
+               %{
+                 "title" => data["title"],
+                 "inserted_at" => inserted_at,
+                 "updated_at" => updated_at
+               }
+             end)
+             |> Enum.sort_by(& &1["updated_at"], {:desc, DateTime})
+             |> Enum.map(
+               &(&1
+                 |> Map.replace("inserted_at", "timestamp")
+                 |> Map.replace("updated_at", "timestamp"))
+             ) ==
+               expected
+    end
+
+    test "filtering: data search (inserted_at: before now)" do
+      search_params = %{
+        filters: [
+          %{
+            field: :inserted_at,
+            op: :<=,
+            value: offset_now(0)
+          }
+        ]
+      }
+
+      {:ok, {_results, meta}} =
+        filtered_search("articles", TimestampsFacetSchema, search_params)
+
+      expected = 3
+
+      assert meta.total_count == expected
+    end
+
+    test "filtering: data search (inserted_at: equal or before first article)",
+         context do
+      %{articles: articles} = context
+
+      first_article_inserted_at =
+        articles
+        |> Enum.map(&Map.from_struct(&1))
+        |> Enum.sort_by(
+          & &1.inserted_at,
+          {:asc, DateTime}
+        )
+        |> List.first()
+        |> Map.get(:inserted_at)
+
+      search_params = %{
+        filters: [
+          %{
+            field: :inserted_at,
+            op: :<=,
+            value: first_article_inserted_at
+          }
+        ]
+      }
+
+      {:ok, {_results, meta}} =
+        filtered_search("articles", TimestampsFacetSchema, search_params)
+
+      expected = 1
+
+      assert meta.total_count == expected
+    end
+
+    test "sorting on inserted_at (datetime, desc)" do
+      results = get_results_on_sort_by(:sort_inserted_at, :desc)
+
+      expected = [
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture",
+          "updated_at" => "timestamp"
+        },
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+          "updated_at" => "timestamp"
+        },
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+          "updated_at" => "timestamp"
+        }
+      ]
+
+      assert results == expected
+    end
+
+    test "sorting on inserted_at (datetime, asc)" do
+      results = get_results_on_sort_by(:sort_inserted_at, :asc)
+
+      expected = [
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+          "updated_at" => "timestamp"
+        },
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+          "updated_at" => "timestamp"
+        },
+        %{
+          "inserted_at" => "timestamp",
+          "title" =>
+            "Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture",
+          "updated_at" => "timestamp"
+        }
+      ]
+
+      assert results == expected
+    end
+  end
+
   defp search_all(view_id, schema) do
     ecto_schema = Fase.ecto_schema(schema, view_id)
 
@@ -1951,5 +2124,35 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
         first_2_options: Enum.take(result.options, 2)
       })
     end)
+  end
+
+  defp get_results_on_sort_by(sort_field, direction) do
+    search_params = %{
+      order_by: [sort_field],
+      order_directions: [direction]
+    }
+
+    {:ok, {results, _meta}} =
+      filtered_search("articles", TimestampsFacetSchema, search_params)
+
+    results
+    |> Enum.map(fn %{data: data} ->
+      {:ok, updated_at, _} =
+        DateTime.from_iso8601(data["updated_at"] <> "Z")
+
+      {:ok, inserted_at, _} =
+        DateTime.from_iso8601(data["inserted_at"] <> "Z")
+
+      %{
+        "title" => data["title"],
+        "inserted_at" => inserted_at,
+        "updated_at" => updated_at
+      }
+    end)
+    |> Enum.map(
+      &(&1
+        |> Map.replace("inserted_at", "timestamp")
+        |> Map.replace("updated_at", "timestamp"))
+    )
   end
 end
