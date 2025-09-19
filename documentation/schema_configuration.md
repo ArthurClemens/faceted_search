@@ -81,7 +81,7 @@ Settings per resource. The source key refers to the name of a resource table in 
 - Path: `sources` (schema root)
 - Required
 
-When using multiple sources, the source ID's must be unique.
+The source ID's must be unique.
 
 ### Example
 
