@@ -1,5 +1,8 @@
 defmodule Fase.Cache do
-  @moduledoc false
+  @moduledoc """
+  GenServer for handling caching of facet results. Data is cached in an ETS table,
+  where the cache key is the combination of the search view name and the used filters.
+  """
 
   use GenServer, restart: :transient
 

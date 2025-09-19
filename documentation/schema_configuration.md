@@ -188,7 +188,7 @@ A unique name used as reference in field definitions `data_fields`, `text_fields
   - Type: `atom()`
   - Required: when using `binding`
 - `filter`
-  - Identical to the Flop option, except that a default filter is applied by `FacetSearch`, making this option optional. If set, this option overrides the default filter.
+  - Identical to the Flop option, except that a default filter is applied by `Fase`, making this option optional. If set, this option overrides the default filter.
   - From the Flop documentation:
     > A module/function/options tuple referencing a custom filter function. The function must take the Ecto query, the Flop.Filter struct, and the options from the tuple as arguments.
   - Type: `{atom(), atom(), Keyword.t()}`
