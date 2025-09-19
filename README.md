@@ -950,7 +950,7 @@ In this chapter:
 - [Cache warming](#cache-warming)
 - [Example of conditional caching](#example-of-conditional-caching)
 
-GenServer `FacetSearch.Cache` handles caching of facet results. Data is cached in an [ETS table ⤴](https://hexdocs.pm/elixir/main/ets.html), where the cache key is the combination of the search view name and the used filters.
+GenServer `Fase.Cache` handles caching of facet results. Data is cached in an [ETS table ⤴](https://hexdocs.pm/elixir/main/ets.html), where the cache key is the combination of the search view name and the used filters.
 
 When the search view is updated, any exsisting cache that contains a key with the search view name is automatically cleared. Alternatively, call `Fase.clear_facets_cache/1`.
 
@@ -958,11 +958,11 @@ The cache is only written and read when option `cache_facets` is `true` - see be
 
 ### Setup caching
 
-1. Add `FacetSearch.Cache` to a supervisor (typically in `application.ex`):
+1. Add `Fase.Cache` to a supervisor (typically in `application.ex`):
 
    ```elixir
    children = [
-     {FacetSearch.Cache, []}
+     {Fase.Cache, []}
      ...
    ]
 
