@@ -1497,6 +1497,20 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       assert results |> Enum.map(& &1.source) |> Enum.sort() == expected
     end
 
+    test "filter on source column (authors)" do
+      search_params = %{
+        filters: [
+          %{field: :source, op: :==, value: "authors"}
+        ]
+      }
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", MultipleSourcesFacetSchema, search_params)
+
+      assert results
+             |> Enum.all?(&(&1.source == "authors"))
+    end
+
     test "filter on shared data field (author)" do
       search_params = %{
         filters: [

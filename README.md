@@ -1018,13 +1018,61 @@ end
 
 ## Multiple sources
 
+In this chapter:
+
+- [Configuring multiple sources](#configuring-multiple-sources)
+- [Filtering by source](#filtering-by-source)
+
 When multiple resources share common attributes, a unified search interface allows users to search across all of them and use the resource type itself as a facet. For example, in a media library containing books, movies, and music, each item has a title, author or creator, publishing date, and genre. The media type can then serve as one of the filters in the search.
+
+### Configuring multiple sources
 
 To create such a unified interface for resources with similar attributes, add a configuration for each resource under `sources`, using the resource’s table name as the key.
 
-The resource's ID's must be unique.
+The resource ID's must be unique.
+
+```elixir
+use Fase,
+  sources: [
+    books: [
+       # options for the books table
+    ],
+    movies: [
+       # options for the movies table
+    ]
+  ]
+```
 
 See [schema configuration: sources](documentation/schema_configuration.md#sources) for details.
+
+### Filtering by source
+
+The simplest way to filter results by source is by use field `source` in the filter:
+
+```elixir
+search_params = %{
+  filters: [
+    %{field: :source, op: :==, value: "books"}
+  ]
+}
+```
+
+In case you need to refer to the source in the search results, add `source` to `data_fields`:
+
+```elixir
+use Fase,
+  sources: [
+    books: [
+      ...
+      data_fields: [
+        :draft,
+        :source
+      ]
+    ]
+  ]
+```
+
+The filter search parameters are the same as the example above (the filter is still applied to the source column).
 
 ## Joining tables
 

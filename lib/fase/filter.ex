@@ -10,7 +10,7 @@ defmodule Fase.Filter do
 
   alias Fase.Constants
 
-  def filter(query, %Flop.Filter{field: field, value: value, op: op}, opts) do
+  def filter(query, %{field: field, value: value, op: op}, opts) do
     ecto_type = Keyword.get(opts, :ecto_type)
     source_is_array = Keyword.get(opts, :source_is_array, false)
 
@@ -139,6 +139,16 @@ defmodule Fase.Filter do
     )
 
     expr
+  end
+
+  def dynamic_expr("source", _, _) do
+    dynamic(
+      [r],
+      fragment(
+        "?",
+        field(r, :source)
+      )
+    )
   end
 
   def dynamic_expr(_name, _, %{
