@@ -98,6 +98,25 @@ defmodule Fase.NimbleSchema do
           ]
         ]
       ]
+    ],
+    default_order: [
+      type: :map,
+      keys: [
+        order_by: [type: {:list, :atom}],
+        order_directions: [
+          type:
+            {:list,
+             {:in,
+              [
+                :asc,
+                :asc_nulls_first,
+                :asc_nulls_last,
+                :desc,
+                :desc_nulls_first,
+                :desc_nulls_last
+              ]}}
+        ]
+      ]
     ]
   ]
 
