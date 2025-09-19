@@ -53,6 +53,12 @@ This brings the following benefits:
 
 ## The search view
 
+In this chapter:
+
+- [Properties](#properties)
+- [Creating the search view](#creating-the-search-view)
+- [Updating the search view](#updating-the-search-view)
+
 ### Properties
 
 Data from one or more database tables and columns is aggregated into a "search view" - a materialized view.
@@ -99,6 +105,13 @@ See also:
 
 ## Searching and filtering
 
+In this chapter:
+
+- [Searching with Flop](#searching-with-flop)
+  - [Casting filter fields and results data](#casting-filter-fields-and-results-data)
+- [Limiting results data](#limiting-results-data)
+- [Filtering on timestamps](#filtering-on-timestamps)
+
 ### Searching with Flop
 
 We can query the search view using Flop filters. For example, to perform a text search on author name and filter by publication year:
@@ -137,6 +150,7 @@ Example result:
 
 The values inside the returned `data` map can be used for the display of search results.
 
+<a name="casting-filter-fields-and-results-data" />
 #### Casting filter fields and results data
 
 Data fields can be cast to a different type. For example, to change the type of `draft` from boolean to integer, we add a `cast` entry to the data field:
@@ -211,7 +225,7 @@ use Fase,
   ]
 ```
 
-After creating the search view, query on the date field: 
+After creating the search view, query on the date field:
 
 ```elixir
 last_week = DateTime.now!("Etc/UTC") |> DateTime.add(-7, :day)
@@ -229,10 +243,14 @@ search_params = %{
 
 ## Sorting
 
-Sorting search results can be done in 2 ways:
+In this chapter:
 
-1. Using Flop params
-2. Using Ecto queries
+- [Sorting with Flop](#sorting-with-flop)
+  - [Default sort order](#default-sort-order)
+  - [Sorting on timestamps](#sorting-on-timestamps)
+  - [Casting sort column values](#casting-sort-column-values)
+- [Sorting with Ecto](#sorting-with-ecto)
+  - [Using sort_fields with Ecto](#using-sort_fields-with-ecto)
 
 ### Sorting with Flop
 
@@ -266,6 +284,25 @@ search_params = %{
 }
 ```
 
+<a name="default-sort-order" />
+#### Default sort order
+
+Add [Flop's default sort order ⤴](https://hexdocs.pm/flop/Flop.Schema.html#module-default-sort-order) settings to the schema configuration.
+
+Use the `sort_` prefix to point to the sort field. For example:
+
+```elixir
+use Fase,
+  sources: [
+    ...
+  ],
+  default_order: %{
+    order_by: [:sort_title],
+    order_directions: [:asc]
+  }
+```
+
+<a name="sorting-on-timestamps" />
 #### Sorting on timestamps
 
 Add timestamp fields to the `fields` and `sort_fields` options:
@@ -288,7 +325,7 @@ use Fase,
   ]
 ```
 
-Then add sort options to the search parameters. Note that sort fields use prefix "sort_" when used in search parameters.
+Then add sort options to the search parameters. Note that sort fields use prefix "sort\_" when used in search parameters.
 
 ```elixir
 search_params = %{
@@ -297,6 +334,7 @@ search_params = %{
 }
 ```
 
+<a name="casting-sort-column-values" />
 #### Casting sort column values
 
 Casting sort column values is useful when the original values aren’t suitable for sorting, for example, strings that represent numbers:
@@ -350,6 +388,7 @@ Similarly, to sort on matches in titles:
 )
 ```
 
+<a name="using-sort_fields-with-ecto" />
 #### Using sort_fields with Ecto
 
 It is also possible to use the generated sort columns described in [Sorting with Flop ↓](#sorting-with-flop) with an Ecto query.
@@ -365,6 +404,14 @@ Assuming that `title` is listed under the `sort_fields` option:
 
 ## Faceted search
 
+In this chapter:
+
+- [1. Configuring the schema](#1-configuring-the-schema)
+- [2. Performing a facet search](#2-performing-a-facet-search)
+  - [Combining Flop and facets](#combining-flop-and-facets)
+- [3. Handling facet results](#3-handling-facet-results)
+- [4. Facet selection](#4-facet-selection)
+
 So far, we've seen how to search, filter, and sort data from the search view using the Flop API. In this section we will expand this with facet data.
 
 Getting facet results, and filtering using facets, involve the following steps:
@@ -374,7 +421,7 @@ Getting facet results, and filtering using facets, involve the following steps:
 3. Handle the facet results in the application.
 4. Refine the search with facet selection
 
-### 1. Configure the schema
+### 1. Configuring the schema
 
 Option [`facet_fields`](documentation/schema_configuration.md#facet_fields) configures the search view to store values from the listed fields. After performing a search, the collected facet results (containing value, label and count for each option) are then passed to the facet search results.
 
@@ -413,6 +460,7 @@ ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, "media")
 query = from(ecto_schema)
 ```
 
+<a name="combining-flop-and-facets" />
 #### Combining Flop and facets
 
 Facet search is typically combined with filters and text search. So it makes sense to combine both `Flop.validate_and_run` and
@@ -436,7 +484,7 @@ def search_media(search_params \\ %{}) do
 end
 ```
 
-#### Usage example
+**Usage example**
 
 If the user has typed "Le Guin" in the search box, the Flop parameters and search instructions will look like this:
 
@@ -492,19 +540,19 @@ UI controls are outside of the scope of this library; this section describes the
 ]
 ```
 
-#### Option: value
+**Option: value**
 
 The `value ` field contains the data from a table's column, cast to the `ecto_type` defined in schema `fields`. Its main use is to set the filter value - see [Facet selection ↓](#4-facet-selection). The value is also useful for sorting the list of options in case their values are numeric.
 
-#### Option: label
+**Option: label**
 
 The `label` field contains the string value of the `value` field, unless configured otherwise. See [Option labels ↓](#option-labels).
 
-#### Option: count
+**Option: count**
 
 The `count` field corresponds to the the number of rows with the column value with current search filters applied. The count is frequently used in faceted search UI's, but also often left out to reduce clutter.
 
-#### Option: selected
+**Option: selected**
 
 The `selected` field simply stores the selected state of the applied filter.
 
@@ -512,7 +560,7 @@ The `selected` field simply stores the selected state of the applied filter.
 
 Selected facet options are translated to additional search filters, using the configured [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields).
 
-#### Facet filters
+**Facet filters**
 
 Facet filters are a specialized form of search filters:
 
@@ -527,7 +575,7 @@ To achieve this behavior using Flop, we need to create filters using the followi
 - The `value` must be an array.
 - The operator `op` must be `:==`.
 
-#### Example search
+**Example search**
 
 If we provide a checkbox group to the search page to select the publication year (not the best UI - see [Ranges](#ranges) for a better alternative), and the user has typed "Le Guin" in the search box, and selected the years 1964 and 1966, the Flop search parameters will look like this:
 
@@ -560,12 +608,16 @@ The returned facet results will look like this:
 
 ## Option labels
 
-Instead of displaying the option values, option labels may contain texts that are better suited for a user interface.
+In this chapter:
 
-Two scenarios are supported:
+- [Labels from database tables](#labels-from-database-tables)
+- [Custom labels](#custom-labels)
 
-1. A database table provides text representations - for example, product names, genre titles, user roles, etc.
-2. Custom text is needed, and it's preferable that UI components do not have to process the option values themselves.
+By default, the `label` field in the returned options contains the stringified value.
+To provide a better suited label for a user interface, two scenarios are supported:
+
+1. Retrieving the label texts from a database table, for example: product names, genre titles, user roles, etc.
+2. Writing a custom label in a callback function
 
 ### Labels from database tables
 
@@ -618,6 +670,12 @@ defmodule MyApp.FacetSchema do
 
 ## Ranges
 
+In this chapter:
+
+- [Configuration](#configuration)
+- [Filtering range facets](#filtering-range-facets)
+- [Range labels](#range-labels)
+
 Ranges divide numerical and date entries into distinct categories (buckets), for example: movies created between 2000 and 2010, prices from EUR 0 to 10, items modified since last week, etc.
 
 ### Configuration
@@ -629,7 +687,7 @@ In the schema configuration for `facet_fields`, use range bound options to defin
 
 When using date ranges, refresh the search view at least as often as the smallest configured interval to avoid outdated values.
 
-#### Example with numerical data
+**Example with numerical data**
 
 ```elixir
 facet_fields: [
@@ -641,7 +699,7 @@ facet_fields: [
 
 Note that the `publication_year` value in the facet results now contains the bucket number instead of the year.
 
-#### Example with dates
+**Example with dates**
 
 This example assumes `updated_at` is defined in `fields`.
 
@@ -725,6 +783,12 @@ end
 ```
 
 ## Hierarchies / categories
+
+In this chapter:
+
+- [Configuration](#configuration-1)
+- [Filtering hierarchical facets](#filtering-hierarchical-facets)
+- [Hierarchy labels](#hierarchy-labels)
 
 Hierarchical facets allow users to refine their search step-by-step by navigating a tree-based data structure such as a product catalog.
 
@@ -825,6 +889,12 @@ end
 
 ## Performance
 
+In this chapter:
+
+- [Built-in optimizations](#built-in-optimizations)
+- [Measuring query time](#measuring-query-time)
+- [Optimizing queries](#optimizing-queries)
+
 When the search view grows to a substantial number of rows, additional performance tweaking will be needed. At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
 
 When using facets, retrieving facet data takes up the bulk of the query time: it involves two extra database queries on the `tsv` column where all rows are filtered and grouped. When querying more than 100,000 rows, this adds up.
@@ -852,7 +922,7 @@ A rough performance goal for a search query is to take less than 300ms.
 
 ### Optimizing queries
 
-#### Scoping
+**Scoping**
 
 One way to improve query time is to break up a single search view into multiple ones, each scoped with a filter.
 
@@ -862,17 +932,23 @@ The idea of scoped search views is that the number of rows are smaller, resultin
 
 See [Scoping data ↓](#scoping-data) for details.
 
-#### Caching
+**Caching**
 
 Query results can be cached, see [Caching facet results ↓](#caching-facet-results).
 
-#### Working around common text searches
+**Working around common text searches**
 
 Because of input variations, text searches are hard to optimize using caching, even more so when results are displayed as you type (debounced results). Or it would require a large number of caches, which should be avoided too.
 
 One way is to translate a text query to a filtered query. For example, “blue trousers” can be interpreted as filters "apparel:trousers" and "color:blue". The user is then redirected to the category page with filters applied, and cached results are displayed.
 
 ## Caching facet results
+
+In this chapter:
+
+- [Setup caching](#setup-caching)
+- [Cache warming](#cache-warming)
+- [Example of conditional caching](#example-of-conditional-caching)
 
 GenServer `FacetSearch.Cache` handles caching of facet results. Data is cached in an [ETS table ⤴](https://hexdocs.pm/elixir/main/ets.html), where the cache key is the combination of the search view name and the used filters.
 
@@ -1019,12 +1095,21 @@ search_params = %{
 
 ## Scoping data
 
+In this chapter:
+
+- [Creating a scope](#creating-a-scope)
+- [Example: scoping to the current user](#example-scoping-to-the-current-user)
+- [Combining scopes](#combining-scopes)
+- [Scoping with multiple sources](#scoping-with-multiple-sources)
+
 Scoping is the method of filtering search view data upfront. Possible use cases:
 
 - When working with large datasets, where data can be split up in separate logical parts, for example items filtered by category, source or date.
 - For performance reasons it could be better to split up source data to create multiple "parametrized" search views.
 - Extending parametrized search views to multi-tenant applications, where each user or tenant should only have access to a specific subset of the data.
 - The source table contains columns with unwanted values that should be cleaned up.
+
+### Creating a scope
 
 A scope is created in three steps:
 
@@ -1034,13 +1119,13 @@ A scope is created in three steps:
 
 ### Example: scoping to the current user
 
-#### 1. Pass `scope_keys` to the `sources` option:
+**1. Pass `scope_keys` to the `sources` option**
 
 ```elixir
 scope_keys: [:current_user],
 ```
 
-#### 2. Define the callback:
+**2. Define the callback**
 
 ```elixir
 def scope_by(:current_user, %{current_user: current_user} = _scopes) do
@@ -1054,7 +1139,7 @@ end
 
 The value at key `field` should reference a field listed in `fields`, or a column in the source table.
 
-#### 3. Pass the scope to `Fase.create_search_view/3`:
+**3. Pass the scope to `Fase.create_search_view/3`**
 
 ```elixir
 view_id = "books"
@@ -1128,7 +1213,16 @@ The `scope_keys` option must be set separately for each source.
 
 ## Multi-tenancy and prefix
 
-Pass the schema `prefix` option to the schema and to create, refresh, and search functions.
+In this chapter:
+
+- [Search view schema with prefix](#search-view-schema-with-prefix)
+- [Creating and updating a view](#creating-and-updating-a-view)
+- [Searching with prefix](#searching-with-prefix)
+
+Prefixes are required when data is stored in separate database schemas.
+
+- Specify the prefix by setting the `prefix` option in the schema definition.
+- Include the prefix in create, refresh, and search functions.
 
 ### Search view schema with prefix
 
@@ -1173,7 +1267,7 @@ To refresh the view:
 Fase.refresh_search_view(MyApp.FacetSchema, "media", prefix: "catalog")
 ```
 
-### Searching
+### Searching with prefix
 
 To align with Flop options, the `prefix` option is wrapped inside `query_opts`:
 
@@ -1181,7 +1275,7 @@ To align with Flop options, the `prefix` option is wrapped inside `query_opts`:
 {:ok, facets} <- Fase.search(ecto_schema, search_params, query_opts: [prefix: prefix])
 ```
 
-#### Example search function with prefix options
+**Example search function with prefix options**
 
 ```elixir
 def search_media(search_params \\ %{}, opts \\ []) do
@@ -1207,7 +1301,7 @@ end
 ## Credits
 
 - Mathias Polligkeit for providing the excellent search library [Flop ⤴](https://hexdocs.pm/flop).
-- Anne Teresa De Keersmaeker and Rosas for creating and performing the namesake dance piece Fase.
+- Fase, Four Movements to the Music of Steve Reich, was choreographer Anne Teresa De Keersmaeker’s very first performance, premiered in 1982.
 
 <figure>
    <img src="https://www.rosas.be/picture/1979/fancybox/rosas-fase-four-movements-to-the-music-of-steve-reich---dancers-laura-bachman-soa-ratsifandrihana-c-anne-van-aerschot-fase2018-c-anne-van-aerschot7jpg.jpg" />
@@ -1215,4 +1309,3 @@ end
       <small>Fase, Four Movements to the Music of Steve Reich - dancers Laura Bachman, Soa Ratsifandrihana - © Anne Van Aerschot. Choreography Anne Teresa De Keersmaeker/Rosas 1982-2018.</small>
    </caption>
 </figure>
-

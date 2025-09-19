@@ -335,6 +335,39 @@ defmodule Fase.Test.Adapters.Ecto.FacetedSearchTest do
       :ok
     end
 
+    test "sorting by default_order" do
+      search_params = %{}
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ExtendedFacetSchema, search_params)
+
+      entries =
+        Enum.map(
+          results,
+          &%{publish_date: &1.sort_publish_date, author: &1.sort_author}
+        )
+
+      expected =
+        Enum.sort_by(
+          entries,
+          &{&1.publish_date, &1.author},
+          &compare_default_order_results/2
+        )
+
+      assert entries == expected
+    end
+
+    defp compare_default_order_results(
+           {publish_date_a, author_a},
+           {publish_date_b, author_b}
+         ) do
+      case Date.compare(publish_date_a, publish_date_b) do
+        :eq -> String.downcase(author_a) < String.downcase(author_b)
+        :gt -> true
+        _ -> false
+      end
+    end
+
     test "sorting on publish_date (datetime)" do
       search_params = %{
         order_by: [:sort_publish_date],

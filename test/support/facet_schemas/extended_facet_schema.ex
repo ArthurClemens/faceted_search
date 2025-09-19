@@ -119,7 +119,11 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
           ]
         ]
       ]
-    ]
+    ],
+    default_order: %{
+      order_by: [:sort_publish_date, :sort_author],
+      order_directions: [:desc, :asc]
+    }
   ]
 
   use Fase, @options

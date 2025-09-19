@@ -44,6 +44,9 @@ defmodule Fase do
 
       sortable_option = Enum.map(sortable_fields, & &1.name)
 
+      default_order = Keyword.get(options, :default_order, %{})
+      dbg(default_order)
+
       use Ecto.Schema
 
       use Fase.Types,
@@ -64,7 +67,8 @@ defmodule Fase do
         adapter_opts: [
           custom_fields: custom_fields_option
         ],
-        sortable: sortable_option
+        sortable: sortable_option,
+        default_order: default_order
       }
 
       schema "fase_document" do
