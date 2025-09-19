@@ -53,6 +53,7 @@ The provide Ecto type will be converted to a Postgres type.
 - Path: `id` (schema root)
 
 ### List entries
+
 - A keyword list with key:
   - `cast`
     - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
@@ -698,4 +699,33 @@ sources: [
     ...
   ]
 ]
+```
+
+## default_order
+
+From the Flop documentation:
+
+> Specify a default sort order by setting the `default_order_by` and `default_order_directions` options [...].
+> If no order directions are set, `:asc` is the default for all fields.
+
+- Type: `map()`
+- Path: `default_order`
+
+### Map entries
+
+- `order_by` - A list of sort fields, where each field has a `sort_` prefix.
+  - Type: `list(atom())`
+- `order_directions` - A list of order directions, where each element corresponds to the `order_by` element at the same index.
+  - Type: `list(:asc | :desc)`
+
+### Example
+
+```
+sources: [
+  ...
+],
+default_order: %{
+  order_by: [:sort_title],
+  order_directions: [:asc]
+}
 ```
