@@ -23,10 +23,16 @@ defmodule Fase.SchemaValidationData do
     |> Enum.map_join("\n", fn error ->
       info =
         case error.error_type do
-          :empty_lists ->
+          :empty_keyword_lists ->
             """
             Invalid value for key "#{error.key}".
             Expected a non-empty keyword list.
+            """
+
+          :empty_lists ->
+            """
+            Invalid value for key "#{error.key}".
+            Expected a non-empty list.
             """
 
           :invalid_key ->

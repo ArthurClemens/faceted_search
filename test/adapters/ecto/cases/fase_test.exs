@@ -7,6 +7,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
   alias Fase.Test.MyApp.ExtendedFacetSchema
   alias Fase.Test.MyApp.MultipleSourcesFacetSchema
+  alias Fase.Test.MyApp.OperationsFacetSchema
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
   alias Fase.Test.MyApp.TimestampsFacetSchema
@@ -104,8 +105,21 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       }
 
       expected = [
-        "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood. Helena van Dijk"
+        "Hélène Dubois Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood."
       ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", ExtendedFacetSchema, search_params)
+
+      assert results |> Enum.map(& &1.text) == expected
+    end
+
+    test "text field result (text with accents: without unaccent operation will not find a match)" do
+      search_params = %{
+        filters: [%{field: :text, op: :ilike, value: "Helene"}]
+      }
+
+      expected = []
 
       {:ok, {results, _meta}} =
         filtered_search("articles", ExtendedFacetSchema, search_params)
@@ -130,7 +144,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       search_params = %{
         filters: [
           %{field: :text, op: :ilike, value: "political"},
-          %{field: :text, op: :ilike, value: "treatises"}
+          %{field: :text, op: :ilike, value: "metaphors"}
         ]
       }
 
@@ -145,7 +159,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     test "multiple terms using ilike_and" do
       search_params = %{
         filters: [
-          %{field: :text, op: :ilike, value: "political treatises"}
+          %{field: :text, op: :ilike_and, value: "political metaphors"}
         ]
       }
 
@@ -158,7 +172,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     end
   end
 
-  describe "filtering: data search" do
+  describe "filtering: data fields" do
     setup do
       init_resources(article_count: 10)
 
@@ -169,7 +183,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     test "data field result (including casts of field 'draft' and 'word_count')" do
       search_params = %{
         filters: [
-          %{field: :title, op: :ilike, value: "political"}
+          %{field: :title, op: :ilike, value: "politiques"}
         ]
       }
 
@@ -178,7 +192,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
       expected = [
         %{
-          "author" => "Helena van Dijk",
+          "id" => "uuid",
+          "author" => "Hélène Dubois",
           "draft" => 1,
           "indicators" => [
             %{"type" => "history", "word_count" => "3473"},
@@ -199,7 +214,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
             "politics"
           ],
           "title" =>
-            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
+            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
         }
       ]
 
@@ -207,13 +222,14 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
              |> Enum.map(fn %{data: data} ->
                data
                |> Map.replace("publish_date", "datetime")
+               |> Map.replace("id", "uuid")
              end) == expected
     end
 
     test "search subfield: title (ilike)" do
       search_params = %{
         filters: [
-          %{field: :title, op: :ilike, value: "political"}
+          %{field: :title, op: :ilike, value: "politiques"}
         ]
       }
 
@@ -304,7 +320,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         %{
           "draft" => 1,
           "title" =>
-            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
+            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
         },
         %{
           "draft" => 1,
@@ -441,9 +457,60 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
             },
             %Fase.Option{
               count: 2,
-              label: "Helena van Dijk",
+              label: "Hélène Dubois",
               selected: false,
-              value: "Helena van Dijk"
+              value: "Hélène Dubois"
+            }
+          ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %Fase.Option{
+              count: 2,
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
+            },
+            %Fase.Option{
+              count: 2,
+              label: "Hélène Dubois",
+              selected: false,
+              value: "Hélène Dubois"
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %Fase.Option{
+              count: 1,
+              label: "archives",
+              selected: false,
+              value: "archives"
+            },
+            %Fase.Option{
+              count: 1,
+              label: "books",
+              selected: false,
+              value: "books"
+            }
+          ]
+        },
+        publish_date: %{
+          count: 4,
+          first_2_options: [
+            %Fase.Option{
+              count: 4,
+              label: "last year",
+              selected: false,
+              value: 1
+            },
+            %Fase.Option{
+              count: 1,
+              label: "last quarter",
+              selected: false,
+              value: 2
             }
           ]
         },
@@ -453,14 +520,14 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
             %Fase.Option{
               count: 1,
               label: "Archives",
-              value: "archives",
-              selected: false
+              selected: false,
+              value: "archives"
             },
             %Fase.Option{
               count: 1,
               label: "Books",
-              value: "books",
-              selected: false
+              selected: false,
+              value: "books"
             }
           ]
         },
@@ -476,57 +543,6 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
             %Fase.Option{
               count: 2,
               label: "4000-6000",
-              selected: false,
-              value: 2
-            }
-          ]
-        },
-        category_author: %{
-          count: 5,
-          first_2_options: [
-            %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
-              count: 2,
-              selected: false
-            },
-            %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
-              count: 2,
-              selected: false
-            }
-          ]
-        },
-        category_tags: %{
-          count: 20,
-          first_2_options: [
-            %Fase.Option{
-              value: "archives",
-              label: "archives",
-              count: 1,
-              selected: false
-            },
-            %Fase.Option{
-              value: "books",
-              label: "books",
-              count: 1,
-              selected: false
-            }
-          ]
-        },
-        publish_date: %{
-          count: 4,
-          first_2_options: [
-            %Fase.Option{
-              count: 3,
-              label: "last year",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 2,
-              label: "last quarter",
               selected: false,
               value: 2
             }
@@ -563,8 +579,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: true
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
+              value: "Hélène Dubois",
+              label: "Hélène Dubois",
               count: 2,
               selected: false
             }
@@ -614,8 +630,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
+              value: "Hélène Dubois",
+              label: "Hélène Dubois",
               count: 2,
               selected: false
             }
@@ -691,8 +707,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: true
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
+              value: "Hélène Dubois",
+              label: "Hélène Dubois",
               count: 2,
               selected: false
             }
@@ -736,8 +752,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
+              value: "Hélène Dubois",
+              label: "Hélène Dubois",
               count: 2,
               selected: false
             }
@@ -796,33 +812,67 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 5,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
               count: 1,
-              selected: false
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
               count: 2,
-              selected: false
+              label: "Hélène Dubois",
+              selected: false,
+              value: "Hélène Dubois"
+            }
+          ]
+        },
+        category_author: %{
+          count: 5,
+          first_2_options: [
+            %Fase.Option{
+              count: 1,
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
+            },
+            %Fase.Option{
+              count: 2,
+              label: "Hélène Dubois",
+              selected: false,
+              value: "Hélène Dubois"
+            }
+          ]
+        },
+        category_tags: %{
+          count: 20,
+          first_2_options: [
+            %Fase.Option{
+              count: 1,
+              label: "archives",
+              selected: false,
+              value: "archives"
+            },
+            %Fase.Option{
+              count: 1,
+              label: "books",
+              selected: false,
+              value: "books"
             }
           ]
         },
         publish_date: %{
-          count: 4,
+          count: 3,
           first_2_options: [
             %Fase.Option{
-              value: 1,
+              count: 2,
               label: "last year",
-              count: 1,
-              selected: false
+              selected: false,
+              value: 1
             },
             %Fase.Option{
-              value: 2,
-              label: "last quarter",
-              count: 1,
-              selected: false
+              count: 3,
+              label: "last month",
+              selected: false,
+              value: 3
             }
           ]
         },
@@ -830,16 +880,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 14,
           first_2_options: [
             %Fase.Option{
-              value: "books",
-              label: "Books",
               count: 1,
-              selected: false
+              label: "Books",
+              selected: false,
+              value: "books"
             },
             %Fase.Option{
-              value: "culture",
-              label: "Culture",
               count: 1,
-              selected: false
+              label: "Culture",
+              selected: false,
+              value: "culture"
             }
           ]
         },
@@ -859,40 +909,6 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               value: 2
             }
           ]
-        },
-        category_author: %{
-          count: 5,
-          first_2_options: [
-            %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
-              count: 1,
-              selected: false
-            },
-            %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
-              count: 2,
-              selected: false
-            }
-          ]
-        },
-        category_tags: %{
-          count: 20,
-          first_2_options: [
-            %Fase.Option{
-              value: "archives",
-              label: "archives",
-              count: 1,
-              selected: false
-            },
-            %Fase.Option{
-              value: "books",
-              label: "books",
-              count: 1,
-              selected: false
-            }
-          ]
         }
       }
 
@@ -901,16 +917,10 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
       expected_publish_date_options = [
         %Fase.Option{
-          count: 1,
+          count: 2,
           label: "last year",
           selected: false,
           value: 1
-        },
-        %Fase.Option{
-          count: 1,
-          label: "last quarter",
-          selected: false,
-          value: 2
         },
         %Fase.Option{
           count: 3,
@@ -921,8 +931,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         %Fase.Option{
           count: 2,
           label: "today",
-          selected: false,
-          value: 5
+          value: 5,
+          selected: false
         }
       ]
 
@@ -957,8 +967,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
             %Fase.Option{
               count: 1,
               label: "Mateo Alvarez",
-              value: "Mateo Alvarez",
-              selected: false
+              selected: false,
+              value: "Mateo Alvarez"
             }
           ]
         },
@@ -973,9 +983,9 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
             },
             %Fase.Option{
               count: 2,
-              label: "Helena van Dijk",
+              label: "Hélène Dubois",
               selected: false,
-              value: "Helena van Dijk"
+              value: "Hélène Dubois"
             }
           ]
         },
@@ -1000,13 +1010,13 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 4,
           first_2_options: [
             %Fase.Option{
-              count: 3,
+              count: 4,
               label: "last year",
               selected: false,
               value: 1
             },
             %Fase.Option{
-              count: 2,
+              count: 1,
               label: "last quarter",
               selected: false,
               value: 2
@@ -1054,13 +1064,13 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
       expected_publish_date_options = [
         %Fase.Option{
-          count: 3,
+          count: 4,
           label: "last year",
           selected: false,
           value: 1
         },
         %Fase.Option{
-          count: 2,
+          count: 1,
           label: "last quarter",
           selected: false,
           value: 2
@@ -1087,7 +1097,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       search_params = %{
         filters: [
           %{
-            value: ["Aisha Rahman", "Helena van Dijk"],
+            value: ["Aisha Rahman", "Hélène Dubois"],
             op: :==,
             field: :facet_category_author
           }
@@ -1102,16 +1112,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 2,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
               count: 2,
-              selected: false
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
               count: 2,
-              selected: false
+              label: "Hélène Dubois",
+              selected: false,
+              value: "Hélène Dubois"
             }
           ]
         },
@@ -1119,16 +1129,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 5,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
               count: 2,
-              selected: true
+              label: "Aisha Rahman",
+              selected: true,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
               count: 2,
-              selected: true
+              label: "Hélène Dubois",
+              selected: true,
+              value: "Hélène Dubois"
             }
           ]
         },
@@ -1136,16 +1146,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 12,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman>books",
-              label: "Aisha Rahman>books",
               count: 1,
-              selected: false
+              label: "Aisha Rahman>books",
+              selected: false,
+              value: "Aisha Rahman>books"
             },
             %Fase.Option{
-              value: "Aisha Rahman>emotion",
-              label: "Aisha Rahman>emotion",
               count: 1,
-              selected: false
+              label: "Aisha Rahman>emotion",
+              selected: false,
+              value: "Aisha Rahman>emotion"
             }
           ]
         },
@@ -1153,33 +1163,33 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 20,
           first_2_options: [
             %Fase.Option{
-              value: "archives",
-              label: "archives",
               count: 1,
-              selected: false
+              label: "archives",
+              selected: false,
+              value: "archives"
             },
             %Fase.Option{
-              value: "books",
-              label: "books",
               count: 1,
-              selected: false
+              label: "books",
+              selected: false,
+              value: "books"
             }
           ]
         },
         publish_date: %{
-          count: 3,
+          count: 2,
           first_2_options: [
             %Fase.Option{
-              value: 1,
+              count: 3,
               label: "last year",
-              count: 2,
-              selected: false
+              selected: false,
+              value: 1
             },
             %Fase.Option{
-              value: 2,
-              label: "last quarter",
               count: 1,
-              selected: false
+              label: "today",
+              selected: false,
+              value: 5
             }
           ]
         },
@@ -1187,16 +1197,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 11,
           first_2_options: [
             %Fase.Option{
-              value: "books",
-              label: "Books",
               count: 1,
-              selected: false
+              label: "Books",
+              selected: false,
+              value: "books"
             },
             %Fase.Option{
-              value: "emotion",
-              label: "Emotion",
               count: 1,
-              selected: false
+              label: "Emotion",
+              selected: false,
+              value: "emotion"
             }
           ]
         },
@@ -1204,16 +1214,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 2,
           first_2_options: [
             %Fase.Option{
-              value: 1,
-              label: "2000-4000",
               count: 3,
-              selected: false
+              label: "2000-4000",
+              selected: false,
+              value: 1
             },
             %Fase.Option{
-              value: 3,
-              label: "6000-8000",
               count: 1,
-              selected: false
+              label: "6000-8000",
+              selected: false,
+              value: 3
             }
           ]
         }
@@ -1227,7 +1237,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       search_params = %{
         filters: [
           %{
-            value: ["Helena van Dijk>history"],
+            value: ["Hélène Dubois>history"],
             op: :==,
             field: :facet_category_author_tags
           }
@@ -1242,10 +1252,10 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 1,
           first_2_options: [
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
               count: 1,
-              selected: false
+              label: "Hélène Dubois",
+              selected: false,
+              value: "Hélène Dubois"
             }
           ]
         },
@@ -1253,16 +1263,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 5,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
               count: 2,
-              selected: false
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Helena van Dijk",
-              label: "Helena van Dijk",
               count: 1,
-              selected: true
+              label: "Hélène Dubois",
+              selected: true,
+              value: "Hélène Dubois"
             }
           ]
         },
@@ -1270,16 +1280,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 6,
           first_2_options: [
             %Fase.Option{
-              value: "Helena van Dijk>history",
-              label: "Helena van Dijk>history",
               count: 1,
-              selected: true
+              label: "Hélène Dubois>history",
+              selected: true,
+              value: "Hélène Dubois>history"
             },
             %Fase.Option{
-              value: "Helena van Dijk>interdisciplinary",
-              label: "Helena van Dijk>interdisciplinary",
               count: 1,
-              selected: false
+              label: "Hélène Dubois>interdisciplinary",
+              selected: false,
+              value: "Hélène Dubois>interdisciplinary"
             }
           ]
         },
@@ -1287,16 +1297,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 20,
           first_2_options: [
             %Fase.Option{
-              value: "archives",
-              label: "archives",
               count: 1,
-              selected: false
+              label: "archives",
+              selected: false,
+              value: "archives"
             },
             %Fase.Option{
-              value: "books",
-              label: "books",
               count: 1,
-              selected: false
+              label: "books",
+              selected: false,
+              value: "books"
             }
           ]
         },
@@ -1304,10 +1314,10 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 1,
           first_2_options: [
             %Fase.Option{
-              value: 2,
-              label: "last quarter",
               count: 1,
-              selected: false
+              label: "last year",
+              selected: false,
+              value: 1
             }
           ]
         },
@@ -1315,16 +1325,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 3,
           first_2_options: [
             %Fase.Option{
-              value: "history",
-              label: "History",
               count: 1,
-              selected: false
+              label: "History",
+              selected: false,
+              value: "history"
             },
             %Fase.Option{
-              value: "language_analysis",
-              label: "Language analysis: Critical reading",
               count: 1,
-              selected: false
+              label: "Language analysis: Critical reading",
+              selected: false,
+              value: "language_analysis"
             }
           ]
         },
@@ -1332,10 +1342,10 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 1,
           first_2_options: [
             %Fase.Option{
-              value: 1,
-              label: "2000-4000",
               count: 1,
-              selected: false
+              label: "2000-4000",
+              selected: false,
+              value: 1
             }
           ]
         }
@@ -1343,6 +1353,89 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
       assert meta.total_count == 1
       assert facet_result_subset(facets) == expected
+    end
+  end
+
+  describe "operations" do
+    setup do
+      articles = init_resources(article_count: 10)
+      Fase.create_search_view(OperationsFacetSchema, "articles")
+
+      %{articles: articles}
+    end
+
+    test "text field result (text with accents: with operation 'unaccent' will find a match; includes operations 'to_date', 'initcap', 'concat' and 'length')" do
+      search_params = %{
+        filters: [%{field: :text, op: :ilike, value: "Helene"}]
+      }
+
+      expected = [
+        "Analyzes the layered temporal structures present in oral testimonies from post-war societies, integrating insights from history, psychology, and narratology. Temporalities Of Memory: An Interdisciplinary Approach To Post-War Oral Histories 81 Helene Dubois 2025-09-20 0",
+        "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood. Géographie Des Marges : Métaphores Spatiales Dans Les Traités Politiques À L'Époque Moderne 91 Helene Dubois 2025-05-29 0"
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", OperationsFacetSchema, search_params)
+
+      assert results |> Enum.map(& &1.text) |> Enum.sort() == expected
+    end
+
+    test "data field result", context do
+      %{articles: articles} = context
+
+      first_article_publish_date =
+        articles
+        |> Enum.map(&Map.from_struct(&1))
+        |> Enum.sort_by(
+          & &1.publish_date,
+          {:desc, DateTime}
+        )
+        |> List.first()
+        |> Map.get(:publish_date)
+        |> Calendar.strftime("%Y-%m-%d")
+
+      search_params = %{
+        filters: [
+          %{field: :publish_date, op: :==, value: first_article_publish_date}
+        ]
+      }
+
+      expected = [
+        %{
+          "author" => "Hélène Dubois",
+          "publish_date" => "2025-09-20",
+          "title" =>
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+          "indicators" => [%{"word_count" => "2871"}]
+        },
+        %{
+          "author" => "Mateo Alvarez",
+          "publish_date" => "2025-09-20",
+          "title" =>
+            "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
+          "indicators" => [%{"word_count" => "3627"}]
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", OperationsFacetSchema, search_params)
+
+      assert results |> Enum.map(& &1.data) |> Enum.sort_by(& &1["title"]) ==
+               expected
+    end
+
+    test "sorting on publish_date (cast to integer)" do
+      search_params = %{
+        order_by: [:sort_publish_date],
+        order_directions: [:desc]
+      }
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", OperationsFacetSchema, search_params)
+
+      entries = Enum.map(results, & &1.sort_publish_date)
+      expected = Enum.sort(entries, :desc)
+      assert entries == expected
     end
   end
 
@@ -1372,7 +1465,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
   describe "scopes (publish_date)" do
     setup do
-      init_resources(article_count: 10)
+      articles = init_resources(article_count: 10)
 
       last_month = offset_now(-30)
 
@@ -1380,14 +1473,25 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         scopes: %{publish_date: last_month}
       )
 
-      :ok
+      %{articles: articles}
     end
 
-    test "results without filters" do
+    test "results without filters", context do
+      %{articles: articles} = context
       search_params = %{}
 
-      date_1 = offset_now()
-      date_2 = offset_now(-9)
+      first_article_publish_date =
+        articles
+        |> Enum.map(&Map.from_struct(&1))
+        |> Enum.sort_by(
+          & &1.publish_date,
+          {:desc, DateTime}
+        )
+        |> List.first()
+        |> Map.get(:publish_date)
+
+      date_1 = first_article_publish_date
+      date_2 = offset_datetime(date_1, -9)
 
       expected = [
         date_1,
@@ -1514,14 +1618,14 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     test "filter on shared data field (author)" do
       search_params = %{
         filters: [
-          %{field: :author, op: :==, value: "Helena van Dijk"}
+          %{field: :author, op: :==, value: "Hélène Dubois"}
         ]
       }
 
       expected = [
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "birthdate" => "1977-01-25",
             "source" => "authors"
           },
@@ -1529,16 +1633,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "publish_date" => "date",
             "title" =>
-              "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
+              "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
           },
           source: "articles"
         },
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "publish_date" => "date",
             "title" =>
               "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
@@ -1578,7 +1682,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "birthdate" => "1977-01-25",
             "source" => "authors"
           },
@@ -1625,7 +1729,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
-      expected = ["authors Sven Olsson 1947-10-22"]
+      expected = ["Sven Olsson 1947-10-22 authors"]
 
       {:ok, {results, _meta}} =
         filtered_search("articles", MultipleSourcesFacetSchema, search_params)
@@ -1661,7 +1765,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "birthdate" => "1977-01-25",
             "source" => "authors"
           },
@@ -1707,7 +1811,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           sort_source: "articles"
         },
         %{
-          sort_author: "Helena van Dijk",
+          sort_author: "Hélène Dubois",
           sort_source: "articles"
         },
         %{
@@ -1721,7 +1825,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         %{sort_author: "Sven Olsson", sort_source: "articles"},
         %{sort_author: "Aisha Rahman", sort_source: "authors"},
         %{
-          sort_author: "Helena van Dijk",
+          sort_author: "Hélène Dubois",
           sort_source: "authors"
         },
         %{
@@ -1751,14 +1855,14 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     test "facet search" do
       search_params = %{
         filters: [
-          %{field: :facet_author, op: :==, value: ["Helena van Dijk"]}
+          %{field: :facet_author, op: :==, value: ["Hélène Dubois"]}
         ]
       }
 
       expected = [
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "birthdate" => "1977-01-25",
             "source" => "authors"
           },
@@ -1766,16 +1870,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "publish_date" => "date",
             "title" =>
-              "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises"
+              "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
           },
           source: "articles"
         },
         %{
           data: %{
-            "author" => "Helena van Dijk",
+            "author" => "Hélène Dubois",
             "publish_date" => "date",
             "title" =>
               "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
@@ -1875,13 +1979,13 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           count: 4,
           first_2_options: [
             %Fase.Option{
-              count: 3,
+              count: 4,
               label: "last year",
               selected: false,
               value: 1
             },
             %Fase.Option{
-              count: 2,
+              count: 1,
               label: "last quarter",
               selected: false,
               value: 2
@@ -1894,13 +1998,13 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
       expected_publish_date_options = [
         %Fase.Option{
-          count: 3,
+          count: 4,
           label: "last year",
           selected: false,
           value: 1
         },
         %Fase.Option{
-          count: 2,
+          count: 1,
           label: "last quarter",
           selected: false,
           value: 2
@@ -1975,7 +2079,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           "article_title" =>
-            "From Papyrus to Pixel: Materiality and Meaning in the Evolution of the Book, Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises, Narrative Entropy: Chaos Theory and Structure in Modernist Fiction, Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture, Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+            "From Papyrus to Pixel: Materiality and Meaning in the Evolution of the Book, Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne, Narrative Entropy: Chaos Theory and Structure in Modernist Fiction, Semiotic Networks: Symbol Transmission in Medieval Manuscript Culture, Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
           "category_name" => "paper"
         }
       ]
@@ -2022,7 +2126,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         %{
           "inserted_at" => "timestamp",
           "title" =>
-            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
           "updated_at" => "timestamp"
         }
       ]
@@ -2123,7 +2227,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         %{
           "inserted_at" => "timestamp",
           "title" =>
-            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
           "updated_at" => "timestamp"
         }
       ]
@@ -2138,7 +2242,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         %{
           "inserted_at" => "timestamp",
           "title" =>
-            "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
           "updated_at" => "timestamp"
         },
         %{

@@ -76,8 +76,10 @@ defmodule Fase.FlopSchema do
   defp create_filter_field_options(fields, data_fields) do
     fields
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
-      cast = get_cast_from_data_fields(data_fields, column_name)
-      ecto_type = cast || Keyword.get(column_options, :ecto_type)
+      ecto_type =
+        get_ecto_type_from_data_fields(data_fields, column_name) ||
+          Keyword.get(column_options, :ecto_type)
+
       filter = Keyword.get(column_options, :filter)
 
       operators = column_options[:operators]
@@ -96,9 +98,9 @@ defmodule Fase.FlopSchema do
     end)
   end
 
-  defp get_cast_from_data_fields(data_fields, column_name) do
+  defp get_ecto_type_from_data_fields(data_fields, column_name) do
     Enum.find_value(data_fields, fn
-      {name, opts} when name == column_name -> Keyword.get(opts, :cast)
+      {name, opts} when name == column_name -> Keyword.get(opts, :ecto_type)
       _ -> nil
     end)
   end
@@ -186,22 +188,28 @@ defmodule Fase.FlopSchema do
     Keyword.get_values(source_options, :sort_fields)
     |> List.flatten()
     |> Enum.map(fn sort_field ->
-      {name, cast} =
+      {name, options} =
         case sort_field do
-          {name, [cast: cast]} -> {name, cast}
-          {name, _} -> {name, nil}
-          name -> {name, nil}
+          {name, options} when is_list(options) -> {name, options}
+          {name, _} -> {name, []}
+          name -> {name, []}
         end
 
       field_data = Keyword.get(custom_fields, name)
 
+      ecto_type_from_sort_field = Keyword.get(options, :ecto_type)
+
       ecto_type =
-        if field_data, do: Keyword.get(field_data, :ecto_type), else: :string
+        cond do
+          not is_nil(ecto_type_from_sort_field) -> ecto_type_from_sort_field
+          not is_nil(field_data) -> Keyword.get(field_data, :ecto_type)
+          true -> :string
+        end
 
       %{
         name: :"#{Constants.sort_field_prefix()}#{name}",
         ecto_type: ecto_type,
-        cast: cast
+        operations: Keyword.get(options, :operations)
       }
     end)
   end

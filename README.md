@@ -34,7 +34,7 @@ While faceted search was popularized by e-commerce platforms, many other types o
 - Fansites
 - Admin interfaces
 
-This Fase library aims to provide the tooling to bring faceted search to your Elixir application, using Elixir code and a Postgres database.
+**Fase** aims to provide the tooling to bring faceted search to your Elixir application, using Elixir code and a Postgres database.
 
 This brings the following benefits:
 
@@ -42,7 +42,7 @@ This brings the following benefits:
 - Integrates seamlessly with an existing Flop setup, using the same concepts and functions.
 - Combines faceted search with regular Flop-based filters and text search.
 - Allows scoping per table, user, or any other scope you define.
-- Because search data is cached in a database view, searching may be a lot faster.
+- Because search data is cached in a database view, searching may be substantially faster.
 
 ## Library concepts
 
@@ -108,7 +108,6 @@ See also:
 In this chapter:
 
 - [Searching with Flop](#searching-with-flop)
-  - [Casting filter fields and results data](#casting-filter-fields-and-results-data)
 - [Limiting results data](#limiting-results-data)
 - [Filtering on timestamps](#filtering-on-timestamps)
 
@@ -149,49 +148,6 @@ Example result:
 ```
 
 The values inside the returned `data` map can be used for the display of search results.
-
-<a name="casting-filter-fields-and-results-data" />
-#### Casting filter fields and results data
-
-Data fields can be cast to a different type. For example, to change the type of `draft` from boolean to integer, we add a `cast` entry to the data field:
-
-```elixir
-use Fase,
-  sources: [
-    books: [
-      fields: [
-        ...
-        draft: [
-          ecto_type: :boolean
-        ]
-      ],
-      data_fields: [
-        ...
-        draft: [
-          cast: :integer
-        ]
-      ]
-    ]
-  ]
-```
-
-The cast value can be any valid type that is supported by `Ecto.Type.cast/2`.
-
-Then we can use the integer value in the filter search parameters:
-
-```elixir
-search_params = %{
-  filters: [
-    %{
-      field: :draft,
-      op: :==,
-      value: 1
-    }
-  ]
-}
-```
-
-The data map will also contain integer values for "draft".
 
 ### Limiting results data
 
@@ -241,6 +197,60 @@ search_params = %{
 }
 ```
 
+## Casting and data transforms
+
+Field values can be cast or otherwise transformed using Postgres functions.
+The `operations` option accepts a list of strings, each containing a Postgres function or type operator. The question mark `?` is a placeholder for the current value, which is updated after each operation.
+If the resulting value has a different type than the field type defined in `fields`, an additional `ecto_type` entry is required.
+
+```elixir
+  draft: [
+    operations: [
+      "cast(? AS integer)"
+    ],
+    ecto_type: :integer
+  ]
+```
+
+Then we can use the integer value in the filter search parameters:
+
+```elixir
+search_params = %{
+  filters: [
+    %{
+      field: :draft,
+      op: :==,
+      value: 1
+    }
+  ]
+}
+```
+
+The `transform` option is available for:
+- `data_fields`
+- `text_fields`
+- `sort_fields`
+
+### Examples
+
+Format a timestamp to a searchable date:
+
+```elixir
+operations: ["to_char(?, 'YYYY-MM-DD')"]
+```
+
+Remove accented characters (requires [Postgres extension unaccent ⤴](https://www.postgresql.org/docs/current/unaccent.html )):
+
+```elixir
+operations: ["unaccent(?)"]
+```
+
+Change text to title case:
+
+```elixir
+operations: ["initcap(?)"]
+```
+
 ## Sorting
 
 In this chapter:
@@ -248,7 +258,7 @@ In this chapter:
 - [Sorting with Flop](#sorting-with-flop)
   - [Default sort order](#default-sort-order)
   - [Sorting on timestamps](#sorting-on-timestamps)
-  - [Casting sort column values](#casting-sort-column-values)
+  - [Transforming sort column values](#transforming-sort-column-values)
 - [Sorting with Ecto](#sorting-with-ecto)
   - [Using sort_fields with Ecto](#using-sort_fields-with-ecto)
 
@@ -334,29 +344,31 @@ search_params = %{
 }
 ```
 
-<a name="casting-sort-column-values" />
-#### Casting sort column values
+As with Flop, multiple fields can be passed to `order_by` and `order_directions`.
 
-Casting sort column values is useful when the original values aren’t suitable for sorting, for example, strings that represent numbers:
+<a name="transforming-sort-column-values" />
+#### Transforming sort column values
+
+Transforming sort column values is useful when the original values aren’t suitable for sorting, for example, strings that represent numbers:
 
 ```elixir
-iex> ["1.1", "1.2", "1.10"] |> Enum.sort()
+iex> Enum.sort(["1.1", "1.2", "1.10"])
 ["1.1", "1.10", "1.2"]
 ```
 
-To define a cast operation, add `cast` to the sort field entry:
+To define a transform operation, add `operations` to the sort field entry:
 
 ```elixir
 sort_fields: [
   category: [
-    cast: :float
+    operations: [
+      "cast(? as float)"
+    ]
   ]
 ]
 ```
 
-The cast value can be any valid type that is supported by `Ecto.Type.cast/2`.
-
-As with Flop, multiple fields can be passed to `order_by` and `order_directions`.
+See also: [Casting and data transforms](#casting-and-data-transforms)
 
 ### Sorting with Ecto
 

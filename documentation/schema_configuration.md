@@ -42,37 +42,6 @@ use Fase,
   ]
 ```
 
-## id
-
-Optional setting that defines the type of the ID column. If not configured, the search view will infer the type from the sources.
-When multiple sources use different ID types, this setting can be used to cast them to a common type.
-
-The provide Ecto type will be converted to a Postgres type.
-
-- Type: `list(Keyword.t())`
-- Path: `id` (schema root)
-
-### List entries
-
-- A keyword list with key:
-  - `cast`
-    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
-    - Type: `atom()`
-
-### Example
-
-Casting the ID to text:
-
-```
-use Fase,
-  id: [
-    cast: :string
-  ],
-  sources: [
-    ...
-  ]
-```
-
 ## sources
 
 Settings per resource. The source key refers to the name of a resource table in your repo.
@@ -268,6 +237,8 @@ The referenced fields populate the `data` column in the search view.
 
 Additionally, custom fields can be defined to generate data from other sources.
 
+The values of these fields may be optionally transformed.
+
 - Type: `list(atom()) | list(Keyword.t())`
 - Path: `sources > [source table] > data_fields`
 
@@ -277,10 +248,15 @@ Either:
 
 - A field name from option `fields`.
   - Type: `atom()`
-- A keyword list with key:
-  - `cast`
-    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
-    - Type: `atom()`
+- A keyword list:
+  - Key: a field name from option `fields`
+  - Values:
+    - A keyword list with key `operations`:
+      - Type: `list(String.t())`
+    - A keyword list with key `ecto_type`
+      - Only if the operations result in a different type than defined in `fields`
+      - The Ecto type such as `:string` or `{:array, :string}`.
+      - Type: `any()`
 - A keyword list of field name/entry options to generate JSON data from joined tables or fields listed in the `fields` option.
 
 Entry options are either:
@@ -296,9 +272,9 @@ Entry options are either:
     - Referenced column of the joined table.
     - Type: `atom()`
     - Required: when using `binding`
-  - `cast`
-    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
-    - Type: `atom()`
+  - `operations`
+    - Type to cast or transform the value
+    - Type: `list(String.t())`
 
 ### Examples
 
@@ -324,7 +300,7 @@ sources: [
 ]
 ```
 
-Use `cast ` to cast data to another type:
+Use `operations` to transform the data value to another type:
 
 ```
 fields: [
@@ -336,10 +312,15 @@ fields: [
 data_fields: [
   ...
   draft: [
-    cast: :integer
+    operations: [
+      "cast(? AS integer)"
+    ],
+    ecto_type: :integer
   ]
 ]
 ```
+
+See also: [Casting and data transforms](README.md#casting-and-data-transforms)
 
 To generate custom data, add any new key with a name from the `fields` option:
 
@@ -360,15 +341,16 @@ data_fields: [
 ]
 ```
 
-Custom data can also be cast to a different type:
+Custom data can also be transformed to a different type:
 
 ```
 data_fields: [
   ...
   my_custom_data: [
-    publication_year: [
-      cast: :integer
-    ],
+    publish_date: [
+      operations: ["to_char(?, 'YYYY-MM-DD')"],
+      ecto_type: :string
+    ]
   ]
 ]
 ```
@@ -436,7 +418,7 @@ sources: [
 
 ## text_fields
 
-A list of fields used for text search.
+Specifies the list of fields used for text search. The values of these fields may be optionally transformed.
 
 The referenced fields populate the `text` column in the search view.
 
@@ -445,10 +427,19 @@ The referenced fields populate the `text` column in the search view.
 
 ### List entries
 
+Either:
+
 - A field name from option `fields`.
   - Type: `atom()`
+- A keyword list:
+  - Key: a field name from option `fields`
+  - Values:
+    - A keyword list with key `operations`:
+      - Type: `list(String.t())`
 
 ### Examples
+
+Specifying the field names inserts their values into the `text` column.
 
 ```
 sources: [
@@ -460,6 +451,30 @@ sources: [
   ]
 ]
 ```
+
+Transform the values with the `operations` option, where each list item is a Postgres function.
+The question mark is a placeholder for the current value.
+
+```
+sources: [
+  books: [
+    ...
+    text_fields: [
+      title: [
+        operations: ["initcap(?)", "concat(?, ' ', length(?))"]
+      ],
+      author: [
+        operations: ["unaccent(?)"]
+      ],
+      publish_date: [
+        operations: ["to_char(?, 'YYYY-MM-DD')"]
+      ]
+    ]
+  ]
+]
+```
+
+See also: [Casting and data transforms](README.md#casting-and-data-transforms)
 
 ## facet_fields
 
@@ -473,6 +488,7 @@ A list of fields used to create facets, with options for labels from a database 
 Either:
 
 - A field name from option `fields`.
+  - Type: `atom()`
 - A keyword list:
   - Key: a field name from option `fields`
   - Values:
@@ -629,7 +645,7 @@ sources: [
 
 ## sort_fields
 
-A list of fields used for sorting results. Field values can optionally be cast to another data type.
+A list of fields used to sort results. The values of these fields may be optionally transformed.
 
 The fields referenced from the `fields` option are used to create extra columns in the search view.
 
@@ -642,14 +658,17 @@ Either:
 
 - A field name from option `fields`.
   - Type: `atom()`
-- A keyword list with key:
-  - `cast`
-    - Type to casts the value to (any type that is supported by `Ecto.Type.cast/2`)
-    - Type: `atom()`
+- A keyword list:
+  - Key: a field name from option `fields`
+  - Values:
+    - A keyword list with key `operations`:
+      - Type: `list(String.t())`
+    - A keyword list with key `ecto_type`
+      - Only if the operations result in a different type than defined in `fields`
+      - The Ecto type such as `:string` or `{:array, :string}`.
+      - Type: `any()` 
 
 ### Examples
-
-#### Without casting
 
 ```
 sources: [
@@ -663,7 +682,8 @@ sources: [
 ]
 ```
 
-#### With casting
+Transform the values with the `operations` option, where each list item is a Postgres function.
+The question mark is a placeholder for the current value.
 
 ```
 sources: [
@@ -672,12 +692,17 @@ sources: [
     sort_fields: [
       :title,
       publication_year: [
-        cast: :float
+        operations: [
+          "cast(? as float)"
+        ],
+        ecto_type: :float
       ]
     ]
   ]
 ]
 ```
+
+See also: [Casting and data transforms](README.md#casting-and-data-transforms)
 
 ## scopes
 

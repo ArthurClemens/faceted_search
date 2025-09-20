@@ -235,7 +235,7 @@ defmodule Fase do
 
   Parameters:
   - `facet_name` - Name of the facet
-  - `option_value` - Value or cast value
+  - `option_value` - Value
   - `database_label` - The database label if set in [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields)
 
   ## Examples

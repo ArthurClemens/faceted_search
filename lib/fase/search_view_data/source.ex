@@ -9,6 +9,7 @@ defmodule Fase.Source do
   alias Fase.Join
   alias Fase.Scope
   alias Fase.SortField
+  alias Fase.TextField
 
   @enforce_keys [
     :table_name
@@ -33,7 +34,7 @@ defmodule Fase.Source do
           joins: list(Join.t()) | nil,
           fields: list(Field.t()) | nil,
           data_fields: list(atom()) | nil,
-          text_fields: list(atom()) | nil,
+          text_fields: list(TextField.t()) | nil,
           facet_fields: list(FacetField.t()) | nil,
           sort_fields: list(SortField.t()) | nil
         }
@@ -57,7 +58,7 @@ defmodule Fase.Source do
       fields:
         Keyword.get(options, :fields) |> collect_fields(table_name, prefix),
       data_fields: Keyword.get(options, :data_fields) |> collect_data_fields(),
-      text_fields: Keyword.get(options, :text_fields),
+      text_fields: Keyword.get(options, :text_fields) |> collect_text_fields(),
       facet_fields:
         Keyword.get(options, :facet_fields) |> collect_facet_fields(),
       sort_fields: Keyword.get(options, :sort_fields) |> collect_sort_fields()
@@ -90,6 +91,13 @@ defmodule Fase.Source do
   end
 
   defp collect_data_fields(_fields), do: nil
+
+  defp collect_text_fields(text_fields)
+       when is_list(text_fields) and text_fields != [] do
+    Enum.map(text_fields, fn field_options -> TextField.new(field_options) end)
+  end
+
+  defp collect_text_fields(_text_fields), do: nil
 
   defp collect_scopes(scope_keys, module)
        when is_list(scope_keys) and scope_keys != [] do
