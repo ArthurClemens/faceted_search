@@ -63,11 +63,11 @@ defmodule Fase.Test.Factory do
   @articles [
     %{
       title:
-        "Mapping the Margins: Spatial Metaphors in Early Modern Political Treatises",
+        "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
       summary:
         "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood.",
       tags: ["politics", "history", "language_analysis"],
-      author: "Helena van Dijk",
+      author: "Hélène Dubois",
       word_count: 3473,
       categories: ["paper"]
     },
@@ -77,7 +77,7 @@ defmodule Fase.Test.Factory do
       summary:
         "Analyzes the layered temporal structures present in oral testimonies from post-war societies, integrating insights from history, psychology, and narratology.",
       tags: ["memory", "oral-history", "interdisciplinary"],
-      author: "Helena van Dijk",
+      author: "Hélène Dubois",
       word_count: 2871,
       categories: ["paper"]
     },
@@ -164,7 +164,7 @@ defmodule Fase.Test.Factory do
 
   @authors [
     %{
-      full_name: "Helena van Dijk",
+      full_name: "Hélène Dubois",
       birthdate: ~D[1977-01-25]
     },
     %{
@@ -295,6 +295,11 @@ defmodule Fase.Test.Factory do
     do:
       "Etc/UTC"
       |> DateTime.now!()
+      |> offset_datetime(offset, unit)
+
+  def offset_datetime(datetime, offset \\ 0, unit \\ :day),
+    do:
+      datetime
       |> DateTime.add(offset, unit)
       |> DateTime.truncate(:second)
 

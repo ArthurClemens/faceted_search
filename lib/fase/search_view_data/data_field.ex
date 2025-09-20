@@ -3,29 +3,32 @@ defmodule Fase.DataField do
   Properties of a data field that is included in the search view generation.
   """
 
-  alias Fase.DataFieldEntry
+  alias Fase.CustomDataFieldEntry
 
   @enforce_keys [
     :name
   ]
 
-  defstruct name: nil, entries: nil, cast: nil
+  defstruct name: nil, entries: nil, operations: nil, ecto_type: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
           # optional
-          entries: list(DataFieldEntry.t()) | nil,
-          cast: String.t() | nil
+          entries: list(CustomDataFieldEntry.t()) | nil,
+          operations: list(String.t()) | nil,
+          ecto_type: atom() | nil
         }
 
   @spec new(atom(), Keyword.t() | nil) :: t()
   def new(name, options \\ []) do
-    {cast_options, entry_options} = Keyword.split(options, [:cast])
+    {operation_options, entry_options} =
+      Keyword.split(options, [:operations, :ecto_type])
 
     struct(__MODULE__, %{
       name: name,
-      cast: Keyword.get(cast_options, :cast),
+      operations: Keyword.get(operation_options, :operations),
+      ecto_type: Keyword.get(operation_options, :ecto_type),
       entries: collect_entries(entry_options)
     })
   end
@@ -37,7 +40,7 @@ defmodule Fase.DataField do
         field_name = if Keyword.get(options, :binding), do: nil, else: name
 
         struct(
-          DataFieldEntry,
+          CustomDataFieldEntry,
           options
           |> Keyword.put(:name, name)
           |> Keyword.put(:field_name, field_name)
@@ -45,7 +48,7 @@ defmodule Fase.DataField do
 
       name ->
         struct(
-          DataFieldEntry,
+          CustomDataFieldEntry,
           %{name: name, field_name: name}
         )
     end)
@@ -54,7 +57,7 @@ defmodule Fase.DataField do
   defp collect_entries(_), do: nil
 end
 
-defmodule Fase.DataFieldEntry do
+defmodule Fase.CustomDataFieldEntry do
   @moduledoc """
   Properties of a data field entry that is included in the search view generation.
   """
@@ -63,7 +66,12 @@ defmodule Fase.DataFieldEntry do
     :name
   ]
 
-  defstruct name: nil, binding: nil, column: nil, field_name: nil, cast: nil
+  defstruct name: nil,
+            binding: nil,
+            column: nil,
+            field_name: nil,
+            operations: nil,
+            ecto_type: nil
 
   @type t() :: %__MODULE__{
           # required
@@ -72,6 +80,7 @@ defmodule Fase.DataFieldEntry do
           binding: atom() | nil,
           column: atom() | nil,
           field_name: atom() | nil,
-          cast: String.t() | nil
+          operations: list(String.t()) | nil,
+          ecto_type: atom() | nil
         }
 end

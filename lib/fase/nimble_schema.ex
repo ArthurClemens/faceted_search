@@ -22,8 +22,8 @@ defmodule Fase.NimbleSchema do
     id: [
       type: :keyword_list,
       keys: [
-        cast: [
-          type: :atom,
+        operations: [
+          type: {:list, :string},
           required: true
         ]
       ]
@@ -84,7 +84,7 @@ defmodule Fase.NimbleSchema do
               type: {:list, {:or, [:atom, {:tuple, [:atom, :any]}]}}
             ],
             text_fields: [
-              type: {:list, :atom}
+              type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}}
             ],
             facet_fields: [
               type: {:list, {:or, [:atom, {:tuple, [:atom, :keyword_list]}]}}
@@ -166,34 +166,51 @@ defmodule Fase.NimbleSchema do
               },
               _keys_map
               when is_list(raw_values) ->
-                cond do
-                  MapSet.equal?(
-                    MapSet.new([:binding, :column]),
-                    MapSet.new(Keyword.keys(raw_values))
-                  ) ->
-                    :ok
+                if MapSet.subset?(
+                     MapSet.new(Keyword.keys(raw_values)),
+                     MapSet.new([:binding, :column, :operations, :ecto_type])
+                   ) do
+                  :ok
+                else
+                  key = Keyword.keys(raw_values) |> List.first()
 
-                  MapSet.equal?(
-                    MapSet.new([:cast]),
-                    MapSet.new(Keyword.keys(raw_values))
-                  ) ->
-                    :ok
-
-                  true ->
-                    key = Keyword.keys(raw_values) |> List.first()
-
-                    %{
-                      error: :unlisted,
-                      key: key,
-                      supported_keys: [:binding, :column, :cast]
-                    }
+                  %{
+                    error: :unlisted,
+                    key: key,
+                    supported_keys: [
+                      :binding,
+                      :column,
+                      :operations,
+                      :ecto_type
+                    ]
+                  }
                 end
 
               _, _ ->
                 :ok
             end
           )
-          |> validate_options(module, opts, :text_fields)
+          |> validate_options(module, opts, :text_fields,
+            get_supported_keyword_list_options: fn
+              %{path: [_, _, :text_fields, _], key: key, raw: raw}, _
+              when key == :operations ->
+                if is_list(raw) and raw != [] do
+                  :ok
+                else
+                  %{
+                    error: :empty_lists,
+                    key: key,
+                    supported_keys: [:operations]
+                  }
+                end
+
+              %{path: [_, _, :text_fields, _], key: key}, _ ->
+                %{error: :unlisted, key: key, supported_keys: [:operations]}
+
+              _, _ ->
+                :ok
+            end
+          )
           |> validate_options(module, opts, :facet_fields,
             get_supported_keyword_list_options: fn
               %{path: [_, _, :facet_fields], key: key}, _
@@ -240,7 +257,8 @@ defmodule Fase.NimbleSchema do
             get_supported_keyword_list_options: fn
               %{path: [_, _, :sort_fields, _], key: key}, _keys_map ->
                 supported_keys = [
-                  :cast
+                  :operations,
+                  :ecto_type
                 ]
 
                 if key in supported_keys do
@@ -281,7 +299,7 @@ defmodule Fase.NimbleSchema do
          module,
          opts,
          option,
-         validation_opts \\ []
+         validation_opts
        ) do
     get_source_entries(opts, option)
     |> Enum.reduce(collected_errors, fn %{
@@ -369,11 +387,16 @@ defmodule Fase.NimbleSchema do
 
     Enum.reduce(
       entries,
-      %{atom_keys: [], empty_lists: [], keyword_lists: [], key_values: []},
+      %{
+        atom_keys: [],
+        empty_keyword_lists: [],
+        keyword_lists: [],
+        key_values: []
+      },
       fn
-        # empty_lists
+        # empty_keyword_lists
         {key, values}, acc when values == [] ->
-          Map.update(acc, :empty_lists, [], fn existing ->
+          Map.update(acc, :empty_keyword_lists, [], fn existing ->
             [%{key: key, path: path} | existing]
           end)
 
@@ -418,8 +441,8 @@ defmodule Fase.NimbleSchema do
     end)
   end
 
-  defp list_errored_entries(:empty_lists, entries, _validation_opts) do
-    entries |> insert_error_type(:empty_lists)
+  defp list_errored_entries(:empty_keyword_lists, entries, _validation_opts) do
+    entries |> insert_error_type(:empty_keyword_lists)
   end
 
   defp list_errored_entries(:atom_keys, entries, validation_opts) do

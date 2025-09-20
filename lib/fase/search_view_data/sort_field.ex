@@ -7,27 +7,29 @@ defmodule Fase.SortField do
     :name
   ]
 
-  defstruct name: nil, cast: nil
+  defstruct name: nil, operations: nil, ecto_type: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
           # optional
-          cast: String.t() | nil
+          operations: list(String.t()) | nil,
+          ecto_type: atom() | nil
         }
 
   def new(field_options) do
-    {name, cast} =
+    {name, options} =
       case field_options do
-        {name, [cast: cast]} -> {name, cast}
-        name -> {name, nil}
+        {name, options} when is_list(options) -> {name, options}
+        name -> {name, []}
       end
 
     struct(
       __MODULE__,
       %{
         name: name,
-        cast: cast
+        operations: Keyword.get(options, :operations),
+        ecto_type: Keyword.get(options, :ecto_type)
       }
     )
   end

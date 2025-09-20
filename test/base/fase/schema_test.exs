@@ -3,6 +3,7 @@ defmodule Fase.Test.SchemaTest do
 
   alias Fase.Test.MyApp.ExtendedFacetSchema
   alias Fase.Test.MyApp.MultipleSourcesFacetSchema
+  alias Fase.Test.MyApp.OperationsFacetSchema
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
   alias Fase.Test.MyApp.SimpleFacetSchema
@@ -39,83 +40,86 @@ defmodule Fase.Test.SchemaTest do
 
     test "extended schema" do
       expected = [
-        {:module, Fase.Test.MyApp.ExtendedFacetSchema},
-        {:id, [cast: :string]},
-        {:sources,
-         [
-           articles: [
-             joins: [
-               author_articles: [on: "author_articles.article_id = articles.id"],
-               authors: [on: "authors.id = author_articles.author_id"],
-               article_tags: [on: "article_tags.article_id = articles.id"],
-               tags: [on: "tags.id = article_tags.tag_id"],
-               tag_texts: [on: "tag_texts.tag_id = tags.id"]
-             ],
-             fields: [
-               title: [ecto_type: :string],
-               summary: [ecto_type: :string],
-               publish_date: [ecto_type: :utc_datetime],
-               draft: [ecto_type: :boolean],
-               word_count: [ecto_type: :integer],
-               tags: [
-                 binding: :tags,
-                 column: :name,
-                 ecto_type: {:array, :string}
-               ],
-               tag_titles: [
-                 binding: :tag_texts,
-                 column: :title,
-                 ecto_type: {:array, :string}
-               ],
-               author: [
-                 binding: :authors,
-                 column: :full_name,
-                 ecto_type: :string
-               ]
-             ],
-             data_fields: [
-               :title,
-               :author,
-               :tags,
-               :tag_titles,
-               {:draft, [cast: :integer]},
-               {:indicators,
-                [
-                  word_count: [cast: :string],
-                  type: [binding: :tags, column: :name]
-                ]}
-             ],
-             text_fields: [:author, :title, :summary],
-             sort_fields: [:author, :publish_date],
-             facet_fields: [
-               :author,
-               {:tags, [label: :tag_titles]},
-               {:word_count, [number_range_bounds: [2000, 4000, 6000, 8000]]},
-               {:publish_date,
-                [
-                  date_range_bounds: [
-                    "now() - interval '1 year'",
-                    "now() - interval '3 month'",
-                    "now() - interval '1 month'",
-                    "now() - interval '1 week'",
-                    "now() - interval '1 day'"
-                  ]
-                ]},
-               {:hierarchies,
-                [
-                  category_author: [path: [:author]],
-                  category_author_tags: [path: [:author, :tags]],
-                  category_tags: [path: [:tags]],
-                  category_tags_author: [path: [:tags, :author]]
-                ]}
-             ]
-           ]
-         ]},
-        {:default_order,
-         %{
-           order_by: [:sort_publish_date, :sort_author],
-           order_directions: [:desc, :asc]
-         }}
+        module: Fase.Test.MyApp.ExtendedFacetSchema,
+        sources: [
+          articles: [
+            joins: [
+              author_articles: [on: "author_articles.article_id = articles.id"],
+              authors: [on: "authors.id = author_articles.author_id"],
+              article_tags: [on: "article_tags.article_id = articles.id"],
+              tags: [on: "tags.id = article_tags.tag_id"],
+              tag_texts: [on: "tag_texts.tag_id = tags.id"]
+            ],
+            fields: [
+              id: [ecto_type: :uuid],
+              title: [ecto_type: :string],
+              summary: [ecto_type: :string],
+              publish_date: [ecto_type: :utc_datetime],
+              draft: [ecto_type: :boolean],
+              word_count: [ecto_type: :integer],
+              tags: [
+                binding: :tags,
+                column: :name,
+                ecto_type: {:array, :string}
+              ],
+              tag_titles: [
+                binding: :tag_texts,
+                column: :title,
+                ecto_type: {:array, :string}
+              ],
+              author: [
+                binding: :authors,
+                column: :full_name,
+                ecto_type: :string
+              ]
+            ],
+            data_fields: [
+              :id,
+              :title,
+              :author,
+              :tags,
+              :tag_titles,
+              {:draft,
+               [{:operations, ["cast(? as integer)"]}, {:ecto_type, :integer}]},
+              {:indicators,
+               [
+                 word_count: [
+                   {:operations, ["cast(? as text)"]},
+                   {:ecto_type, :string}
+                 ],
+                 type: [binding: :tags, column: :name]
+               ]}
+            ],
+            text_fields: [:author, :title, :summary],
+            sort_fields: [:author, :publish_date],
+            facet_fields: [
+              :author,
+              {:tags, [label: :tag_titles]},
+              {:word_count, [number_range_bounds: [2000, 4000, 6000, 8000]]},
+              {:publish_date,
+               [
+                 date_range_bounds: [
+                   "now() - interval '1 year'",
+                   "now() - interval '3 month'",
+                   "now() - interval '1 month'",
+                   "now() - interval '1 week'",
+                   "now() - interval '1 day'"
+                 ]
+               ]},
+              {:hierarchies,
+               [
+                 category_author: [path: [:author]],
+                 category_author_tags: [path: [:author, :tags]],
+                 category_tags: [path: [:tags]],
+                 category_tags_author: [path: [:tags, :author]]
+               ]}
+            ]
+          ]
+        ],
+        default_order: %{
+          order_by: [:sort_publish_date, :sort_author],
+          order_directions: [:desc, :asc]
+        }
       ]
 
       assert Fase.options(ExtendedFacetSchema) == expected
@@ -253,6 +257,60 @@ defmodule Fase.Test.SchemaTest do
       ]
 
       assert Fase.options(TimestampsFacetSchema) == expected
+    end
+
+    test "operations schema" do
+      expected = [
+        module: Fase.Test.MyApp.OperationsFacetSchema,
+        sources: [
+          articles: [
+            joins: [
+              author_articles: [on: "author_articles.article_id = articles.id"],
+              authors: [on: "authors.id = author_articles.author_id"]
+            ],
+            fields: [
+              {:title, [ecto_type: :string]},
+              {:summary, [ecto_type: :string]},
+              {:publish_date, [ecto_type: :utc_datetime]},
+              {:author,
+               [binding: :authors, column: :full_name, ecto_type: :string]},
+              {:draft, [ecto_type: :boolean]},
+              {:word_count, [ecto_type: :integer]}
+            ],
+            data_fields: [
+              :title,
+              :author,
+              {:publish_date,
+               [operations: ["to_char(?, 'YYYY-MM-DD')"], ecto_type: :string]},
+              {:indicators,
+               [
+                 word_count: [
+                   operations: ["cast(? as text)"],
+                   ecto_type: :string
+                 ]
+               ]}
+            ],
+            text_fields: [
+              :summary,
+              {:title,
+               [operations: ["initcap(?)", "concat(?, ' ', length(?))"]]},
+              {:author, [operations: ["unaccent(?)"]]},
+              {:publish_date, [operations: ["to_char(?, 'YYYY-MM-DD')"]]},
+              {:draft, [operations: ["cast(NOT ? AS integer)"]]}
+            ],
+            sort_fields: [
+              :author,
+              {:publish_date,
+               [
+                 operations: ["to_char(?, 'YYYYMMDD')", "cast(? as integer)"],
+                 ecto_type: :integer
+               ]}
+            ]
+          ]
+        ]
+      ]
+
+      assert Fase.options(OperationsFacetSchema) == expected
     end
   end
 

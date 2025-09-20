@@ -7,7 +7,6 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
   """
 
   @options [
-    id: [cast: :string],
     sources: [
       articles: [
         joins: [
@@ -28,6 +27,9 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
           ]
         ],
         fields: [
+          id: [
+            ecto_type: :uuid
+          ],
           title: [
             ecto_type: :string
           ],
@@ -60,16 +62,19 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
           ]
         ],
         data_fields: [
+          :id,
           :title,
           :author,
           :tags,
           :tag_titles,
           draft: [
-            cast: :integer
+            operations: ["cast(? as integer)"],
+            ecto_type: :integer
           ],
           indicators: [
             word_count: [
-              cast: :string
+              operations: ["cast(? as text)"],
+              ecto_type: :string
             ],
             type: [
               binding: :tags,

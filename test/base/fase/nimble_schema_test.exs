@@ -40,12 +40,12 @@ defmodule Fase.Test.NimbleSchemaTest do
               :title,
               :draft,
               publish_date: [
-                cast: :string
+                operations: ["cast(? as text)"]
               ],
               my_custom_data: [
                 :title,
                 draft: [
-                  cast: :integer
+                  operations: ["cast(? as integer)"]
                 ],
                 definition: [
                   binding: :genres,
@@ -54,8 +54,12 @@ defmodule Fase.Test.NimbleSchemaTest do
               ]
             ],
             text_fields: [
-              :title,
-              :summary
+              :summary,
+              title: [
+                operations: [
+                  "unaccent(?)"
+                ]
+              ]
             ],
             facet_fields: [
               :draft
@@ -224,7 +228,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.data_fields.custom_data\n        Key \"xxx\" is not supported.\n        Supported keys are: \"binding\", \"column\", \"cast\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.data_fields.custom_data\n        Key \"xxx\" is not supported.\n        Supported keys are: \"binding\", \"column\", \"operations\", \"ecto_type\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),
@@ -496,7 +500,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.sort_fields.publication_year\n        Key \"xxx\" is not supported.\n        Supported keys are: \"cast\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.sort_fields.publication_year\n        Key \"xxx\" is not supported.\n        Supported keys are: \"operations\", \"ecto_type\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),
@@ -523,6 +527,88 @@ defmodule Fase.Test.NimbleSchemaTest do
 
       assert_raise Fase.InvalidOptionsError,
                    "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields\n        Key \"xxx\" is not supported.\n        Expected a key that is listed in `fields`.",
+                   fn ->
+                     NimbleSchema.validate!(
+                       Keyword.put(options, :module, FacetSchema),
+                       FacetSchema
+                     )
+                   end
+    end
+
+    test "text_fields (empty keyword list)" do
+      options = [
+        sources: [
+          articles: [
+            fields: [
+              author: [
+                ecto_type: :string
+              ]
+            ],
+            text_fields: [
+              author: []
+            ]
+          ]
+        ]
+      ]
+
+      assert_raise Fase.InvalidOptionsError,
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields\n        Invalid value for key \"author\".\n        Expected a non-empty keyword list.",
+                   fn ->
+                     NimbleSchema.validate!(
+                       Keyword.put(options, :module, FacetSchema),
+                       FacetSchema
+                     )
+                   end
+    end
+
+    test "text_fields (invalid value)" do
+      options = [
+        sources: [
+          articles: [
+            fields: [
+              author: [
+                ecto_type: :string
+              ]
+            ],
+            text_fields: [
+              author: [
+                operations: ""
+              ]
+            ]
+          ]
+        ]
+      ]
+
+      assert_raise Fase.InvalidOptionsError,
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields.author\n        Invalid value for key \"operations\".\n        Expected a non-empty list.",
+                   fn ->
+                     NimbleSchema.validate!(
+                       Keyword.put(options, :module, FacetSchema),
+                       FacetSchema
+                     )
+                   end
+    end
+
+    test "text_fields (invalid keyword list)" do
+      options = [
+        sources: [
+          articles: [
+            fields: [
+              author: [
+                ecto_type: :string
+              ]
+            ],
+            text_fields: [
+              author: [
+                ops: [""]
+              ]
+            ]
+          ]
+        ]
+      ]
+
+      assert_raise Fase.InvalidOptionsError,
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields.author\n        Key \"ops\" is not supported.\n        Supported keys are: \"operations\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),

@@ -433,16 +433,11 @@ defmodule Fase.SearchView do
   # ID columns
 
   @spec create_id_columns(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_id_columns(source, search_view_description) do
+  defp create_id_columns(source, _) do
     %{table_name: table_name} = source
-    id_cast = search_view_description.id |> get_in([:cast])
 
     [
-      if id_cast do
-        "CAST(#{table_name}.id AS #{Constants.ecto_type_to_postgres(id_cast)}) AS id"
-      else
-        "#{table_name}.id AS id"
-      end,
+      "#{table_name}.id AS id",
       "'#{table_name}' AS source"
     ]
     |> Enum.join(",\n")
@@ -500,12 +495,17 @@ defmodule Fase.SearchView do
 
     table_and_column =
       table_and_column_string(table_name, column_name)
-      |> maybe_cast(data_field.cast)
+
+    ecto_type = data_field.ecto_type || ecto_type
+
+    value =
+      (data_field.operations || [])
+      |> run_operations(table_and_column)
 
     case ecto_type do
-      {:array, _} -> "'#{name}', array_agg(DISTINCT #{table_and_column})"
-      :string -> "'#{name}', string_agg(DISTINCT #{table_and_column}, ', ')"
-      _ -> "'#{name}', #{table_and_column}"
+      {:array, _} -> "'#{name}', array_agg(DISTINCT #{value})"
+      :string -> "'#{name}', string_agg(DISTINCT #{value}, ', ')"
+      _ -> "'#{name}', #{value}"
     end
   end
 
@@ -524,7 +524,7 @@ defmodule Fase.SearchView do
     table_and_columns =
       entries
       |> Enum.map(fn
-        %{name: name, cast: cast, field_name: field_name}
+        %{name: name, operations: operations, field_name: field_name}
         when not is_nil(field_name) ->
           field = fields |> Enum.find(&(&1.name == field_name))
 
@@ -534,28 +534,35 @@ defmodule Fase.SearchView do
                 name: name,
                 table_name: table_name,
                 column_name: column_name,
-                cast: cast
+                operations: operations
               }
 
             _ ->
               nil
           end
 
-        %{name: name, cast: cast, binding: binding, column: column} ->
-          %{name: name, table_name: binding, column_name: column, cast: cast}
+        %{name: name, operations: operations, binding: binding, column: column} ->
+          %{
+            name: name,
+            table_name: binding,
+            column_name: column,
+            operations: operations
+          }
 
         _ ->
           nil
       end)
       |> Enum.filter(&(!!&1))
-      |> Enum.map(
-        &Map.put(
-          &1,
+      |> Enum.map(fn entry ->
+        Map.put(
+          entry,
           :table_and_column,
-          table_and_column_string(&1.table_name, &1.column_name)
-          |> maybe_cast(&1.cast)
+          run_operations(
+            entry.operations,
+            table_and_column_string(entry.table_name, entry.column_name)
+          )
         )
-      )
+      end)
 
     key_values =
       table_and_columns
@@ -576,23 +583,47 @@ defmodule Fase.SearchView do
 
   @spec create_text_column(Source.t(), SearchViewDescription.t()) :: String.t()
   defp create_text_column(
-         %{fields: fields, text_fields: text_fields, joins: joins} = _source,
+         %{
+           table_name: current_source_table_name,
+           fields: fields,
+           text_fields: text_fields,
+           joins: joins
+         } = _source,
          _
        )
        when is_list(text_fields) and text_fields != [] do
     fields_array =
-      fields
-      |> Enum.filter(&(&1.name in text_fields))
-      |> Enum.map_join(",\n", fn field ->
+      text_fields
+      |> Enum.map(
+        &%{
+          text_field: &1,
+          field:
+            Enum.find(fields, fn field -> field.name == &1.name end)
+            |> Map.put(:table_name, current_source_table_name)
+        }
+      )
+      |> Enum.map_join(",\n", fn %{text_field: text_field, field: field} ->
         {table_name, column_name} = get_table_and_column(field, joins)
         table_and_column = table_and_column_string(table_name, column_name)
 
+        default_operations =
+          case field.ecto_type do
+            :string -> []
+            _ -> ["CAST(? AS text)"]
+          end
+
+        custom_operations = text_field.operations || []
+
+        value =
+          Enum.concat(custom_operations, default_operations)
+          |> run_operations(table_and_column)
+
         case field.ecto_type do
           :string ->
-            "  COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
+            "  COALESCE(string_agg(DISTINCT #{value}, ', '), '')"
 
           _ ->
-            "  COALESCE(CAST(#{table_and_column} AS text), '')"
+            "  COALESCE(#{value}, '')"
         end
       end)
 
@@ -809,9 +840,9 @@ defmodule Fase.SearchView do
 
       create_sort_statement(
         %{
-          cast: sort_field.cast,
+          operations: sort_field.operations,
           current_source_table_name: current_source_table_name,
-          ecto_type: ecto_type,
+          ecto_type: sort_field.ecto_type || ecto_type,
           field: field,
           joins: joins,
           sort_column_name: sort_column_name
@@ -826,7 +857,7 @@ defmodule Fase.SearchView do
   defp create_sort_statement(attrs, field_in_current_source_sort_fields)
        when field_in_current_source_sort_fields do
     %{
-      cast: cast,
+      operations: operations,
       current_source_table_name: current_source_table_name,
       ecto_type: ecto_type,
       field: field,
@@ -836,16 +867,17 @@ defmodule Fase.SearchView do
 
     {table_name, column_name} = get_table_and_column(field, joins)
     table_and_column = table_and_column_string(table_name, column_name)
+    value = run_operations(operations, table_and_column)
 
     ref =
       maybe_aggregate(
-        table_and_column,
+        value,
         current_source_table_name,
         table_name,
         ecto_type
       )
 
-    "#{ref |> maybe_cast(cast)} AS #{sort_column_name}"
+    "#{ref} AS #{sort_column_name}"
   end
 
   defp create_sort_statement(
@@ -859,13 +891,17 @@ defmodule Fase.SearchView do
 
   # Util functions
 
-  defp maybe_cast(value, cast) when not is_nil(cast),
-    do: "CAST(#{value} AS #{Constants.ecto_type_to_postgres(cast)})"
+  defp run_operations(operations, value)
+       when is_list(operations) and operations != [] do
+    Enum.reduce(operations, value, fn operation, acc ->
+      operation |> String.replace("?", acc)
+    end)
+  end
 
-  defp maybe_cast(value, _cast), do: value
+  defp run_operations(_operations, value), do: value
 
   defp maybe_aggregate(
-         table_and_column,
+         value,
          current_source_table_name,
          table_name,
          ecto_type
@@ -874,19 +910,19 @@ defmodule Fase.SearchView do
 
     cond do
       is_tuple(ecto_type) and elem(ecto_type, 0) == :array ->
-        "array_agg(DISTINCT #{table_and_column})"
+        "array_agg(DISTINCT #{value})"
 
       ecto_type == :string and needs_aggregate ->
-        "COALESCE(string_agg(DISTINCT #{table_and_column}, ', '), '')"
+        "COALESCE(string_agg(DISTINCT #{value}, ', '), '')"
 
       ecto_type == :boolean and needs_aggregate ->
-        "every(#{table_and_column}.inactive)"
+        "every(#{value})"
 
       needs_aggregate ->
-        "any_value(#{table_and_column}.inactive)"
+        "any_value(#{value})"
 
       true ->
-        table_and_column
+        value
     end
   end
 
