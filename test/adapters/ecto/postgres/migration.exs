@@ -11,7 +11,8 @@ defmodule Fase.Test.Repo.Postgres.Migration do
       SQL.query(Fase.Test.Repo, sql, [])
     end)
 
-    # unaccent extension and function
+    # unaccent extension
+
     execute(
       "CREATE EXTENSION IF NOT EXISTS unaccent;",
       "DROP EXTENSION IF EXISTS unaccent;"

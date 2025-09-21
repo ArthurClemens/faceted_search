@@ -65,11 +65,11 @@ Data from one or more database tables and columns is aggregated into a "search v
 
 The search view contains these base columns:
 
-- `id` - The column that contains the data source record ID - useful for navigation or performing additional database lookups.
-- `source` - A `string` column that contains the data source table name.
-- `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
-- `text` - A `text` column that contains a "bag of words" per row, used for text searches.
-- `tsv` - A `tsvector` column used for storing facet data.
+- `id` The column that contains the data source record ID - useful for navigation or performing additional database lookups.
+- `source` A `string` column that contains the data source table name.
+- `data` A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
+- `text` A `text` column that contains a "bag of words" per row, used for text searches.
+- `tsv` A `tsvector` column used for storing facet data.
 
 Additional sort columns are added when option `sort_fields` is used - see [Sorting ↓](#sorting).
 
@@ -195,60 +195,6 @@ search_params = %{
     }
   ]
 }
-```
-
-## Casting and data transforms
-
-Field values can be cast or otherwise transformed using Postgres functions.
-The `transforms` option accepts a list of strings, each containing a Postgres function or type operator. The question mark `?` is a placeholder for the current value, which is updated after each operation.
-If the resulting value has a different type than the field type defined in `fields`, an additional `ecto_type` entry is required.
-
-```elixir
-  draft: [
-    transforms: [
-      "cast(? AS integer)"
-    ],
-    ecto_type: :integer
-  ]
-```
-
-Then we can use the integer value in the filter search parameters:
-
-```elixir
-search_params = %{
-  filters: [
-    %{
-      field: :draft,
-      op: :==,
-      value: 1
-    }
-  ]
-}
-```
-
-The `transform` option is available for:
-- `data_fields`
-- `text_fields`
-- `sort_fields`
-
-### Examples
-
-Format a timestamp to a searchable date:
-
-```elixir
-transforms: ["to_char(?, 'YYYY-MM-DD')"]
-```
-
-Remove accented characters (requires [Postgres extension unaccent ⤴](https://www.postgresql.org/docs/current/unaccent.html )):
-
-```elixir
-transforms: ["unaccent(?)"]
-```
-
-Change text to title case:
-
-```elixir
-transforms: ["initcap(?)"]
 ```
 
 ## Sorting
@@ -694,8 +640,8 @@ Ranges divide numerical and date entries into distinct categories (buckets), for
 
 In the schema configuration for `facet_fields`, use range bound options to define the bounds of the buckets.
 
-- `number_range_bounds` - for numerical data
-- `date_range_bounds` - for dates, timestamps, and intervals
+- `number_range_bounds` For numerical data
+- `date_range_bounds` For dates, timestamps, and intervals
 
 When using date ranges, refresh the search view at least as often as the smallest configured interval to avoid outdated values.
 
@@ -1270,6 +1216,88 @@ The `scope_keys` option must be set separately for each source.
  ]
 ]
 ```
+
+## Data and search transforms
+
+In this chapter:
+
+- [Data transforms](#data-transforms)
+- [Search transforms](#search-transforms)
+
+### Data transforms
+
+Field values that are stored in the search view can be cast or otherwise transformed using Postgres functions.
+
+The `transforms` option accepts a list of strings, each containing a Postgres function or type operator. The question mark `?` is a placeholder for the current value, which is updated after each operation.
+If the resulting value has a different type than the field type defined in `fields`, an additional `ecto_type` entry is required.
+
+After casting a value to an integer:
+
+```elixir
+  draft: [
+    transforms: [
+      "cast(? AS integer)"
+    ],
+    ecto_type: :integer
+  ]
+```
+
+we can use the integer value in the filter search parameters:
+
+```elixir
+search_params = %{
+  filters: [
+    %{
+      field: :draft,
+      op: :==,
+      value: 1
+    }
+  ]
+}
+```
+
+The `transform` option is available for:
+- `data_fields`
+- `text_fields`
+- `sort_fields`
+
+**Examples**
+
+Format a timestamp to a searchable date:
+
+```elixir
+transforms: ["to_char(?, 'YYYY-MM-DD')"]
+```
+
+Remove accented characters (requires [Postgres extension unaccent ⤴](https://www.postgresql.org/docs/current/unaccent.html) to be installed):
+
+```elixir
+transforms: ["unaccent(?)"]
+```
+
+Change text to title case:
+
+```elixir
+transforms: ["initcap(?)"]
+```
+
+### Search transforms
+
+Database and search values while performing a search can be transformed using callback function `search_transform/3`.
+
+For example, if the applied filters produce the following database expression:
+```sql
+WHERE text ILIKE '%geology%'
+```
+
+the `search_transform/3` callback can be used to modify the left side, the right side, or both.
+A callback that applies `unaccent` to both sides would produce:
+
+```sql
+WHERE unaccent(text) ILIKE unaccent('%geology%')
+```
+
+[Callbacks: search_transform/3](Fase.html#c:search_transform/3)
 
 ## Multi-tenancy and prefix
 

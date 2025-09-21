@@ -6,12 +6,16 @@ defmodule Fase.FlopSchema do
   alias Fase.Constants
   alias Fase.Filter
 
-  @default_filterable_fields [:source, :text]
-  @source_field [
+  @default_fields [
     source: [
+      ecto_type: :string
+    ],
+    text: [
       ecto_type: :string
     ]
   ]
+  @default_filterable_fields Keyword.keys(@default_fields)
+
   @spec create_flop_custom_fields_option(schema_options()) :: Keyword.t()
   def create_flop_custom_fields_option(options) do
     %{fields: fields, data_fields: data_fields, facet_fields: facet_fields} =
@@ -19,7 +23,7 @@ defmodule Fase.FlopSchema do
       |> Keyword.get_values(:sources)
       |> List.flatten()
       |> Enum.reduce(
-        %{fields: [@source_field], data_fields: [], facet_fields: []},
+        %{fields: [@default_fields], data_fields: [], facet_fields: []},
         fn {_source, source_options}, acc ->
           fields = Keyword.get_values(source_options, :fields) |> List.flatten()
 
@@ -61,9 +65,15 @@ defmodule Fase.FlopSchema do
         clean_up_fields(existing)
       end)
 
+    module = Keyword.get(options, :module)
+
     Enum.concat(
-      create_filter_field_options(fields, data_fields),
-      create_facet_search_field_options(facet_fields, fields)
+      create_filter_field_options(fields, data_fields, module),
+      create_facet_search_field_options(
+        facet_fields,
+        fields,
+        module
+      )
     )
   end
 
@@ -73,14 +83,12 @@ defmodule Fase.FlopSchema do
       |> List.flatten()
       |> Enum.uniq()
 
-  defp create_filter_field_options(fields, data_fields) do
+  defp create_filter_field_options(fields, data_fields, module) do
     fields
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
       ecto_type =
         get_ecto_type_from_data_fields(data_fields, column_name) ||
           Keyword.get(column_options, :ecto_type)
-
-      filter = Keyword.get(column_options, :filter)
 
       operators = column_options[:operators]
 
@@ -90,7 +98,9 @@ defmodule Fase.FlopSchema do
       custom_field =
         {column_name,
          [
-           filter: filter || {Filter, :filter, [ecto_type: ecto_type]},
+           filter:
+             Keyword.get(column_options, :filter) ||
+               {Filter, :filter, [ecto_type: ecto_type, module: module]},
            ecto_type: ecto_type
          ] ++ allowed_operators_option}
 
@@ -107,7 +117,7 @@ defmodule Fase.FlopSchema do
 
   # Skip warning: Atoms are generated at compile time.
   # sobelow_skip ["DOS.BinToAtom"]
-  defp create_facet_search_field_options(facet_fields, fields) do
+  defp create_facet_search_field_options(facet_fields, fields, module) do
     facet_fields
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
       field_options = Keyword.get(fields, column_name, [])
@@ -152,7 +162,8 @@ defmodule Fase.FlopSchema do
                 field_reference: field_reference,
                 is_facet_search: true,
                 is_range_facet: is_range_facet,
-                is_hierarchy_facet: is_hierarchy_facet
+                is_hierarchy_facet: is_hierarchy_facet,
+                module: module
               ]},
            ecto_type: facet_ecto_type
          ]}

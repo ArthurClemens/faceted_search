@@ -1,7 +1,9 @@
-defmodule Fase.Test.MyApp.OperationsFacetSchema do
+defmodule Fase.Test.MyApp.TransformsFacetSchema do
   @moduledoc """
   A facet schema to test transforms
   """
+
+  import Ecto.Query, warn: false
 
   @options [
     sources: [
@@ -15,6 +17,9 @@ defmodule Fase.Test.MyApp.OperationsFacetSchema do
           ]
         ],
         fields: [
+          text: [
+            ecto_type: :string
+          ],
           title: [
             ecto_type: :string
           ],
@@ -79,4 +84,18 @@ defmodule Fase.Test.MyApp.OperationsFacetSchema do
   use Fase, @options
 
   def schema_options, do: @options
+
+  @impl Fase
+  def search_transform(_, term_or_expression, %{field: field})
+      when field in [:author, :text] do
+    dynamic(
+      [_binding],
+      fragment(
+        "unaccent(?)",
+        ^term_or_expression
+      )
+    )
+  end
+
+  def search_transform(_, term_or_expression, _), do: term_or_expression
 end

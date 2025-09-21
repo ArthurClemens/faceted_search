@@ -182,10 +182,13 @@ defmodule Fase do
   @type database_label :: String.t()
 
   @doc """
-  Configures one or more scopes when creating the search view.
+  Defines a scope filter when creating the search view.
+
   Use together with option `scopes` under `source`. The list of scope keys are used
-  to selectively call the `scope_by/2` callback functions.
+  to selectively call this `scope_by/2` callback functions.
   Each returned map is used to render a `WHERE` clause in the search view creation.
+
+  Place the callback in the module that defines the schema, and **above the schema**.
 
   See also: `create_search_view/3`.
 
@@ -203,26 +206,25 @@ defmodule Fase do
 
   Then 2 `scopy_by/2` callback functions with corresponding keys will define the scope rules. For example:
 
-      defmodule MyApp.FacetSchema do
+      @impl Fase
+      def scope_by(:current_user, scope) do
+        %{
+          field: :user_id,
+          comparison: "=",
+          value: scope.user.id
+        }
+      end
 
-          def scope_by(:current_user, scope) do
-            %{
-              field: :user_id,
-              comparison: "=",
-              value: scope.user.id
-            }
-          end
+      def scope_by(:publication_year, scope) do
+        %{
+          field: :publication_year,
+          comparison: ">",
+          value: scope.publication_year
+        }
+      end
 
-          def scope_by(:publication_year, scope) do
-            %{
-              field: :publication_year,
-              comparison: ">",
-              value: scope.publication_year
-            }
-          end
+      use Fase, ...
 
-          use Fase,
-            ...
   """
   @callback scope_by(scope_key(), scope() | nil) :: %{
               field: atom(),
@@ -231,46 +233,105 @@ defmodule Fase do
             }
 
   @doc """
-  Returns a custom option label. If `nil` is returned, the option value as string will be used.
+  Adds a transformation step to the search query when a filter is applied.
+
+  For example, if the applied filters produce the following database expression:
+  ```sql
+  WHERE text ILIKE '%geology%'
+  ```
+
+  the `search_transform/3` callback can be used to modify the left side, the right side, or both.
+  A callback that applies `unaccent` to both sides would produce:
+
+  ```sql
+  WHERE unaccent(text) ILIKE unaccent('%geology%')
+  ```
 
   Parameters:
-  - `facet_name` - Name of the facet
-  - `option_value` - Value
-  - `database_label` - The database label if set in [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields)
+  - `type`:
+    - `expression` The callback is applied to the left side
+    - `token` The callback is applied to the right side
+    - `_` The callback is applied to both sides
+  - `token_or_expression` The search token or search expression.
+  - `context` A map used for pattern matching to conditionally apply the transformation. Keys:
+    - `module` The calling module
+    - `filter` The `Flop.Filter` map
+    - `ecto_type` The Ecto type
+    - `query_value` The filter value after `Ecto.Type.cast` is applied.
+    - `field` The field name
+
+  Place the callback in the module that defines the schema.
 
   ## Examples
 
-      defmodule MyApp.FacetSchema do
+      import Ecto.Query, warn: false
 
-        def option_label(:favorite, value, _) do
-          if value, do: "Yes", else: "No"
+      @impl Fase
+      def search_transform(:token, token, _) do
+        dynamic(
+          [_binding],
+          fragment(
+            "unaccent(?)",
+            ^token
+          )
+        )
+      end
+
+      def search_transform(:expression, expression, _), do: expression
+
+
+  To apply the transformation only on the `author` field:
+
+      def search_transform(_, term_or_expression, %{field: :author}) do
+        ...
+      end
+
+  """
+  @callback search_transform(:token | :expression, term(), map()) ::
+              Ecto.Queryable.t()
+
+  @doc """
+  Returns a custom option label.
+
+  Parameters:
+  - `facet_name` Name of the facet
+  - `option_value` Value
+  - `database_label` The database label if set in [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields)
+
+  Return `nil` to use the option value as string.
+
+  Place the callback in the module that defines the schema.
+
+  ## Examples
+
+      @impl Fase
+      def option_label(:favorite, value, _) do
+        if value, do: "Yes", else: "No"
+      end
+
+      def option_label(:user_roles, value, _) do
+        case value do
+          :admin -> gettext("Admin")
+          :support -> gettext("Support")
+          :qa -> gettext("Q&A")
+          _ -> value
         end
+      end
 
-        def option_label(:user_roles, value, _) do
-          case value do
-            :admin -> gettext("Admin")
-            :support -> gettext("Support")
-            :qa -> gettext("Q&A")
-            _ -> value
-          end
+      def option_label(:languages, value, database_label) do
+        case value do
+          "en" -> "English (UK)"
+          _ -> database_label
         end
+      end
 
-        def option_label(:languages, value, database_label) do
-          case value do
-            "en" -> "English (UK)"
-            _ -> database_label
-          end
-        end
-
-        def option_label(_, _, _), do: nil
-
-      ...
+      def option_label(_, _, _), do: nil
 
   """
   @callback option_label(facet_name(), option_value(), database_label() | nil) ::
               String.t() | nil
 
-  @optional_callbacks scope_by: 2, option_label: 3
+  @optional_callbacks scope_by: 2, option_label: 3, search_transform: 3
 
   # Schema
 
@@ -425,9 +486,9 @@ defmodule Fase do
   Performs a Flop search with search parameters and returns a list of matching facets.
 
   Options:
-  - `cache_facets` - see [Caching facet results](README.md#caching-facet-results)
-  - `query_opts` - Supports `prefix`
-  - `repo` - Custom database repo
+  - `cache_facets` See [Caching facet results](README.md#caching-facet-results)
+  - `query_opts` Supports `prefix`
+  - `repo` Custom database repo
 
   ## Examples
 
