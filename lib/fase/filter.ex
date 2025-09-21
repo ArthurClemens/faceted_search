@@ -8,7 +8,7 @@ defmodule Fase.Filter do
 
   require Logger
 
-  alias Fase.Constants
+  alias Fase.Internal.Constants
 
   def filter(query, %Flop.Filter{} = flop_filter, opts) do
     %{field: field, value: value, op: op} = flop_filter

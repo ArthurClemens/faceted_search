@@ -1,4 +1,4 @@
-defmodule Fase.SortField do
+defmodule Fase.SearchView.SortField do
   @moduledoc """
   Properties of a sort field that is included in the search view generation.
   """

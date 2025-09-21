@@ -1,11 +1,11 @@
-defmodule Fase.SearchViewDescription do
+defmodule Fase.SearchView.SearchViewDescription do
   @moduledoc """
   The search view configuration of the processed schema.
   """
 
-  use Fase.Types, include: [:schema_options]
+  use Fase.Internal.Types, include: [:schema_options]
 
-  alias Fase.Source
+  alias Fase.SearchView.Source
 
   @enforce_keys [
     :sources

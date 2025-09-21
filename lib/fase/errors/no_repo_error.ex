@@ -1,4 +1,4 @@
-defmodule Fase.NoRepoError do
+defmodule Fase.Errors.NoRepoError do
   @moduledoc """
   Raised when no Ecto repo was specified. A repo can be configured in Flop - see [Flop documentation](https://hexdocs.pm/flop).
   """

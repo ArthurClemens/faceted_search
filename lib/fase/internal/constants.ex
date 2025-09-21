@@ -1,4 +1,4 @@
-defmodule Fase.Constants do
+defmodule Fase.Internal.Constants do
   @moduledoc false
 
   def facet_search_field_prefix, do: "facet_"

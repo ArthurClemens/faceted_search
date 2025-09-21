@@ -1,4 +1,4 @@
-defmodule Fase.MissingCallbackError do
+defmodule Fase.Errors.MissingCallbackError do
   @moduledoc """
   Raised when no behaviour callback was specified.
   """

@@ -1,14 +1,12 @@
-defmodule Fase.FacetConfig do
-  @moduledoc """
-  Contains type information for a facet.
-  """
+defmodule Fase.Internal.FacetConfig do
+  @moduledoc false
 
-  use Fase.Types,
+  use Fase.Internal.Types,
     include: [:range_types]
 
-  alias Fase.Constants
-  alias Fase.FacetConfig
-  alias Fase.SearchViewDescription
+  alias Fase.Internal.Constants
+  alias Fase.Internal.FacetConfig
+  alias Fase.SearchView.SearchViewDescription
 
   @enforce_keys [
     :name,

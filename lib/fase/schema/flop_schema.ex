@@ -1,10 +1,10 @@
-defmodule Fase.FlopSchema do
+defmodule Fase.Schema.FlopSchema do
   @moduledoc false
 
-  use Fase.Types, include: [:schema_options]
+  use Fase.Internal.Types, include: [:schema_options]
 
-  alias Fase.Constants
   alias Fase.Filter
+  alias Fase.Internal.Constants
 
   @default_fields [
     source: [

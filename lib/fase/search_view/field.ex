@@ -1,4 +1,4 @@
-defmodule Fase.Field do
+defmodule Fase.SearchView.Field do
   @moduledoc """
   Properties of a database field from the source table or from a joined table that is included in search view generation.
   """

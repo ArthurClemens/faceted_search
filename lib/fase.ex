@@ -5,7 +5,7 @@ defmodule Fase do
   For an overview of the library, visit the [README](README.md).
   """
 
-  use Fase.Types,
+  use Fase.Internal.Types,
     include: [
       :schema_options,
       :create_search_view_options,
@@ -15,10 +15,10 @@ defmodule Fase do
 
   alias Fase.Facet
   alias Fase.Facets
-  alias Fase.FlopSchema
-  alias Fase.NimbleSchema
+  alias Fase.Schema.FlopSchema
+  alias Fase.Schema.NimbleSchema
   alias Fase.SearchView
-  alias Fase.SearchViewDescription
+  alias Fase.SearchView.SearchViewDescription
 
   @doc """
   Defines the database schema for the search view. Pass the schema configuration via the options -
@@ -48,7 +48,7 @@ defmodule Fase do
 
       use Ecto.Schema
 
-      use Fase.Types,
+      use Fase.Internal.Types,
         include: [
           :schema_options,
           :create_search_view_options,
@@ -349,12 +349,12 @@ defmodule Fase do
     do: module.options()
 
   @doc """
-  Returns the `Fase.SearchViewDescription` used to build the search view. Useful for debugging problems.
+  Returns the `Fase.SearchView.SearchViewDescription` used to build the search view. Useful for debugging problems.
 
   ## Examples
 
       iex> Fase.search_view_description(MyApp.FacetSchema)
-      %Fase.SearchViewDescription{}
+      %Fase.SearchView.SearchViewDescription{}
 
   """
   @spec search_view_description(module()) :: SearchViewDescription.t()

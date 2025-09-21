@@ -1,4 +1,4 @@
-defmodule Fase.Types do
+defmodule Fase.Internal.Types do
   @moduledoc false
 
   defmacro __using__(opts \\ []) do
@@ -9,7 +9,7 @@ defmodule Fase.Types do
         @type schema_options() :: [
                 unquote(
                   NimbleOptions.option_typespec(
-                    Fase.NimbleSchema.option_schema()
+                    Fase.Schema.NimbleSchema.option_schema()
                   )
                 )
               ]

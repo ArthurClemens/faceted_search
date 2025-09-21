@@ -2,7 +2,7 @@ defmodule Fase.Test.NimbleSchemaTest do
   use ExUnit.Case, async: true
 
   alias __MODULE__.FacetSchema
-  alias Fase.NimbleSchema
+  alias Fase.Schema.NimbleSchema
 
   describe "the validate_options/1 function" do
     test "a valid schema" do

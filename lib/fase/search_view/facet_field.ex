@@ -1,9 +1,9 @@
-defmodule Fase.FacetField do
+defmodule Fase.SearchView.FacetField do
   @moduledoc """
   Properties of a facet field that is included in the search view generation.
   """
 
-  use Fase.Types,
+  use Fase.Internal.Types,
     include: [:range_types]
 
   @enforce_keys [
