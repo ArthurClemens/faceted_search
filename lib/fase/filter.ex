@@ -2,17 +2,19 @@ defmodule Fase.Filter do
   @moduledoc false
 
   # Filters for custom fields
-  # Adds support for searching the `data` JSON column and the `tsv` TSVector column in the document view table.
+  # Adds support for searching the source, data, text and tsv columns in the document view table.
 
   import Ecto.Query, warn: false
 
   require Logger
 
-  alias Fase.Constants
+  alias Fase.Internal.Constants
 
-  def filter(query, %{field: field, value: value, op: op}, opts) do
+  def filter(query, %Flop.Filter{} = flop_filter, opts) do
+    %{field: field, value: value, op: op} = flop_filter
+
+    module = Keyword.get(opts, :module)
     ecto_type = Keyword.get(opts, :ecto_type)
-    source_is_array = Keyword.get(opts, :source_is_array, false)
 
     value_type =
       case ecto_type do
@@ -24,18 +26,30 @@ defmodule Fase.Filter do
 
     case cast_value do
       {:ok, query_value} ->
-        name = Keyword.get(opts, :field_reference, field) |> to_string()
+        field = Keyword.get(opts, :field_reference, field)
+        name = to_string(field)
 
+        source_is_array = Keyword.get(opts, :source_is_array, false)
         source_is_array_value = is_list(value)
         is_facet_search = Keyword.get(opts, :is_facet_search, false)
         is_range_facet = Keyword.get(opts, :is_range_facet, false)
 
+        expression_context = %{
+          source_is_array: source_is_array,
+          is_facet_search: is_facet_search,
+          is_range_facet: is_range_facet
+        }
+
         expr =
-          dynamic_expr(name, ecto_type, %{
-            source_is_array: source_is_array,
-            is_facet_search: is_facet_search,
-            is_range_facet: is_range_facet
-          })
+          dynamic_expr(name, ecto_type, expression_context)
+
+        condition_context = %{
+          module: module,
+          field: field,
+          filter: flop_filter,
+          ecto_type: ecto_type,
+          query_value: query_value
+        }
 
         conditions =
           cond do
@@ -51,7 +65,7 @@ defmodule Fase.Filter do
               get_array_conditions(op, value_type, expr, query_value)
 
             true ->
-              get_conditions(op, expr, query_value)
+              get_conditions(op, expr, query_value, condition_context)
           end
 
         where(query, ^conditions)
@@ -62,25 +76,25 @@ defmodule Fase.Filter do
     end
   end
 
-  defp get_conditions(:==, expr, query_value),
+  defp get_conditions(:==, expr, query_value, _condition_context),
     do: dynamic([r], ^expr == ^query_value)
 
-  defp get_conditions(:!=, expr, query_value),
+  defp get_conditions(:!=, expr, query_value, _condition_context),
     do: dynamic([r], ^expr != ^query_value)
 
-  defp get_conditions(:>, expr, query_value),
+  defp get_conditions(:>, expr, query_value, _condition_context),
     do: dynamic([r], ^expr > ^query_value)
 
-  defp get_conditions(:<, expr, query_value),
+  defp get_conditions(:<, expr, query_value, _condition_context),
     do: dynamic([r], ^expr < ^query_value)
 
-  defp get_conditions(:>=, expr, query_value),
+  defp get_conditions(:>=, expr, query_value, _condition_context),
     do: dynamic([r], ^expr >= ^query_value)
 
-  defp get_conditions(:<=, expr, query_value),
+  defp get_conditions(:<=, expr, query_value, _condition_context),
     do: dynamic([r], ^expr <= ^query_value)
 
-  defp get_conditions(op, expr, query_value)
+  defp get_conditions(op, expr, query_value, condition_context)
        when op in [
               :like,
               :ilike,
@@ -91,9 +105,9 @@ defmodule Fase.Filter do
               :not_like,
               :not_ilike
             ],
-       do: collect_string_conditions(op, expr, query_value)
+       do: collect_string_conditions(op, expr, query_value, condition_context)
 
-  defp get_conditions(op, expr, query_value) do
+  defp get_conditions(op, expr, query_value, _condition_context) do
     Logger.error(
       "Operator #{op} for query value '#{query_value}' is not supported"
     )
@@ -147,6 +161,16 @@ defmodule Fase.Filter do
       fragment(
         "?",
         field(r, :source)
+      )
+    )
+  end
+
+  def dynamic_expr("text", _, _) do
+    dynamic(
+      [r],
+      fragment(
+        "?",
+        field(r, :text)
       )
     )
   end
@@ -231,14 +255,38 @@ defmodule Fase.Filter do
     )
   end
 
-  defp collect_string_conditions(op, expr, query_value) do
+  defp collect_string_conditions(op, expr, query_value, condition_context) do
     op_combinator = combinator(op)
     op_operator_fn = operator_query_fn(op)
 
     query_value
     |> Flop.Misc.split_search_text()
-    |> Enum.map(&op_operator_fn.(&1, expr))
+    |> Enum.map(fn token ->
+      token = maybe_search_transform(:token, token, condition_context)
+      expr = maybe_search_transform(:expression, expr, condition_context)
+      op_operator_fn.(expr, token)
+    end)
     |> dynamic_reducer(op_combinator)
+  end
+
+  defp maybe_search_transform(
+         type,
+         term_or_expression,
+         condition_context
+       ) do
+    if Kernel.function_exported?(
+         condition_context.module,
+         Constants.search_transform_callback(),
+         3
+       ) do
+      apply(condition_context.module, Constants.search_transform_callback(), [
+        type,
+        term_or_expression,
+        condition_context
+      ])
+    else
+      term_or_expression
+    end
   end
 
   defp combinator(:like_or), do: :or
@@ -261,16 +309,16 @@ defmodule Fase.Filter do
     Logger.error("Operator query #{op} is not supported")
   end
 
-  defp like_operator_query(term, expr),
+  defp like_operator_query(expr, term),
     do: dynamic([r], fragment("? LIKE ?", ^expr, ^term))
 
-  defp ilike_operator_query(term, expr),
+  defp ilike_operator_query(expr, term),
     do: dynamic([r], fragment("? ILIKE ?", ^expr, ^term))
 
-  defp not_like_operator_query(term, expr),
+  defp not_like_operator_query(expr, term),
     do: dynamic([r], fragment("? NOT LIKE ?", ^expr, ^term))
 
-  defp not_ilike_operator_query(term, expr),
+  defp not_ilike_operator_query(expr, term),
     do: dynamic([r], fragment("? NOT ILIKE ?", ^expr, ^term))
 
   defp dynamic_reducer(dynamic, :and) do

@@ -571,8 +571,8 @@ sources: [
 
 Range buckets are categories for numerical or date values. Use a range option to define the bounds of the buckets:
 
-- `number_range_bounds` - for numerical data
-- `date_range_bounds` - for dates, timestamps, and intervals
+- `number_range_bounds` for numerical data
+- `date_range_bounds` for dates, timestamps, and intervals
 
 Given the example list or numerical values `[1980, 2000, 2020]`, the following buckets are created:
 
@@ -738,9 +738,9 @@ From the Flop documentation:
 
 ### Map entries
 
-- `order_by` - A list of sort fields, where each field has a `sort_` prefix.
+- `order_by` A list of sort fields, where each field has a `sort_` prefix.
   - Type: `list(atom())`
-- `order_directions` - A list of order directions, where each element corresponds to the `order_by` element at the same index.
+- `order_directions` A list of order directions, where each element corresponds to the `order_by` element at the same index.
   - Type: `list(:asc | :desc)`
 
 ### Example

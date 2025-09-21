@@ -1,4 +1,4 @@
-defmodule Fase.Constants do
+defmodule Fase.Internal.Constants do
   @moduledoc false
 
   def facet_search_field_prefix, do: "facet_"
@@ -6,6 +6,7 @@ defmodule Fase.Constants do
   def tsv_separator, do: "=:="
   def hierarchy_separator, do: ">"
   def scope_callback, do: :scope_by
+  def search_transform_callback, do: :search_transform
   def option_label_callback, do: :option_label
 
   @ecto_to_postgres_types %{

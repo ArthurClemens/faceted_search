@@ -1,4 +1,4 @@
-defmodule Fase.Join do
+defmodule Fase.SearchView.Join do
   @moduledoc """
   Properties of a joined field that is included in the search view generation.
   """

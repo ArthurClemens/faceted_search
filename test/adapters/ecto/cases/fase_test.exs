@@ -7,11 +7,25 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
   alias Fase.Test.MyApp.ExtendedFacetSchema
   alias Fase.Test.MyApp.MultipleSourcesFacetSchema
-  alias Fase.Test.MyApp.OperationsFacetSchema
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
   alias Fase.Test.MyApp.TimestampsFacetSchema
+  alias Fase.Test.MyApp.TransformsFacetSchema
   alias Fase.Test.Repo
+
+  setup_all do
+    on_exit(fn ->
+      [
+        ExtendedFacetSchema,
+        MultipleSourcesFacetSchema,
+        PrefixFacetSchema,
+        ScopedFacetSchema,
+        TimestampsFacetSchema,
+        TransformsFacetSchema
+      ]
+      |> Enum.each(&Fase.drop_search_view(&1, "articles"))
+    end)
+  end
 
   describe "search view" do
     setup do
@@ -1359,7 +1373,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
   describe "transforms" do
     setup do
       articles = init_resources(article_count: 10)
-      Fase.create_search_view(OperationsFacetSchema, "articles")
+      Fase.create_search_view(TransformsFacetSchema, "articles")
 
       %{articles: articles}
     end
@@ -1375,7 +1389,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       ]
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", OperationsFacetSchema, search_params)
+        filtered_search("articles", TransformsFacetSchema, search_params)
 
       assert results
              |> Enum.map(& &1.text)
@@ -1383,7 +1397,26 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
              |> Enum.sort() == expected
     end
 
-    test "data field result", context do
+    test "text field search with accent in the query value" do
+      search_params = %{
+        filters: [%{field: :text, op: :ilike, value: "Hélène"}]
+      }
+
+      expected = [
+        "Analyzes the layered temporal structures present in oral testimonies from post-war societies, integrating insights from history, psychology, and narratology. Temporalities Of Memory: An Interdisciplinary Approach To Post-War Oral Histories 81 Helene Dubois date 0",
+        "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood. Géographie Des Marges : Métaphores Spatiales Dans Les Traités Politiques À L'Époque Moderne 91 Helene Dubois date 0"
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", TransformsFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(& &1.text)
+             |> Enum.map(&String.replace(&1, ~r/(\d{4}-\d{2}-\d{2})/, "date"))
+             |> Enum.sort() == expected
+    end
+
+    test "data field result (search data.publish_date)", context do
       %{articles: articles} = context
 
       first_article_publish_date =
@@ -1406,24 +1439,57 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = [
         %{
           "author" => "Hélène Dubois",
-          "publish_date" => "2025-09-20",
+          "indicators" => [%{"word_count" => "2871"}],
+          "publish_date" => "publish_date",
           "title" =>
-            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
-          "indicators" => [%{"word_count" => "2871"}]
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
         },
         %{
           "author" => "Mateo Alvarez",
-          "publish_date" => "2025-09-20",
+          "indicators" => [%{"word_count" => "3627"}],
+          "publish_date" => "publish_date",
           "title" =>
-            "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
-          "indicators" => [%{"word_count" => "3627"}]
+            "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature"
         }
       ]
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", OperationsFacetSchema, search_params)
+        filtered_search("articles", TransformsFacetSchema, search_params)
 
-      assert results |> Enum.map(& &1.data) |> Enum.sort_by(& &1["title"]) ==
+      assert results
+             |> Enum.map(&Map.replace(&1.data, "publish_date", "publish_date"))
+             |> Enum.sort_by(& &1["title"]) ==
+               expected
+    end
+
+    test "data field search (search data.author, without accent in the query value) (uses callback search_transform/3)" do
+      search_params = %{
+        filters: [%{field: :author, op: :ilike, value: "Dubois Helene"}]
+      }
+
+      expected = [
+        %{
+          "author" => "Hélène Dubois",
+          "indicators" => [%{"word_count" => "3473"}],
+          "publish_date" => "publish_date",
+          "title" =>
+            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
+        },
+        %{
+          "author" => "Hélène Dubois",
+          "indicators" => [%{"word_count" => "2871"}],
+          "publish_date" => "publish_date",
+          "title" =>
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", TransformsFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(&Map.replace(&1.data, "publish_date", "publish_date"))
+             |> Enum.sort_by(& &1["title"]) ==
                expected
     end
 
@@ -1434,7 +1500,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       }
 
       {:ok, {results, _meta}} =
-        filtered_search("articles", OperationsFacetSchema, search_params)
+        filtered_search("articles", TransformsFacetSchema, search_params)
 
       entries = Enum.map(results, & &1.sort_publish_date)
       expected = Enum.sort(entries, :desc)

@@ -1,7 +1,7 @@
 defmodule Fase.SearchView do
   @moduledoc false
 
-  use Fase.Types,
+  use Fase.Internal.Types,
     include: [
       :schema_options,
       :create_search_view_options,
@@ -11,15 +11,15 @@ defmodule Fase.SearchView do
   require Logger
 
   alias Ecto.Adapters.SQL
-  alias Fase.Config
-  alias Fase.Constants
-  alias Fase.DataField
-  alias Fase.FacetField
-  alias Fase.Field
-  alias Fase.Join
-  alias Fase.SearchViewDescription
-  alias Fase.SearchViewError
-  alias Fase.Source
+  alias Fase.Errors.SearchViewError
+  alias Fase.Internal.Constants
+  alias Fase.SearchView.Config
+  alias Fase.SearchView.DataField
+  alias Fase.SearchView.FacetField
+  alias Fase.SearchView.Field
+  alias Fase.SearchView.Join
+  alias Fase.SearchView.SearchViewDescription
+  alias Fase.SearchView.Source
 
   @doc """
   The normalized Postgres view name generated from `view_id`.

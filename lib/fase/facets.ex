@@ -1,7 +1,7 @@
 defmodule Fase.Facets do
   @moduledoc false
 
-  use Fase.Types,
+  use Fase.Internal.Types,
     include: [:facet_search_options]
 
   import Ecto.Query, warn: false
@@ -10,11 +10,11 @@ defmodule Fase.Facets do
 
   alias Ecto.Adapters.SQL
   alias Fase.Cache
-  alias Fase.Config
-  alias Fase.Constants
   alias Fase.Facet
-  alias Fase.FacetConfig
+  alias Fase.Internal.Constants
+  alias Fase.Internal.FacetConfig
   alias Fase.Option
+  alias Fase.SearchView.Config
 
   @typep result_value :: String.t()
   @typep result_label :: String.t()

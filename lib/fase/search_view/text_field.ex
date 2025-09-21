@@ -1,4 +1,4 @@
-defmodule Fase.TextField do
+defmodule Fase.SearchView.TextField do
   @moduledoc """
   Properties of a text field that is included in the search view generation.
   """

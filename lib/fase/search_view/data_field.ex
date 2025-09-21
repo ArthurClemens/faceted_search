@@ -1,9 +1,9 @@
-defmodule Fase.DataField do
+defmodule Fase.SearchView.DataField do
   @moduledoc """
   Properties of a data field that is included in the search view generation.
   """
 
-  alias Fase.CustomDataFieldEntry
+  alias Fase.SearchView.CustomDataFieldEntry
 
   @enforce_keys [
     :name
@@ -57,7 +57,7 @@ defmodule Fase.DataField do
   defp collect_entries(_), do: nil
 end
 
-defmodule Fase.CustomDataFieldEntry do
+defmodule Fase.SearchView.CustomDataFieldEntry do
   @moduledoc """
   Properties of a data field entry that is included in the search view generation.
   """

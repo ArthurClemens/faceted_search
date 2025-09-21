@@ -3,11 +3,11 @@ defmodule Fase.Test.SchemaTest do
 
   alias Fase.Test.MyApp.ExtendedFacetSchema
   alias Fase.Test.MyApp.MultipleSourcesFacetSchema
-  alias Fase.Test.MyApp.OperationsFacetSchema
   alias Fase.Test.MyApp.PrefixFacetSchema
   alias Fase.Test.MyApp.ScopedFacetSchema
   alias Fase.Test.MyApp.SimpleFacetSchema
   alias Fase.Test.MyApp.TimestampsFacetSchema
+  alias Fase.Test.MyApp.TransformsFacetSchema
 
   describe "the options/1 function" do
     test "simple schema" do
@@ -261,7 +261,7 @@ defmodule Fase.Test.SchemaTest do
 
     test "transforms schema" do
       expected = [
-        module: Fase.Test.MyApp.OperationsFacetSchema,
+        module: Fase.Test.MyApp.TransformsFacetSchema,
         sources: [
           articles: [
             joins: [
@@ -269,6 +269,7 @@ defmodule Fase.Test.SchemaTest do
               authors: [on: "authors.id = author_articles.author_id"]
             ],
             fields: [
+              {:text, [ecto_type: :string]},
               {:title, [ecto_type: :string]},
               {:summary, [ecto_type: :string]},
               {:publish_date, [ecto_type: :utc_datetime]},
@@ -310,7 +311,7 @@ defmodule Fase.Test.SchemaTest do
         ]
       ]
 
-      assert Fase.options(OperationsFacetSchema) == expected
+      assert Fase.options(TransformsFacetSchema) == expected
     end
   end
 

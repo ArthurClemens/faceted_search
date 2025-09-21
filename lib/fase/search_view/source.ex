@@ -1,15 +1,15 @@
-defmodule Fase.Source do
+defmodule Fase.SearchView.Source do
   @moduledoc """
-  Part of the `Fase.SearchViewDescription`.
+  Part of the `Fase.SearchView.SearchViewDescription`.
   """
 
-  alias Fase.DataField
-  alias Fase.FacetField
-  alias Fase.Field
-  alias Fase.Join
-  alias Fase.Scope
-  alias Fase.SortField
-  alias Fase.TextField
+  alias Fase.SearchView.DataField
+  alias Fase.SearchView.FacetField
+  alias Fase.SearchView.Field
+  alias Fase.SearchView.Join
+  alias Fase.SearchView.Scope
+  alias Fase.SearchView.SortField
+  alias Fase.SearchView.TextField
 
   @enforce_keys [
     :table_name
@@ -39,7 +39,7 @@ defmodule Fase.Source do
           sort_fields: list(SortField.t()) | nil
         }
 
-  @source_field %Fase.Field{
+  @source_field %Fase.SearchView.Field{
     table_name: :source,
     name: :source,
     ecto_type: :string,

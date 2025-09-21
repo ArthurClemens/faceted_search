@@ -1,10 +1,10 @@
-defmodule Fase.Config do
+defmodule Fase.SearchView.Config do
   @moduledoc false
 
-  use Fase.Types, include: [:create_search_view_options]
+  use Fase.Internal.Types, include: [:create_search_view_options]
 
-  alias Fase.NoRepoError
-  alias Fase.SearchViewError
+  alias Fase.Errors.NoRepoError
+  alias Fase.Errors.SearchViewError
 
   @search_view_prefix "fv_"
   @name_separator "_"

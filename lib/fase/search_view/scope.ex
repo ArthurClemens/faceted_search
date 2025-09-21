@@ -1,4 +1,4 @@
-defmodule Fase.Scope do
+defmodule Fase.SearchView.Scope do
   @moduledoc """
   Definition for the `scope_by` callback.
   """

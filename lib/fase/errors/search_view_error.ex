@@ -1,4 +1,4 @@
-defmodule Fase.SearchViewError do
+defmodule Fase.Errors.SearchViewError do
   @moduledoc """
   Raised when an error occurs when creating a materialized view.
   """
@@ -17,6 +17,6 @@ defmodule Fase.SearchViewError do
 
     """
 
-    %Fase.SearchViewError{message: message}
+    %Fase.Errors.SearchViewError{message: message}
   end
 end

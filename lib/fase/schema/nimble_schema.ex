@@ -1,9 +1,9 @@
-defmodule Fase.NimbleSchema do
+defmodule Fase.Schema.NimbleSchema do
   @moduledoc false
 
-  alias Fase.Constants
+  alias Fase.Errors.MissingCallbackError
+  alias Fase.Internal.Constants
   alias Fase.InvalidOptionsError
-  alias Fase.MissingCallbackError
   alias Fase.SchemaValidationData
 
   @default_schema_fields [
