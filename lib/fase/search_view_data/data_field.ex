@@ -9,25 +9,25 @@ defmodule Fase.DataField do
     :name
   ]
 
-  defstruct name: nil, entries: nil, operations: nil, ecto_type: nil
+  defstruct name: nil, entries: nil, transforms: nil, ecto_type: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
           # optional
           entries: list(CustomDataFieldEntry.t()) | nil,
-          operations: list(String.t()) | nil,
+          transforms: list(String.t()) | nil,
           ecto_type: atom() | nil
         }
 
   @spec new(atom(), Keyword.t() | nil) :: t()
   def new(name, options \\ []) do
     {operation_options, entry_options} =
-      Keyword.split(options, [:operations, :ecto_type])
+      Keyword.split(options, [:transforms, :ecto_type])
 
     struct(__MODULE__, %{
       name: name,
-      operations: Keyword.get(operation_options, :operations),
+      transforms: Keyword.get(operation_options, :transforms),
       ecto_type: Keyword.get(operation_options, :ecto_type),
       entries: collect_entries(entry_options)
     })
@@ -70,7 +70,7 @@ defmodule Fase.CustomDataFieldEntry do
             binding: nil,
             column: nil,
             field_name: nil,
-            operations: nil,
+            transforms: nil,
             ecto_type: nil
 
   @type t() :: %__MODULE__{
@@ -80,7 +80,7 @@ defmodule Fase.CustomDataFieldEntry do
           binding: atom() | nil,
           column: atom() | nil,
           field_name: atom() | nil,
-          operations: list(String.t()) | nil,
+          transforms: list(String.t()) | nil,
           ecto_type: atom() | nil
         }
 end

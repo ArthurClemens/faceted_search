@@ -1,6 +1,6 @@
 defmodule Fase.Test.MyApp.OperationsFacetSchema do
   @moduledoc """
-  A facet schema to test operations
+  A facet schema to test transforms
   """
 
   @options [
@@ -40,12 +40,12 @@ defmodule Fase.Test.MyApp.OperationsFacetSchema do
           :title,
           :author,
           publish_date: [
-            operations: ["to_char(?, 'YYYY-MM-DD')"],
+            transforms: ["to_char(?, 'YYYY-MM-DD')"],
             ecto_type: :string
           ],
           indicators: [
             word_count: [
-              operations: ["cast(? as text)"],
+              transforms: ["cast(? as text)"],
               ecto_type: :string
             ]
           ]
@@ -53,22 +53,22 @@ defmodule Fase.Test.MyApp.OperationsFacetSchema do
         text_fields: [
           :summary,
           title: [
-            operations: ["initcap(?)", "concat(?, ' ', length(?))"]
+            transforms: ["initcap(?)", "concat(?, ' ', length(?))"]
           ],
           author: [
-            operations: ["unaccent(?)"]
+            transforms: ["unaccent(?)"]
           ],
           publish_date: [
-            operations: ["to_char(?, 'YYYY-MM-DD')"]
+            transforms: ["to_char(?, 'YYYY-MM-DD')"]
           ],
           draft: [
-            operations: ["cast(NOT ? AS integer)"]
+            transforms: ["cast(NOT ? AS integer)"]
           ]
         ],
         sort_fields: [
           :author,
           publish_date: [
-            operations: ["to_char(?, 'YYYYMMDD')", "cast(? as integer)"],
+            transforms: ["to_char(?, 'YYYYMMDD')", "cast(? as integer)"],
             ecto_type: :integer
           ]
         ]

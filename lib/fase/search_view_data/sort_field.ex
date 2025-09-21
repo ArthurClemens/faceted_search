@@ -7,13 +7,13 @@ defmodule Fase.SortField do
     :name
   ]
 
-  defstruct name: nil, operations: nil, ecto_type: nil
+  defstruct name: nil, transforms: nil, ecto_type: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
           # optional
-          operations: list(String.t()) | nil,
+          transforms: list(String.t()) | nil,
           ecto_type: atom() | nil
         }
 
@@ -28,7 +28,7 @@ defmodule Fase.SortField do
       __MODULE__,
       %{
         name: name,
-        operations: Keyword.get(options, :operations),
+        transforms: Keyword.get(options, :transforms),
         ecto_type: Keyword.get(options, :ecto_type)
       }
     )

@@ -200,12 +200,12 @@ search_params = %{
 ## Casting and data transforms
 
 Field values can be cast or otherwise transformed using Postgres functions.
-The `operations` option accepts a list of strings, each containing a Postgres function or type operator. The question mark `?` is a placeholder for the current value, which is updated after each operation.
+The `transforms` option accepts a list of strings, each containing a Postgres function or type operator. The question mark `?` is a placeholder for the current value, which is updated after each operation.
 If the resulting value has a different type than the field type defined in `fields`, an additional `ecto_type` entry is required.
 
 ```elixir
   draft: [
-    operations: [
+    transforms: [
       "cast(? AS integer)"
     ],
     ecto_type: :integer
@@ -236,19 +236,19 @@ The `transform` option is available for:
 Format a timestamp to a searchable date:
 
 ```elixir
-operations: ["to_char(?, 'YYYY-MM-DD')"]
+transforms: ["to_char(?, 'YYYY-MM-DD')"]
 ```
 
 Remove accented characters (requires [Postgres extension unaccent ⤴](https://www.postgresql.org/docs/current/unaccent.html )):
 
 ```elixir
-operations: ["unaccent(?)"]
+transforms: ["unaccent(?)"]
 ```
 
 Change text to title case:
 
 ```elixir
-operations: ["initcap(?)"]
+transforms: ["initcap(?)"]
 ```
 
 ## Sorting
@@ -356,12 +356,12 @@ iex> Enum.sort(["1.1", "1.2", "1.10"])
 ["1.1", "1.10", "1.2"]
 ```
 
-To define a transform operation, add `operations` to the sort field entry:
+To change the value type, add `transforms` to the sort field entry:
 
 ```elixir
 sort_fields: [
   category: [
-    operations: [
+    transforms: [
       "cast(? as float)"
     ]
   ]

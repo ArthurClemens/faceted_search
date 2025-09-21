@@ -251,10 +251,10 @@ Either:
 - A keyword list:
   - Key: a field name from option `fields`
   - Values:
-    - A keyword list with key `operations`:
+    - A keyword list with key `transforms`:
       - Type: `list(String.t())`
     - A keyword list with key `ecto_type`
-      - Only if the operations result in a different type than defined in `fields`
+      - Only if the transforms result in a different type than defined in `fields`
       - The Ecto type such as `:string` or `{:array, :string}`.
       - Type: `any()`
 - A keyword list of field name/entry options to generate JSON data from joined tables or fields listed in the `fields` option.
@@ -272,7 +272,7 @@ Entry options are either:
     - Referenced column of the joined table.
     - Type: `atom()`
     - Required: when using `binding`
-  - `operations`
+  - `transforms`
     - Type to cast or transform the value
     - Type: `list(String.t())`
 
@@ -300,7 +300,7 @@ sources: [
 ]
 ```
 
-Use `operations` to transform the data value to another type:
+Use `transforms` to transform the data value to another type:
 
 ```
 fields: [
@@ -312,7 +312,7 @@ fields: [
 data_fields: [
   ...
   draft: [
-    operations: [
+    transforms: [
       "cast(? AS integer)"
     ],
     ecto_type: :integer
@@ -348,7 +348,7 @@ data_fields: [
   ...
   my_custom_data: [
     publish_date: [
-      operations: ["to_char(?, 'YYYY-MM-DD')"],
+      transforms: ["to_char(?, 'YYYY-MM-DD')"],
       ecto_type: :string
     ]
   ]
@@ -434,7 +434,7 @@ Either:
 - A keyword list:
   - Key: a field name from option `fields`
   - Values:
-    - A keyword list with key `operations`:
+    - A keyword list with key `transforms`:
       - Type: `list(String.t())`
 
 ### Examples
@@ -452,7 +452,7 @@ sources: [
 ]
 ```
 
-Transform the values with the `operations` option, where each list item is a Postgres function.
+Transform the values with the `transforms` option, where each list item is a Postgres function.
 The question mark is a placeholder for the current value.
 
 ```
@@ -461,13 +461,13 @@ sources: [
     ...
     text_fields: [
       title: [
-        operations: ["initcap(?)", "concat(?, ' ', length(?))"]
+        transforms: ["initcap(?)", "concat(?, ' ', length(?))"]
       ],
       author: [
-        operations: ["unaccent(?)"]
+        transforms: ["unaccent(?)"]
       ],
       publish_date: [
-        operations: ["to_char(?, 'YYYY-MM-DD')"]
+        transforms: ["to_char(?, 'YYYY-MM-DD')"]
       ]
     ]
   ]
@@ -661,10 +661,10 @@ Either:
 - A keyword list:
   - Key: a field name from option `fields`
   - Values:
-    - A keyword list with key `operations`:
+    - A keyword list with key `transforms`:
       - Type: `list(String.t())`
     - A keyword list with key `ecto_type`
-      - Only if the operations result in a different type than defined in `fields`
+      - Only if the transforms result in a different type than defined in `fields`
       - The Ecto type such as `:string` or `{:array, :string}`.
       - Type: `any()` 
 
@@ -682,7 +682,7 @@ sources: [
 ]
 ```
 
-Transform the values with the `operations` option, where each list item is a Postgres function.
+Transform the values with the `transforms` option, where each list item is a Postgres function.
 The question mark is a placeholder for the current value.
 
 ```
@@ -692,7 +692,7 @@ sources: [
     sort_fields: [
       :title,
       publication_year: [
-        operations: [
+        transforms: [
           "cast(? as float)"
         ],
         ecto_type: :float

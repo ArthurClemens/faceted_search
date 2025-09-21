@@ -68,12 +68,12 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
           :tags,
           :tag_titles,
           draft: [
-            operations: ["cast(? as integer)"],
+            transforms: ["cast(? as integer)"],
             ecto_type: :integer
           ],
           indicators: [
             word_count: [
-              operations: ["cast(? as text)"],
+              transforms: ["cast(? as text)"],
               ecto_type: :string
             ],
             type: [

@@ -104,13 +104,13 @@ defmodule Fase.Test.SearchViewTest do
             prefix: nil,
             scopes: nil,
             sort_fields: [
-              %Fase.SortField{operations: nil, name: :publish_date},
-              %Fase.SortField{operations: nil, name: :author}
+              %Fase.SortField{transforms: nil, name: :publish_date},
+              %Fase.SortField{transforms: nil, name: :author}
             ],
             table_name: :articles,
             text_fields: [
-              %Fase.TextField{name: :title, operations: nil},
-              %Fase.TextField{name: :summary, operations: nil}
+              %Fase.TextField{name: :title, transforms: nil},
+              %Fase.TextField{name: :summary, transforms: nil}
             ]
           }
         ]
@@ -130,37 +130,37 @@ defmodule Fase.Test.SearchViewTest do
                 ecto_type: nil,
                 entries: nil,
                 name: :id,
-                operations: nil
+                transforms: nil
               },
               %Fase.DataField{
                 ecto_type: nil,
                 entries: nil,
                 name: :title,
-                operations: nil
+                transforms: nil
               },
               %Fase.DataField{
                 ecto_type: nil,
                 entries: nil,
                 name: :author,
-                operations: nil
+                transforms: nil
               },
               %Fase.DataField{
                 ecto_type: nil,
                 entries: nil,
                 name: :tags,
-                operations: nil
+                transforms: nil
               },
               %Fase.DataField{
                 ecto_type: nil,
                 entries: nil,
                 name: :tag_titles,
-                operations: nil
+                transforms: nil
               },
               %Fase.DataField{
                 ecto_type: :integer,
                 entries: nil,
                 name: :draft,
-                operations: ["cast(? as integer)"]
+                transforms: ["cast(? as integer)"]
               },
               %Fase.DataField{
                 ecto_type: nil,
@@ -171,7 +171,7 @@ defmodule Fase.Test.SearchViewTest do
                     ecto_type: :string,
                     field_name: :word_count,
                     name: :word_count,
-                    operations: ["cast(? as text)"]
+                    transforms: ["cast(? as text)"]
                   },
                   %Fase.CustomDataFieldEntry{
                     binding: :tags,
@@ -179,11 +179,11 @@ defmodule Fase.Test.SearchViewTest do
                     ecto_type: nil,
                     field_name: nil,
                     name: :type,
-                    operations: nil
+                    transforms: nil
                   }
                 ],
                 name: :indicators,
-                operations: nil
+                transforms: nil
               }
             ],
             facet_fields: [
@@ -408,18 +408,18 @@ defmodule Fase.Test.SearchViewTest do
             prefix: nil,
             scopes: nil,
             sort_fields: [
-              %Fase.SortField{ecto_type: nil, name: :author, operations: nil},
+              %Fase.SortField{ecto_type: nil, name: :author, transforms: nil},
               %Fase.SortField{
                 ecto_type: nil,
                 name: :publish_date,
-                operations: nil
+                transforms: nil
               }
             ],
             table_name: :articles,
             text_fields: [
-              %Fase.TextField{name: :author, operations: nil},
-              %Fase.TextField{name: :title, operations: nil},
-              %Fase.TextField{name: :summary, operations: nil}
+              %Fase.TextField{name: :author, transforms: nil},
+              %Fase.TextField{name: :title, transforms: nil},
+              %Fase.TextField{name: :summary, transforms: nil}
             ]
           }
         ]
@@ -562,15 +562,15 @@ defmodule Fase.Test.SearchViewTest do
               }
             ],
             sort_fields: [
-              %Fase.SortField{name: :author, operations: nil},
-              %Fase.SortField{name: :birthdate, operations: nil},
-              %Fase.SortField{name: :source, operations: nil}
+              %Fase.SortField{name: :author, transforms: nil},
+              %Fase.SortField{name: :birthdate, transforms: nil},
+              %Fase.SortField{name: :source, transforms: nil}
             ],
             table_name: :authors,
             text_fields: [
-              %Fase.TextField{name: :author, operations: nil},
-              %Fase.TextField{name: :birthdate, operations: nil},
-              %Fase.TextField{name: :source, operations: nil}
+              %Fase.TextField{name: :author, transforms: nil},
+              %Fase.TextField{name: :birthdate, transforms: nil},
+              %Fase.TextField{name: :source, transforms: nil}
             ]
           },
           %Fase.Source{
@@ -693,13 +693,13 @@ defmodule Fase.Test.SearchViewTest do
               }
             ],
             sort_fields: [
-              %Fase.SortField{name: :publish_date, operations: nil},
-              %Fase.SortField{name: :author, operations: nil},
-              %Fase.SortField{name: :source, operations: nil}
+              %Fase.SortField{name: :publish_date, transforms: nil},
+              %Fase.SortField{name: :author, transforms: nil},
+              %Fase.SortField{name: :source, transforms: nil}
             ],
             text_fields: [
-              %Fase.TextField{name: :title, operations: nil},
-              %Fase.TextField{name: :summary, operations: nil}
+              %Fase.TextField{name: :title, transforms: nil},
+              %Fase.TextField{name: :summary, transforms: nil}
             ]
           }
         ]
@@ -761,13 +761,13 @@ defmodule Fase.Test.SearchViewTest do
               %Fase.DataField{name: :category_name, entries: nil}
             ],
             text_fields: [
-              %Fase.TextField{name: :article_title, operations: nil},
-              %Fase.TextField{name: :category_name, operations: nil}
+              %Fase.TextField{name: :article_title, transforms: nil},
+              %Fase.TextField{name: :category_name, transforms: nil}
             ],
             facet_fields: nil,
             sort_fields: [
-              %Fase.SortField{name: :article_title, operations: nil},
-              %Fase.SortField{name: :category_name, operations: nil}
+              %Fase.SortField{name: :article_title, transforms: nil},
+              %Fase.SortField{name: :category_name, transforms: nil}
             ]
           }
         ]
@@ -828,8 +828,8 @@ defmodule Fase.Test.SearchViewTest do
             text_fields: nil,
             facet_fields: nil,
             sort_fields: [
-              %Fase.SortField{name: :inserted_at, operations: nil},
-              %Fase.SortField{name: :updated_at, operations: nil}
+              %Fase.SortField{name: :inserted_at, transforms: nil},
+              %Fase.SortField{name: :updated_at, transforms: nil}
             ]
           }
         ]
