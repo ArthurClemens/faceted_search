@@ -499,8 +499,8 @@ defmodule Fase.SearchView do
     ecto_type = data_field.ecto_type || ecto_type
 
     value =
-      (data_field.operations || [])
-      |> run_operations(table_and_column)
+      (data_field.transforms || [])
+      |> run_transforms(table_and_column)
 
     case ecto_type do
       {:array, _} -> "'#{name}', array_agg(DISTINCT #{value})"
@@ -524,7 +524,7 @@ defmodule Fase.SearchView do
     table_and_columns =
       entries
       |> Enum.map(fn
-        %{name: name, operations: operations, field_name: field_name}
+        %{name: name, transforms: transforms, field_name: field_name}
         when not is_nil(field_name) ->
           field = fields |> Enum.find(&(&1.name == field_name))
 
@@ -534,19 +534,19 @@ defmodule Fase.SearchView do
                 name: name,
                 table_name: table_name,
                 column_name: column_name,
-                operations: operations
+                transforms: transforms
               }
 
             _ ->
               nil
           end
 
-        %{name: name, operations: operations, binding: binding, column: column} ->
+        %{name: name, transforms: transforms, binding: binding, column: column} ->
           %{
             name: name,
             table_name: binding,
             column_name: column,
-            operations: operations
+            transforms: transforms
           }
 
         _ ->
@@ -557,8 +557,8 @@ defmodule Fase.SearchView do
         Map.put(
           entry,
           :table_and_column,
-          run_operations(
-            entry.operations,
+          run_transforms(
+            entry.transforms,
             table_and_column_string(entry.table_name, entry.column_name)
           )
         )
@@ -606,17 +606,17 @@ defmodule Fase.SearchView do
         {table_name, column_name} = get_table_and_column(field, joins)
         table_and_column = table_and_column_string(table_name, column_name)
 
-        default_operations =
+        default_transforms =
           case field.ecto_type do
             :string -> []
             _ -> ["CAST(? AS text)"]
           end
 
-        custom_operations = text_field.operations || []
+        custom_transforms = text_field.transforms || []
 
         value =
-          Enum.concat(custom_operations, default_operations)
-          |> run_operations(table_and_column)
+          Enum.concat(custom_transforms, default_transforms)
+          |> run_transforms(table_and_column)
 
         case field.ecto_type do
           :string ->
@@ -840,7 +840,7 @@ defmodule Fase.SearchView do
 
       create_sort_statement(
         %{
-          operations: sort_field.operations,
+          transforms: sort_field.transforms,
           current_source_table_name: current_source_table_name,
           ecto_type: sort_field.ecto_type || ecto_type,
           field: field,
@@ -857,7 +857,7 @@ defmodule Fase.SearchView do
   defp create_sort_statement(attrs, field_in_current_source_sort_fields)
        when field_in_current_source_sort_fields do
     %{
-      operations: operations,
+      transforms: transforms,
       current_source_table_name: current_source_table_name,
       ecto_type: ecto_type,
       field: field,
@@ -867,7 +867,7 @@ defmodule Fase.SearchView do
 
     {table_name, column_name} = get_table_and_column(field, joins)
     table_and_column = table_and_column_string(table_name, column_name)
-    value = run_operations(operations, table_and_column)
+    value = run_transforms(transforms, table_and_column)
 
     ref =
       maybe_aggregate(
@@ -891,14 +891,14 @@ defmodule Fase.SearchView do
 
   # Util functions
 
-  defp run_operations(operations, value)
-       when is_list(operations) and operations != [] do
-    Enum.reduce(operations, value, fn operation, acc ->
+  defp run_transforms(transforms, value)
+       when is_list(transforms) and transforms != [] do
+    Enum.reduce(transforms, value, fn operation, acc ->
       operation |> String.replace("?", acc)
     end)
   end
 
-  defp run_operations(_operations, value), do: value
+  defp run_transforms(_transforms, value), do: value
 
   defp maybe_aggregate(
          value,

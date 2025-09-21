@@ -1356,7 +1356,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     end
   end
 
-  describe "operations" do
+  describe "transforms" do
     setup do
       articles = init_resources(article_count: 10)
       Fase.create_search_view(OperationsFacetSchema, "articles")
@@ -1364,20 +1364,23 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       %{articles: articles}
     end
 
-    test "text field result (text with accents: with operation 'unaccent' will find a match; includes operations 'to_date', 'initcap', 'concat' and 'length')" do
+    test "text field result (text with accents: with operation 'unaccent' will find a match; includes transforms 'to_date', 'initcap', 'concat' and 'length')" do
       search_params = %{
         filters: [%{field: :text, op: :ilike, value: "Helene"}]
       }
 
       expected = [
-        "Analyzes the layered temporal structures present in oral testimonies from post-war societies, integrating insights from history, psychology, and narratology. Temporalities Of Memory: An Interdisciplinary Approach To Post-War Oral Histories 81 Helene Dubois 2025-09-20 0",
-        "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood. Géographie Des Marges : Métaphores Spatiales Dans Les Traités Politiques À L'Époque Moderne 91 Helene Dubois 2025-05-29 0"
+        "Analyzes the layered temporal structures present in oral testimonies from post-war societies, integrating insights from history, psychology, and narratology. Temporalities Of Memory: An Interdisciplinary Approach To Post-War Oral Histories 81 Helene Dubois date 0",
+        "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood. Géographie Des Marges : Métaphores Spatiales Dans Les Traités Politiques À L'Époque Moderne 91 Helene Dubois date 0"
       ]
 
       {:ok, {results, _meta}} =
         filtered_search("articles", OperationsFacetSchema, search_params)
 
-      assert results |> Enum.map(& &1.text) |> Enum.sort() == expected
+      assert results
+             |> Enum.map(& &1.text)
+             |> Enum.map(&String.replace(&1, ~r/(\d{4}-\d{2}-\d{2})/, "date"))
+             |> Enum.sort() == expected
     end
 
     test "data field result", context do

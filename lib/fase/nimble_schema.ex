@@ -22,7 +22,7 @@ defmodule Fase.NimbleSchema do
     id: [
       type: :keyword_list,
       keys: [
-        operations: [
+        transforms: [
           type: {:list, :string},
           required: true
         ]
@@ -168,7 +168,7 @@ defmodule Fase.NimbleSchema do
               when is_list(raw_values) ->
                 if MapSet.subset?(
                      MapSet.new(Keyword.keys(raw_values)),
-                     MapSet.new([:binding, :column, :operations, :ecto_type])
+                     MapSet.new([:binding, :column, :transforms, :ecto_type])
                    ) do
                   :ok
                 else
@@ -180,7 +180,7 @@ defmodule Fase.NimbleSchema do
                     supported_keys: [
                       :binding,
                       :column,
-                      :operations,
+                      :transforms,
                       :ecto_type
                     ]
                   }
@@ -193,19 +193,19 @@ defmodule Fase.NimbleSchema do
           |> validate_options(module, opts, :text_fields,
             get_supported_keyword_list_options: fn
               %{path: [_, _, :text_fields, _], key: key, raw: raw}, _
-              when key == :operations ->
+              when key == :transforms ->
                 if is_list(raw) and raw != [] do
                   :ok
                 else
                   %{
                     error: :empty_lists,
                     key: key,
-                    supported_keys: [:operations]
+                    supported_keys: [:transforms]
                   }
                 end
 
               %{path: [_, _, :text_fields, _], key: key}, _ ->
-                %{error: :unlisted, key: key, supported_keys: [:operations]}
+                %{error: :unlisted, key: key, supported_keys: [:transforms]}
 
               _, _ ->
                 :ok
@@ -257,7 +257,7 @@ defmodule Fase.NimbleSchema do
             get_supported_keyword_list_options: fn
               %{path: [_, _, :sort_fields, _], key: key}, _keys_map ->
                 supported_keys = [
-                  :operations,
+                  :transforms,
                   :ecto_type
                 ]
 

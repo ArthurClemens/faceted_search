@@ -7,19 +7,19 @@ defmodule Fase.TextField do
     :name
   ]
 
-  defstruct name: nil, operations: nil
+  defstruct name: nil, transforms: nil
 
   @type t() :: %__MODULE__{
           # required
           name: atom(),
           # optional
-          operations: list(String.t()) | nil
+          transforms: list(String.t()) | nil
         }
 
   def new(field_options) do
-    {name, operations} =
+    {name, transforms} =
       case field_options do
-        {name, [operations: operations]} -> {name, operations}
+        {name, [transforms: transforms]} -> {name, transforms}
         name -> {name, nil}
       end
 
@@ -27,7 +27,7 @@ defmodule Fase.TextField do
       __MODULE__,
       %{
         name: name,
-        operations: operations
+        transforms: transforms
       }
     )
   end

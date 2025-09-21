@@ -40,12 +40,12 @@ defmodule Fase.Test.NimbleSchemaTest do
               :title,
               :draft,
               publish_date: [
-                operations: ["cast(? as text)"]
+                transforms: ["cast(? as text)"]
               ],
               my_custom_data: [
                 :title,
                 draft: [
-                  operations: ["cast(? as integer)"]
+                  transforms: ["cast(? as integer)"]
                 ],
                 definition: [
                   binding: :genres,
@@ -56,7 +56,7 @@ defmodule Fase.Test.NimbleSchemaTest do
             text_fields: [
               :summary,
               title: [
-                operations: [
+                transforms: [
                   "unaccent(?)"
                 ]
               ]
@@ -228,7 +228,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.data_fields.custom_data\n        Key \"xxx\" is not supported.\n        Supported keys are: \"binding\", \"column\", \"operations\", \"ecto_type\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.data_fields.custom_data\n        Key \"xxx\" is not supported.\n        Supported keys are: \"binding\", \"column\", \"transforms\", \"ecto_type\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),
@@ -500,7 +500,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.sort_fields.publication_year\n        Key \"xxx\" is not supported.\n        Supported keys are: \"operations\", \"ecto_type\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.sort_fields.publication_year\n        Key \"xxx\" is not supported.\n        Supported keys are: \"transforms\", \"ecto_type\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),
@@ -572,7 +572,7 @@ defmodule Fase.Test.NimbleSchemaTest do
             ],
             text_fields: [
               author: [
-                operations: ""
+                transforms: ""
               ]
             ]
           ]
@@ -580,7 +580,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields.author\n        Invalid value for key \"operations\".\n        Expected a non-empty list.",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields.author\n        Invalid value for key \"transforms\".\n        Expected a non-empty list.",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),
@@ -608,7 +608,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields.author\n        Key \"ops\" is not supported.\n        Supported keys are: \"operations\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.text_fields.author\n        Key \"ops\" is not supported.\n        Supported keys are: \"transforms\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),

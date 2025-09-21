@@ -80,11 +80,11 @@ defmodule Fase.Test.SchemaTest do
               :tags,
               :tag_titles,
               {:draft,
-               [{:operations, ["cast(? as integer)"]}, {:ecto_type, :integer}]},
+               [{:transforms, ["cast(? as integer)"]}, {:ecto_type, :integer}]},
               {:indicators,
                [
                  word_count: [
-                   {:operations, ["cast(? as text)"]},
+                   {:transforms, ["cast(? as text)"]},
                    {:ecto_type, :string}
                  ],
                  type: [binding: :tags, column: :name]
@@ -259,7 +259,7 @@ defmodule Fase.Test.SchemaTest do
       assert Fase.options(TimestampsFacetSchema) == expected
     end
 
-    test "operations schema" do
+    test "transforms schema" do
       expected = [
         module: Fase.Test.MyApp.OperationsFacetSchema,
         sources: [
@@ -281,11 +281,11 @@ defmodule Fase.Test.SchemaTest do
               :title,
               :author,
               {:publish_date,
-               [operations: ["to_char(?, 'YYYY-MM-DD')"], ecto_type: :string]},
+               [transforms: ["to_char(?, 'YYYY-MM-DD')"], ecto_type: :string]},
               {:indicators,
                [
                  word_count: [
-                   operations: ["cast(? as text)"],
+                   transforms: ["cast(? as text)"],
                    ecto_type: :string
                  ]
                ]}
@@ -293,16 +293,16 @@ defmodule Fase.Test.SchemaTest do
             text_fields: [
               :summary,
               {:title,
-               [operations: ["initcap(?)", "concat(?, ' ', length(?))"]]},
-              {:author, [operations: ["unaccent(?)"]]},
-              {:publish_date, [operations: ["to_char(?, 'YYYY-MM-DD')"]]},
-              {:draft, [operations: ["cast(NOT ? AS integer)"]]}
+               [transforms: ["initcap(?)", "concat(?, ' ', length(?))"]]},
+              {:author, [transforms: ["unaccent(?)"]]},
+              {:publish_date, [transforms: ["to_char(?, 'YYYY-MM-DD')"]]},
+              {:draft, [transforms: ["cast(NOT ? AS integer)"]]}
             ],
             sort_fields: [
               :author,
               {:publish_date,
                [
-                 operations: ["to_char(?, 'YYYYMMDD')", "cast(? as integer)"],
+                 transforms: ["to_char(?, 'YYYYMMDD')", "cast(? as integer)"],
                  ecto_type: :integer
                ]}
             ]

@@ -209,7 +209,7 @@ defmodule Fase.FlopSchema do
       %{
         name: :"#{Constants.sort_field_prefix()}#{name}",
         ecto_type: ecto_type,
-        operations: Keyword.get(options, :operations)
+        transforms: Keyword.get(options, :transforms)
       }
     end)
   end
