@@ -48,11 +48,34 @@ defmodule Fase.Filter do
           field: field,
           filter: flop_filter,
           ecto_type: ecto_type,
-          query_value: query_value
+          query_value: query_value,
+          filter_opts: opts
         }
+
+        custom_condition =
+          if Kernel.function_exported?(
+               condition_context.module,
+               Constants.search_condition_callback(),
+               3
+             ) do
+            apply(
+              condition_context.module,
+              Constants.search_condition_callback(),
+              [
+                expr,
+                query_value,
+                condition_context
+              ]
+            )
+          else
+            nil
+          end
 
         conditions =
           cond do
+            not is_nil(custom_condition) ->
+              custom_condition
+
             is_facet_search ->
               get_facet_conditions(
                 name,

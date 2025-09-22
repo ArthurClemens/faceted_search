@@ -1223,6 +1223,7 @@ In this chapter:
 
 - [Data transforms](#data-transforms)
 - [Search transforms](#search-transforms)
+- [Search conditions / custom filter function](#search-conditions-custom-filter-function)
 
 ### Data transforms
 
@@ -1283,9 +1284,9 @@ transforms: ["initcap(?)"]
 
 ### Search transforms
 
-Database and search values while performing a search can be transformed using callback function `search_transform/3`.
+During a search, database values and search values can be transformed using the `search_transform/3` callback function.
 
-For example, if the applied filters produce the following database expression:
+For example, if the applied filters would normally produce the following database expression:
 ```sql
 WHERE text ILIKE '%geology%'
 ```
@@ -1297,7 +1298,50 @@ A callback that applies `unaccent` to both sides would produce:
 WHERE unaccent(text) ILIKE unaccent('%geology%')
 ```
 
-[Callbacks: search_transform/3](Fase.html#c:search_transform/3)
+See [Callbacks: search_transform/3](Fase.html#c:search_transform/3)
+
+### Search conditions / custom filter function
+
+During a search, additional conditions can be defined with the `search_condition/2` callback function. This serves as a substitute for Flop's custom filter function.
+
+See [Callbacks: search_condition/2](Fase.html#c:search_condition/2)
+
+**Example**
+
+Modified example from the [Flop documentation: custom fields](https://hexdocs.pm/flop/Flop.Schema.html#module-custom-fields ⤴).
+
+Note that parameter `expression` includes the reference to the table/field. The example assumes that field `inserted_at` is included in schema options `fields` and `data_fields`.
+
+```elixir
+@impl Fase
+def search_condition(expression, %{field: field} = context)
+    when field == :inserted_at do
+  %{filter: filter, filter_opts: filter_opts, query_value: value} = context
+  timezone = Keyword.fetch!(filter_opts, :timezone)
+
+  expr = dynamic(
+    [r],
+    fragment("((? AT TIME ZONE 'utc') AT TIME ZONE ?)",
+    ^expression, ^timezone)
+  )
+
+  case filter.op do
+    :>= -> dynamic([r], ^expr >= ^value)
+    :<= -> dynamic([r], ^expr <= ^value)
+  end
+end
+
+def search_condition(_, _), do: nil
+
+...
+
+Flop.validate_and_run(
+  ecto_schema,
+  search_params,
+  for: MyApp.FacetSchema,
+  extra_opts: [timezone: "Etc/UTC"]
+)
+```
 
 ## Multi-tenancy and prefix
 
