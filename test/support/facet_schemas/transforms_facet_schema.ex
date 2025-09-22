@@ -39,11 +39,15 @@ defmodule Fase.Test.MyApp.TransformsFacetSchema do
           ],
           word_count: [
             ecto_type: :integer
+          ],
+          inserted_at: [
+            ecto_type: :utc_datetime
           ]
         ],
         data_fields: [
           :title,
           :author,
+          :inserted_at,
           publish_date: [
             transforms: ["to_char(?, 'YYYY-MM-DD')"],
             ecto_type: :string
@@ -86,16 +90,58 @@ defmodule Fase.Test.MyApp.TransformsFacetSchema do
   def schema_options, do: @options
 
   @impl Fase
-  def search_transform(_, term_or_expression, %{field: field})
+  def search_transform(_, token_or_expression, %{field: field})
       when field in [:author, :text] do
     dynamic(
       [_binding],
       fragment(
         "unaccent(?)",
-        ^term_or_expression
+        ^token_or_expression
       )
     )
   end
 
-  def search_transform(_, term_or_expression, _), do: term_or_expression
+  def search_transform(_, token_or_expression, _), do: token_or_expression
+
+  @impl Fase
+  def search_condition(expression, %{field: field} = context)
+      when field == :author do
+    # Fuzzy match with levenshtein on first name
+    %{query_value: value} = context
+
+    value
+    |> String.split(" ")
+    |> Enum.map(
+      &dynamic(
+        [r],
+        fragment("levenshtein(split_part(?,' ',1), ?) <= 2", ^expression, ^&1)
+      )
+    )
+    |> Enum.reduce(fn dynamic, acc ->
+      dynamic([r], ^acc or ^dynamic)
+    end)
+  end
+
+  def search_condition(expression, %{field: field} = context)
+      when field == :inserted_at do
+    %{filter: filter, filter_opts: filter_opts, query_value: value} = context
+    timezone = Keyword.fetch!(filter_opts, :timezone)
+
+    expr =
+      dynamic(
+        [r],
+        fragment(
+          "((? AT TIME ZONE 'utc') AT TIME ZONE ?)",
+          ^expression,
+          ^timezone
+        )
+      )
+
+    case filter.op do
+      :>= -> dynamic([r], ^expr >= ^value)
+      :<= -> dynamic([r], ^expr <= ^value)
+    end
+  end
+
+  def search_condition(_, _), do: nil
 end

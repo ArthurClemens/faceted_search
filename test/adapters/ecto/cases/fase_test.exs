@@ -1372,7 +1372,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
   describe "transforms" do
     setup do
-      articles = init_resources(article_count: 10)
+      articles = init_resources(article_count: 10, insert_delay: 150)
       Fase.create_search_view(TransformsFacetSchema, "articles")
 
       %{articles: articles}
@@ -1442,14 +1442,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           "indicators" => [%{"word_count" => "2871"}],
           "publish_date" => "publish_date",
           "title" =>
-            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+          "inserted_at" => "inserted_at"
         },
         %{
           "author" => "Mateo Alvarez",
           "indicators" => [%{"word_count" => "3627"}],
           "publish_date" => "publish_date",
           "title" =>
-            "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature"
+            "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
+          "inserted_at" => "inserted_at"
         }
       ]
 
@@ -1457,7 +1459,11 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         filtered_search("articles", TransformsFacetSchema, search_params)
 
       assert results
-             |> Enum.map(&Map.replace(&1.data, "publish_date", "publish_date"))
+             |> Enum.map(
+               &(&1.data
+                 |> Map.replace("publish_date", "publish_date")
+                 |> Map.replace("inserted_at", "inserted_at"))
+             )
              |> Enum.sort_by(& &1["title"]) ==
                expected
     end
@@ -1473,14 +1479,16 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           "indicators" => [%{"word_count" => "3473"}],
           "publish_date" => "publish_date",
           "title" =>
-            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
+            "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
+          "inserted_at" => "inserted_at"
         },
         %{
           "author" => "Hélène Dubois",
           "indicators" => [%{"word_count" => "2871"}],
           "publish_date" => "publish_date",
           "title" =>
-            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
+            "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
+          "inserted_at" => "inserted_at"
         }
       ]
 
@@ -1488,7 +1496,11 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         filtered_search("articles", TransformsFacetSchema, search_params)
 
       assert results
-             |> Enum.map(&Map.replace(&1.data, "publish_date", "publish_date"))
+             |> Enum.map(
+               &(&1.data
+                 |> Map.replace("publish_date", "publish_date")
+                 |> Map.replace("inserted_at", "inserted_at"))
+             )
              |> Enum.sort_by(& &1["title"]) ==
                expected
     end
@@ -1505,6 +1517,35 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       entries = Enum.map(results, & &1.sort_publish_date)
       expected = Enum.sort(entries, :desc)
       assert entries == expected
+    end
+
+    test "filter search with search_condition callback (author)" do
+      search_params = %{
+        filters: [%{field: :author, op: :==, value: "Matt"}]
+      }
+
+      expected = ["Mateo Alvarez"]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", TransformsFacetSchema, search_params)
+
+      assert results |> Enum.map(& &1.data["author"]) |> Enum.uniq() == expected
+    end
+
+    test "filter search with search_condition callback (inserted_at)" do
+      search_params = %{
+        filters: [
+          %{field: :inserted_at, op: :<=, value: offset_now(-500, :millisecond)}
+        ]
+      }
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", TransformsFacetSchema, search_params,
+          extra_opts: [timezone: "Etc/UTC"]
+        )
+
+      count = Enum.count(results)
+      assert count > 0 and count < 10
     end
   end
 
@@ -2342,6 +2383,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
   defp filtered_search(view_id, schema, search_params, opts \\ []) do
     page_size = Keyword.get(opts, :page_size, 10)
     query_opts = Keyword.get(opts, :query_opts, [])
+    extra_opts = Keyword.get(opts, :extra_opts, [])
 
     ecto_schema = Fase.ecto_schema(schema, view_id)
     query = from(ecto_schema)
@@ -2349,7 +2391,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
     Flop.validate_and_run(query, search_params,
       for: schema,
-      query_opts: query_opts
+      query_opts: query_opts,
+      extra_opts: extra_opts
     )
   end
 

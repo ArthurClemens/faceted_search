@@ -99,8 +99,11 @@ defmodule Fase.Schema.FlopSchema do
         {column_name,
          [
            filter:
-             Keyword.get(column_options, :filter) ||
-               {Filter, :filter, [ecto_type: ecto_type, module: module]},
+             {Filter, :filter,
+              [
+                ecto_type: ecto_type,
+                module: module
+              ]},
            ecto_type: ecto_type
          ] ++ allowed_operators_option}
 

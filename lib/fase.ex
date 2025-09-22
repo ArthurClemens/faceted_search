@@ -175,11 +175,24 @@ defmodule Fase do
     end
   end
 
-  @type scope_key :: atom()
-  @type scope :: term()
   @type facet_name :: atom()
   @type option_value :: term()
   @type database_label :: String.t()
+  @type scope_key :: atom()
+  @type scope :: term()
+  @type search_transform_type :: :token | :expression
+  @type token_or_expression :: term()
+  @type query_value :: term()
+  @type field :: atom()
+  @type transform_context :: %{
+          module: module(),
+          filter: Flop.Filter.t(),
+          ecto_type: :any,
+          query_value: query_value(),
+          field: field(),
+          opts: Keyword.t()
+        }
+  @type dynamic_expr :: %Ecto.Query.DynamicExpr{}
 
   @doc """
   Defines a scope filter when creating the search view.
@@ -226,8 +239,9 @@ defmodule Fase do
       use Fase, ...
 
   """
+
   @callback scope_by(scope_key(), scope() | nil) :: %{
-              field: atom(),
+              field: field(),
               comparison: String.t(),
               value: term()
             }
@@ -249,16 +263,17 @@ defmodule Fase do
 
   Parameters:
   - `type`:
-    - `expression` The callback is applied to the left side
-    - `token` The callback is applied to the right side
+    - `:expression` The callback is applied to the left side
+    - `:token` The callback is applied to the right side
     - `_` The callback is applied to both sides
   - `token_or_expression` The search token or search expression.
   - `context` A map used for pattern matching to conditionally apply the transformation. Keys:
     - `module` The calling module
     - `filter` The `Flop.Filter` map
     - `ecto_type` The Ecto type
-    - `query_value` The filter value after `Ecto.Type.cast` is applied.
+    - `query_value` The filter value
     - `field` The field name
+    - `filter_opts` Extra options passed to the filter function (passed as `extra_opts` to `Flop.validate_and_run`)
 
   Place the callback in the module that defines the schema.
 
@@ -277,18 +292,72 @@ defmodule Fase do
         )
       end
 
-      def search_transform(:expression, expression, _), do: expression
+      def search_transform(_, _, _), do: nil
 
 
   To apply the transformation only on the `author` field:
 
-      def search_transform(_, term_or_expression, %{field: :author}) do
+      def search_transform(_, token_or_expression, %{field: :author}) do
         ...
       end
 
   """
-  @callback search_transform(:token | :expression, term(), map()) ::
+  @callback search_transform(
+              search_transform_type(),
+              token_or_expression(),
+              transform_context()
+            ) ::
               Ecto.Queryable.t()
+
+  @doc """
+  Creates a 'where' condition within a filter query.
+
+  Parameters:
+  - `expression` The dynamic expression generated within the filter query; includes the reference to the table/field.
+  - `context` A map used for pattern matching to conditionally apply the transformation. Keys:
+    - `module` The calling module
+    - `filter` The `Flop.Filter` map
+    - `ecto_type` The Ecto type
+    - `query_value` The filter value after `Ecto.Type.cast` has been applied
+    - `field` The field name
+    - `filter_opts` Extra options passed to the filter function (passed as `extra_opts` to `Flop.validate_and_run`)
+
+  ## Examples
+
+  Modified example from the [Flop documentation: custom fields](https://hexdocs.pm/flop/Flop.Schema.html#module-custom-fields ⤴).
+
+      @impl Fase
+      def search_condition(expression, %{field: field} = context)
+          when field == :inserted_at do
+        %{filter: filter, filter_opts: filter_opts, query_value: value} = context
+        timezone = Keyword.fetch!(filter_opts, :timezone)
+
+        expr = dynamic(
+          [r],
+          fragment("((? AT TIME ZONE 'utc') AT TIME ZONE ?)",
+          ^expression, ^timezone)
+        )
+
+        case filter.op do
+          :>= -> dynamic([r], ^expr >= ^value)
+          :<= -> dynamic([r], ^expr <= ^value)
+        end
+      end
+
+      def search_condition(_, _), do: nil
+
+      ...
+
+      Flop.validate_and_run(
+        ecto_schema,
+        search_params,
+        for: MyApp.FacetSchema,
+        extra_opts: [timezone: "Etc/UTC"]
+      )
+
+  """
+  @callback search_condition(dynamic_expr(), transform_context()) ::
+              dynamic_expr()
 
   @doc """
   Returns a custom option label.
@@ -331,7 +400,10 @@ defmodule Fase do
   @callback option_label(facet_name(), option_value(), database_label() | nil) ::
               String.t() | nil
 
-  @optional_callbacks scope_by: 2, option_label: 3, search_transform: 3
+  @optional_callbacks scope_by: 2,
+                      option_label: 3,
+                      search_transform: 3,
+                      search_condition: 2
 
   # Schema
 
@@ -402,6 +474,7 @@ defmodule Fase do
   Options:
   - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
   - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
+  - `timeout` Sets a custom timeout for search view generation if it exceeds the default. For example, use `:infinity`.
 
   ## Examples
 

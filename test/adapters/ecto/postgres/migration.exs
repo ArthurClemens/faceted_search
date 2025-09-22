@@ -18,6 +18,11 @@ defmodule Fase.Test.Repo.Postgres.Migration do
       "DROP EXTENSION IF EXISTS unaccent;"
     )
 
+    execute(
+      "CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;",
+      "DROP EXTENSION IF EXISTS fuzzystrmatch;"
+    )
+
     # schema_prefix classifications
 
     create table(:categories, primary_key: false, prefix: "classifications") do
