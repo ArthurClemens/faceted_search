@@ -593,37 +593,40 @@ See [schema configuration: facet_fields](documentation/schema_configuration.md#f
 
 ### Custom labels
 
-In the schema module, callback `option_label/3` creates label texts for a given value or database label:
+In the schema module, callback `option_label/4` creates label texts for a given value or database label:
 
 ```elixir
 defmodule MyApp.FacetSchema do
 
-  def option_label(:favorite, value, _) do
+  @impl Fase
+  def option_label(:favorite, value, _, _) do
     if value, do: "Yes", else: "No"
   end
 
-  def option_label(:user_roles, value, _) do
-    case value do
-      :admin -> gettext("Admin")
-      :support -> gettext("Support")
-      :qa -> gettext("Q&A")
-      _ -> value
-    end
+  def option_label(:user_roles, value, _, %{locale: locale}) do
+    Gettext.with_locale(MyApp.Gettext, locale, fn ->
+       case value do
+         :admin -> gettext("Admin")
+         :support -> gettext("Support")
+         :qa -> gettext("Q&A")
+         _ -> value
+       end
+    end)
   end
 
-  def option_label(:languages, value, database_label) do
+  def option_label(:languages, value, database_label, _) do
     case value do
       "en" -> "English (UK)"
       _ -> database_label
     end
   end
 
-  def option_label(_, _, _), do: nil
+  def option_label(_, _, _, _), do: nil
 
   ...
 ```
 
-- See [Callbacks: option_label/3](Fase.html#c:option_label/3) for details
+- See [Callbacks: option_label/4](Fase.html#c:option_label/4) for details
 - See [Ranges ↓](#ranges) for an example with range values
 
 ## Ranges
@@ -691,7 +694,7 @@ For a range facet, the option value in the facet results contains the bucket num
 
 ### Range labels
 
-Use the callback function `option_label/3` described at [custom labels](#custom-labels) to create readable option labels for ranges.
+Use the callback function `option_label/4` described at [custom labels](#custom-labels) to create readable option labels for ranges.
 
 The value passed to the callback contains a tuple containing:
 
@@ -713,7 +716,7 @@ With the range bounds in the example above, the values are:
 Example of `option_label` callback for ranges configured with `number_range_bounds`:
 
 ```elixir
-def option_label(:publication_year, value, _) do
+def option_label(:publication_year, value, _, _) do
   {bounds, _bucket} =  value
 
   case bounds do
@@ -727,7 +730,7 @@ end
 Example of `option_label` callback for ranges configured with `date_range_bounds` - with the configuration described above:
 
 ```elixir
-def option_label(:updated_at, value, _) do
+def option_label(:updated_at, value, _, _) do
   {bounds, _bucket} = value
 
   case bounds do
@@ -828,14 +831,14 @@ To remove parent facet `periods` from the facet results, set its option `hide_wh
 
 See [Option labels](#option-labels)
 
-To create a custom text (which cannot be read from the database), use the callback function `option_label/3` described at [custom labels](#custom-labels) to create readable option labels for hierarchies.
+To create a custom text (which cannot be read from the database), use the callback function `option_label/4` described at [custom labels](#custom-labels) to create readable option labels for hierarchies.
 
 The received value will contains the path values separated by ">", for example: "modern_art>pop_art".
 
 Example:
 
 ```elixir
-def option_label(:movements, value, label) do
+def option_label(:movements, value, label, _) do
   movements_value = value |> String.split(">") |> List.last()
 
   case movements_value do

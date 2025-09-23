@@ -366,6 +366,7 @@ defmodule Fase do
   - `facet_name` Name of the facet
   - `option_value` Value
   - `database_label` The database label if set in [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields)
+  - `scope` The scope variable if passed to `Fase.search/3` options
 
   Return `nil` to use the option value as string.
 
@@ -373,35 +374,45 @@ defmodule Fase do
 
   ## Examples
 
+  The second callback instance assumes that `Fase.search` is called with
+  `scope: %{locale: current_locale}` in its options.
+
       @impl Fase
-      def option_label(:favorite, value, _) do
+      def option_label(:favorite, value, _, _) do
         if value, do: "Yes", else: "No"
       end
 
-      def option_label(:user_roles, value, _) do
-        case value do
-          :admin -> gettext("Admin")
-          :support -> gettext("Support")
-          :qa -> gettext("Q&A")
-          _ -> value
-        end
+      def option_label(:user_roles, value, _, %{locale: locale}) do
+        Gettext.with_locale(MyApp.Gettext, locale, fn ->
+          case value do
+            :admin -> gettext("Admin")
+            :support -> gettext("Support")
+            :qa -> gettext("Q&A")
+            _ -> value
+          end
+        end)
       end
 
-      def option_label(:languages, value, database_label) do
+      def option_label(:languages, value, database_label, _) do
         case value do
           "en" -> "English (UK)"
           _ -> database_label
         end
       end
 
-      def option_label(_, _, _), do: nil
+      def option_label(_, _, _, _), do: nil
 
   """
-  @callback option_label(facet_name(), option_value(), database_label() | nil) ::
+  @callback option_label(
+              facet_name(),
+              option_value(),
+              database_label() | nil,
+              scope() | nil
+            ) ::
               String.t() | nil
 
   @optional_callbacks scope_by: 2,
-                      option_label: 3,
+                      option_label: 4,
                       search_transform: 3,
                       search_condition: 2
 
@@ -563,16 +574,19 @@ defmodule Fase do
   - `cache_facets` See [Caching facet results](README.md#caching-facet-results)
   - `query_opts` Supports `prefix`
   - `repo` Custom database repo
+  - `scope` Scope that is passed to the [option_label/4](Fase.html#c:option_label/4) callback
 
   ## Examples
 
       view_id = user.id
       ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, view_id)
+      locale = "fr"
+      opts = [scope: %{locale: locale}]
 
       with {:ok, results} <-
              from(ecto_schema)
              |> Flop.validate_and_run(params, for: MyApp.FacetSchema),
-           {:ok, facets} <- Fase.search(ecto_schema, params) do
+           {:ok, facets} <- Fase.search(ecto_schema, params, opts) do
         {:ok, results, facets}
       else
         error -> error
