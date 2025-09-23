@@ -56,14 +56,13 @@ defmodule Fase.Filter do
           if Kernel.function_exported?(
                condition_context.module,
                Constants.search_condition_callback(),
-               3
+               2
              ) do
             apply(
               condition_context.module,
               Constants.search_condition_callback(),
               [
                 expr,
-                query_value,
                 condition_context
               ]
             )

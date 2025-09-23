@@ -276,11 +276,13 @@ defmodule Fase.Test.SchemaTest do
               {:author,
                [binding: :authors, column: :full_name, ecto_type: :string]},
               {:draft, [ecto_type: :boolean]},
-              {:word_count, [ecto_type: :integer]}
+              {:word_count, [ecto_type: :integer]},
+              {:inserted_at, [ecto_type: :utc_datetime]}
             ],
             data_fields: [
               :title,
               :author,
+              :inserted_at,
               {:publish_date,
                [transforms: ["to_char(?, 'YYYY-MM-DD')"], ecto_type: :string]},
               {:indicators,
