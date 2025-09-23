@@ -127,11 +127,15 @@ defmodule Fase.Test.MyApp.TransformsFacetSchema do
     %{filter: filter, filter_opts: filter_opts, query_value: value} = context
     timezone = Keyword.fetch!(filter_opts, :timezone)
 
-    expr = dynamic(
-      [r],
-      fragment("((? AT TIME ZONE 'utc') AT TIME ZONE ?)",
-      ^expression, ^timezone)
-    )
+    expr =
+      dynamic(
+        [r],
+        fragment(
+          "((? AT TIME ZONE 'utc') AT TIME ZONE ?)",
+          ^expression,
+          ^timezone
+        )
+      )
 
     case filter.op do
       :>= -> dynamic([r], ^expr >= ^value)

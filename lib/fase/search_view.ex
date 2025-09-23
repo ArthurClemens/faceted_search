@@ -366,12 +366,12 @@ defmodule Fase.SearchView do
   # Where filters
 
   defp create_where_filters(
-         %{scopes: scopes} = source,
+         %{scope: scope} = source,
          %{current_scope: current_scope} = _config
        )
-       when is_list(scopes) and scopes != [] and not is_nil(current_scope) do
+       when is_list(scope) and scope != [] and not is_nil(current_scope) do
     filters =
-      scopes
+      scope
       |> Enum.map(&create_where_filter(&1, source, current_scope))
       |> Enum.filter(&(!!&1))
       |> Enum.join(" AND ")

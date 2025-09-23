@@ -16,7 +16,7 @@ defmodule Fase.SearchView.Source do
   ]
 
   defstruct table_name: nil,
-            scopes: nil,
+            scope: nil,
             prefix: nil,
             fields: nil,
             joins: nil,
@@ -30,7 +30,7 @@ defmodule Fase.SearchView.Source do
           table_name: atom(),
           # optional
           prefix: String.t() | nil,
-          scopes: list(Scope.t()) | nil,
+          scope: list(Scope.t()) | nil,
           joins: list(Join.t()) | nil,
           fields: list(Field.t()) | nil,
           data_fields: list(atom()) | nil,
@@ -53,7 +53,7 @@ defmodule Fase.SearchView.Source do
     %__MODULE__{
       table_name: table_name,
       prefix: Keyword.get(options, :prefix),
-      scopes: Keyword.get(options, :scope_keys) |> collect_scopes(module),
+      scope: Keyword.get(options, :scope_keys) |> collect_scope_entries(module),
       joins: Keyword.get(options, :joins) |> collect_joins(),
       fields:
         Keyword.get(options, :fields) |> collect_fields(table_name, prefix),
@@ -99,12 +99,12 @@ defmodule Fase.SearchView.Source do
 
   defp collect_text_fields(_text_fields), do: nil
 
-  defp collect_scopes(scope_keys, module)
+  defp collect_scope_entries(scope_keys, module)
        when is_list(scope_keys) and scope_keys != [] do
     Enum.map(scope_keys, fn scope_key -> Scope.new(module, scope_key) end)
   end
 
-  defp collect_scopes(_scope_keys, _module), do: nil
+  defp collect_scope_entries(_scope_keys, _module), do: nil
 
   defp collect_sort_fields(sort_fields)
        when is_list(sort_fields) and sort_fields != [] do

@@ -10,7 +10,7 @@ defmodule Fase.Errors.MissingCallbackError do
 
         No callback defined.
 
-        Option "scopes" was used, and that requires the behaviour callback #{error.callback} to be defined in module #{error.module}.
+        Option "scope" was used, and that requires the behaviour callback #{error.callback} to be defined in module #{error.module}.
 
         Make sure to place the callback below `use Fase`.
 
@@ -28,7 +28,7 @@ defmodule Fase.Errors.MissingCallbackError do
 
                 use Fase,
                   sources: [
-                    scopes: [...],
+                    scope: [...],
                   ]
     """
   end

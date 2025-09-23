@@ -102,7 +102,7 @@ defmodule Fase.Test.SearchViewTest do
               }
             ],
             prefix: nil,
-            scopes: nil,
+            scope: nil,
             sort_fields: [
               %Fase.SearchView.SortField{transforms: nil, name: :publish_date},
               %Fase.SearchView.SortField{transforms: nil, name: :author}
@@ -406,7 +406,7 @@ defmodule Fase.Test.SearchViewTest do
               }
             ],
             prefix: nil,
-            scopes: nil,
+            scope: nil,
             sort_fields: [
               %Fase.SearchView.SortField{
                 ecto_type: nil,
@@ -479,7 +479,7 @@ defmodule Fase.Test.SearchViewTest do
             ],
             joins: nil,
             prefix: nil,
-            scopes: [
+            scope: [
               %Fase.SearchView.Scope{
                 key: :word_count,
                 module: Fase.Test.MyApp.ScopedFacetSchema
@@ -559,7 +559,7 @@ defmodule Fase.Test.SearchViewTest do
             ],
             joins: nil,
             prefix: nil,
-            scopes: [
+            scope: [
               %Fase.SearchView.Scope{
                 key: :source,
                 module: Fase.Test.MyApp.MultipleSourcesFacetSchema
@@ -690,7 +690,7 @@ defmodule Fase.Test.SearchViewTest do
                 prefix: nil
               }
             ],
-            scopes: [
+            scope: [
               %Fase.SearchView.Scope{
                 key: :source,
                 module: Fase.Test.MyApp.MultipleSourcesFacetSchema
@@ -718,7 +718,7 @@ defmodule Fase.Test.SearchViewTest do
         sources: [
           %Fase.SearchView.Source{
             table_name: :categories,
-            scopes: nil,
+            scope: nil,
             prefix: "classifications",
             fields: [
               %Fase.SearchView.Field{
@@ -787,7 +787,7 @@ defmodule Fase.Test.SearchViewTest do
         sources: [
           %Fase.SearchView.Source{
             table_name: :articles,
-            scopes: nil,
+            scope: nil,
             prefix: nil,
             fields: [
               %Fase.SearchView.Field{

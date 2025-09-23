@@ -36,7 +36,7 @@ defmodule Fase.SearchView.Config do
       raise SearchViewError, %{error: "Missing view_id"}
     end
 
-    current_scope = Keyword.get(options, :scopes)
+    current_scope = Keyword.get(options, :scope)
     prefix = Keyword.get(options, :prefix)
     repo = get_repo(options)
 

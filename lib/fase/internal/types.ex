@@ -17,7 +17,7 @@ defmodule Fase.Internal.Types do
 
       if :create_search_view_options in unquote(includes) do
         @type create_search_view_option ::
-                {:scopes, term()}
+                {:scope, term()}
                 | {:repo, module()}
                 | {:prefix, String.t()}
                 | {:timeout, integer()}
