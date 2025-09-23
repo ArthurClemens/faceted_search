@@ -704,7 +704,7 @@ sources: [
 
 See also: [Casting and data transforms](README.md#casting-and-data-transforms)
 
-## scopes
+## scope
 
 Activates scoping the table contents. See: [Scoping data](README.md#scoping-data).
 

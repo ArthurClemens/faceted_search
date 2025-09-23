@@ -1121,7 +1121,7 @@ A scope is created in three steps:
 
 1. By providing the schema option `scope_keys` with a list of scope identifiers.
 2. By writing callback function `scope_by/2`, defined in the same schema module where `use Fase` is called. The first parameter is the scope identifier.
-3. By calling `Fase.create_search_view/3` with option `scopes`, containing any value that `scope_by/2` should handle.
+3. By calling `Fase.create_search_view/3` with option `scope`, containing any value that `scope_by/2` should handle.
 
 ### Example: scoping to the current user
 
@@ -1134,7 +1134,7 @@ scope_keys: [:current_user],
 **2. Define the callback**
 
 ```elixir
-def scope_by(:current_user, %{current_user: current_user} = _scopes) do
+def scope_by(:current_user, %{current_user: current_user} = _scope) do
   %{
     field: :user_id,
     comparison: "=",
@@ -1151,7 +1151,7 @@ The value at key `field` should reference a field listed in `fields`, or a colum
 view_id = "books"
 
 Fase.create_search_view(MyApp.FacetSchema, view_id,
-  scopes: %{current_user: current_user})
+  scope: %{current_user: current_user})
 ```
 
 ### Combining scopes
@@ -1167,19 +1167,19 @@ scope_keys: [:current_user, :publication_year],
 Define both filter callbacks:
 
 ```elixir
-def scope_by(:current_user, scopes) do
+def scope_by(:current_user, scope) do
   %{
     field: :user_id,
     comparison: "=",
-    value: scopes.user.id
+    value: scope.user.id
   }
 end
 
-def scope_by(:publication_year, scopes) do
+def scope_by(:publication_year, scope) do
   %{
     field: :publication_year,
     comparison: ">",
-    value: scopes.publication_year
+    value: scope.publication_year
   }
 end
 ```
@@ -1192,7 +1192,7 @@ view_id = "user-books-after-2018"
 Fase.create_search_view(
   MyApp.FacetSchema,
   view_id,
-  scopes: %{user: current_user, publication_year: 2018}
+  scope: %{user: current_user, publication_year: 2018}
 )
 ```
 
@@ -1388,7 +1388,7 @@ To store user views in database schema "user_catalogs":
 
 ```elixir
 Fase.create_search_view(MyApp.FacetSchema, user.id,
-  scopes: %{current_user: user},
+  scope: %{current_user: user},
   prefix: "user_catalogs"
 )
 ```

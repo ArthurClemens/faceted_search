@@ -197,7 +197,7 @@ defmodule Fase do
   @doc """
   Defines a scope filter when creating the search view.
 
-  Use together with option `scopes` under `source`. The list of scope keys are used
+  Use together with option `scope` under `source`. The list of scope keys are used
   to selectively call this `scope_by/2` callback functions.
   Each returned map is used to render a `WHERE` clause in the search view creation.
 
@@ -214,7 +214,7 @@ defmodule Fase do
           use Fase,
             sources: [
               media: [
-                scopes: [:current_user, :publication_year],
+                scope: [:current_user, :publication_year],
                 ...
 
   Then 2 `scopy_by/2` callback functions with corresponding keys will define the scope rules. For example:
@@ -472,7 +472,7 @@ defmodule Fase do
   The created materialized view is prefixed with `"fv_"`.
 
   Options:
-  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
+  - `scope` (optional) - The scope to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
   - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
   - `timeout` Sets a custom timeout for search view generation if it exceeds the default. For example, use `:infinity`.
 
@@ -482,7 +482,8 @@ defmodule Fase do
       :ok
 
       iex> Fase.create_search_view(MyApp.FacetSchema, "books",
-      ...>   scopes: %{current_user: current_user})
+      ...>   scope: %{current_user: current_user}
+      ...> )
       :ok
 
   """
@@ -495,8 +496,8 @@ defmodule Fase do
   Returns true if the search view exists.
 
   Options:
-  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
-  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
+  - `scope` (optional) The scope to be passed to the module function provided with option `scope_by` See [Scoping data](README.md#scoping-data).
+  - `repo` (only if not already set in the Flop config) The `Ecto.Repo` module.
   """
   @spec search_view_exists?(module(), String.t(), [create_search_view_option()]) ::
           boolean()
@@ -507,8 +508,8 @@ defmodule Fase do
   Creates the search view if it does not exist.
 
   Options:
-  - `scopes` (optional) - The scope or scopes to be passed to the module function provided with option `scope_by` - see [Scoping data](README.md#scoping-data).
-  - `repo` (only if not already set in the Flop config) - The `Ecto.Repo` module.
+  - `scope` (optional) The scope to be passed to the module function provided with option `scope_by` - See [Scoping data](README.md#scoping-data).
+  - `repo` (only if not already set in the Flop config) The `Ecto.Repo` module.
   """
   @spec create_search_view_if_not_exists(module(), String.t(), [
           create_search_view_option()

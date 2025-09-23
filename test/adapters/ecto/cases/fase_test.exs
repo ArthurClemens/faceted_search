@@ -1549,12 +1549,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     end
   end
 
-  describe "scopes (word_count)" do
+  describe "scope (word_count)" do
     setup do
       init_resources(article_count: 10)
 
       Fase.create_search_view(ScopedFacetSchema, "articles",
-        scopes: %{word_count: 4000}
+        scope: %{word_count: 4000}
       )
 
       :ok
@@ -1573,14 +1573,14 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     end
   end
 
-  describe "scopes (publish_date)" do
+  describe "scope (publish_date)" do
     setup do
       articles = init_resources(article_count: 10)
 
       last_month = offset_now(-30)
 
       Fase.create_search_view(ScopedFacetSchema, "articles",
-        scopes: %{publish_date: last_month}
+        scope: %{publish_date: last_month}
       )
 
       %{articles: articles}
@@ -1625,7 +1625,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     end
   end
 
-  describe "scopes (combined word_count and publish_date)" do
+  describe "scope (combined word_count and publish_date)" do
     setup do
       init_resources(article_count: 10)
 
@@ -1633,7 +1633,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       last_month = now |> DateTime.add(-30, :day)
 
       Fase.create_search_view(ScopedFacetSchema, "articles",
-        scopes: %{word_count: 4000, publish_date: last_month}
+        scope: %{word_count: 4000, publish_date: last_month}
       )
 
       :ok
@@ -2138,12 +2138,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     end
   end
 
-  describe "scopes with sources" do
+  describe "scope with sources" do
     setup do
       init_resources(article_count: 10)
 
       Fase.create_search_view(MultipleSourcesFacetSchema, "articles",
-        scopes: %{source: "authors"}
+        scope: %{source: "authors"}
       )
 
       :ok
@@ -2211,7 +2211,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       articles = init_resources(article_count: 3, insert_delay: 1_000)
 
       Fase.create_search_view(TimestampsFacetSchema, "articles",
-        scopes: %{source: "authors"}
+        scope: %{source: "authors"}
       )
 
       %{articles: articles}

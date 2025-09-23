@@ -43,6 +43,8 @@ defmodule Fase.Facets do
           | {:error, Flop.Meta.t()}
           | {:error, Exception.t()}
 
+  # search
+
   def search(
         ecto_schema,
         raw_search_params \\ %{},
@@ -134,11 +136,15 @@ defmodule Fase.Facets do
     end
   end
 
+  # clear_cache
+
   @spec clear_cache(Ecto.Queryable.t()) :: no_return()
   def clear_cache(ecto_schema) do
     {view_name, _module} = ecto_schema
     Cache.clear(Cache, view_name)
   end
+
+  # warm_cache
 
   @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
           no_return()
@@ -743,6 +749,8 @@ defmodule Fase.Facets do
   end
 
   defp cast_value(raw_value, _), do: raw_value
+
+  # clean_search_params
 
   def clean_search_params(%{filters: filters} = _search_params),
     do: %{filters: filters}

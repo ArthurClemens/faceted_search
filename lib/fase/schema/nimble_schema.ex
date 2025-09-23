@@ -611,7 +611,7 @@ defmodule Fase.Schema.NimbleSchema do
   end
 
   defp validate_scope_callback(opts, module) do
-    has_scopes_option =
+    has_scope_option =
       Keyword.get_values(opts, :sources)
       |> List.flatten()
       |> Enum.map(fn {_, sublist} ->
@@ -621,11 +621,11 @@ defmodule Fase.Schema.NimbleSchema do
       |> List.flatten()
       |> Enum.any?()
 
-    require_scope_by_callback(module, has_scopes_option)
+    require_scope_by_callback(module, has_scope_option)
   end
 
-  defp require_scope_by_callback(module, has_scopes_option)
-       when has_scopes_option do
+  defp require_scope_by_callback(module, has_scope_option)
+       when has_scope_option do
     if not Module.defines?(module, {Constants.scope_callback(), 2}) do
       raise MissingCallbackError.message(%{
               callback: "scope_by/2",
@@ -634,5 +634,5 @@ defmodule Fase.Schema.NimbleSchema do
     end
   end
 
-  defp require_scope_by_callback(_module, _has_scopes_option), do: nil
+  defp require_scope_by_callback(_module, _has_scope_option), do: nil
 end
