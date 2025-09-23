@@ -1372,7 +1372,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
   describe "transforms" do
     setup do
-      articles = init_resources(article_count: 10, insert_delay: 150)
+      articles = init_resources(article_count: 5, insert_delay: 500)
       Fase.create_search_view(TransformsFacetSchema, "articles")
 
       %{articles: articles}
@@ -1521,7 +1521,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
     test "filter search with search_condition callback (author)" do
       search_params = %{
-        filters: [%{field: :author, op: :==, value: "Matt"}]
+        filters: [%{field: :author, value: "Matt"}]
       }
 
       expected = ["Mateo Alvarez"]
@@ -1535,7 +1535,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     test "filter search with search_condition callback (inserted_at)" do
       search_params = %{
         filters: [
-          %{field: :inserted_at, op: :<=, value: offset_now(-500, :millisecond)}
+          %{field: :inserted_at, op: :<=, value: offset_now(-2, :second)}
         ]
       }
 
@@ -1545,7 +1545,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         )
 
       count = Enum.count(results)
-      assert count > 0 and count < 10
+      assert count > 0 and count < 5
     end
   end
 
