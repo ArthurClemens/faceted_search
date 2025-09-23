@@ -135,17 +135,28 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
 
   def schema_options, do: @options
 
-  def option_label(:word_count, value, _) do
+  def option_label(:word_count, value, _, scope) do
     {bounds, _bucket} = value
+    locale = scope[:locale]
 
-    case bounds do
-      [:lower, to] -> "0 - #{to}"
-      [from, :upper] -> "more than #{from}"
-      [from, to] -> "#{from}-#{to}"
+    case locale do
+      "fr" ->
+        case bounds do
+          [:lower, to] -> "de 0 à #{to}"
+          [from, :upper] -> "plus de #{from}"
+          [from, to] -> "de #{from} à #{to}"
+        end
+
+      _ ->
+        case bounds do
+          [:lower, to] -> "0 - #{to}"
+          [from, :upper] -> "more than #{from}"
+          [from, to] -> "#{from}-#{to}"
+        end
     end
   end
 
-  def option_label(:publish_date, value, _) do
+  def option_label(:publish_date, value, _, _) do
     {bounds, _bucket} = value
 
     case bounds do
@@ -169,5 +180,5 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
     end
   end
 
-  def option_label(_, _, _), do: nil
+  def option_label(_, _, _, _), do: nil
 end

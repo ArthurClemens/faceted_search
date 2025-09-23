@@ -199,7 +199,8 @@ defmodule Fase.Facets do
           all_facet_rows,
           filtered_facet_rows,
           search_params,
-          facet_configs
+          facet_configs,
+          facet_search_options
         )
 
       {:ok, facet_results}
@@ -351,7 +352,8 @@ defmodule Fase.Facets do
           list(result_row()),
           list(result_row()),
           map(),
-          facet_configs()
+          facet_configs(),
+          [facet_search_option()]
         ) ::
           list(Facet.t())
   defp consolidate_facet_results(
@@ -359,7 +361,8 @@ defmodule Fase.Facets do
          all_facet_rows,
          filtered_facet_rows,
          search_params,
-         facet_configs
+         facet_configs,
+         facet_search_options
        ) do
     prefix = Constants.facet_search_field_prefix()
 
@@ -392,7 +395,12 @@ defmodule Fase.Facets do
       |> combine_facet_result_states(filtered_facet_result_states)
       |> process_hierarchies(search_params_value_lookup, facet_configs)
 
-    create_facets(module, combined_facet_result_states, facet_configs)
+    create_facets(
+      module,
+      combined_facet_result_states,
+      facet_configs,
+      facet_search_options
+    )
   end
 
   @spec combine_facet_result_states(
@@ -619,9 +627,15 @@ defmodule Fase.Facets do
   @spec create_facets(
           module(),
           facet_result_states(),
-          facet_configs()
+          facet_configs(),
+          [facet_search_option()]
         ) :: list(Facet.t())
-  defp create_facets(module, facet_result_states, facet_configs) do
+  defp create_facets(
+         module,
+         facet_result_states,
+         facet_configs,
+         facet_search_options
+       ) do
     facet_result_states
     |> Enum.reduce([], fn
       {_field, states}, acc when states == [] ->
@@ -629,7 +643,9 @@ defmodule Fase.Facets do
 
       {field, states}, acc ->
         facet_config = get_in(facet_configs, [Access.key(field)])
-        options = Enum.map(states, &create_option(module, &1))
+
+        options =
+          Enum.map(states, &create_option(module, &1, facet_search_options))
 
         if facet_config.hide_when_selected and Enum.any?(options, & &1.selected) do
           acc
@@ -647,8 +663,9 @@ defmodule Fase.Facets do
     |> Enum.reverse()
   end
 
-  @spec create_option(module(), facet_result_state()) :: Option.t()
-  defp create_option(module, facet_result_state) do
+  @spec create_option(module(), facet_result_state(), [facet_search_option()]) ::
+          Option.t()
+  defp create_option(module, facet_result_state, facet_search_options) do
     %{
       count: count,
       database_label: database_label,
@@ -659,14 +676,17 @@ defmodule Fase.Facets do
     } = facet_result_state
 
     has_option_label_callback =
-      Kernel.function_exported?(module, Constants.option_label_callback(), 3)
+      Kernel.function_exported?(module, Constants.option_label_callback(), 4)
+
+    scope = Keyword.get(facet_search_options, :scope)
 
     option_label =
       if has_option_label_callback do
         apply(module, Constants.option_label_callback(), [
           field,
           range_bucket_value || value,
-          database_label
+          database_label,
+          scope
         ])
       end
 

@@ -457,7 +457,9 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       search_params = %{}
 
       {:ok, {_results, meta}, facets} =
-        facet_search("articles", ExtendedFacetSchema, search_params)
+        facet_search("articles", ExtendedFacetSchema, search_params,
+          scope: %{locale: "fr"}
+        )
 
       expected = %{
         author: %{
@@ -550,13 +552,13 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           first_2_options: [
             %Fase.Option{
               count: 5,
-              label: "2000-4000",
+              label: "de 2000 à 4000",
               selected: false,
               value: 1
             },
             %Fase.Option{
               count: 2,
-              label: "4000-6000",
+              label: "de 4000 à 6000",
               selected: false,
               value: 2
             }
@@ -2399,6 +2401,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
   defp facet_search(view_id, schema, search_params, opts \\ []) do
     page_size = Keyword.get(opts, :page_size, 10)
     query_opts = Keyword.get(opts, :query_opts, [])
+    scope = Keyword.get(opts, :scope, [])
 
     ecto_schema = Fase.ecto_schema(schema, view_id)
     query = from(ecto_schema)
@@ -2410,7 +2413,10 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
              query_opts: query_opts
            ),
          {:ok, facets} <-
-           Fase.search(ecto_schema, search_params, query_opts: query_opts) do
+           Fase.search(ecto_schema, search_params,
+             query_opts: query_opts,
+             scope: scope
+           ) do
       {:ok, search_results, facets}
     else
       error ->
