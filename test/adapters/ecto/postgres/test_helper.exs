@@ -1,5 +1,3 @@
-Application.put_env(:fase, :async_integration_tests, true)
-
 Application.put_env(:fase, Fase.Test.Repo,
   username: "postgres",
   password: "postgres",
@@ -47,7 +45,7 @@ Ecto.Migrator.up(
   log: true
 )
 
-Ecto.Adapters.SQL.Sandbox.mode(Fase.Test.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Fase.Test.Repo, :auto)
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 ExUnit.start()

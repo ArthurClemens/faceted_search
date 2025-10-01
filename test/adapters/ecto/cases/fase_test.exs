@@ -1,6 +1,5 @@
 defmodule Fase.Test.Adapters.Ecto.FaseTest do
-  use Fase.Test.Integration.Case,
-    async: Application.compile_env(:fase, :async_integration_tests, true)
+  use Fase.Test.Integration.Case
 
   import Ecto.Query
   import Fase.Test.Factory
