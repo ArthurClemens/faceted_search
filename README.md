@@ -977,6 +977,8 @@ def search_media(search_params \\ %{}) do
 end
 ```
 
+We can verify that the cache is created with `Fase.facets_cached?/2`.
+
 ## Multiple sources
 
 In this chapter:

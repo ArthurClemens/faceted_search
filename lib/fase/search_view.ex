@@ -519,14 +519,29 @@ defmodule Fase.SearchView do
   @spec create_custom_data_entry(DataField.t(), Source.t()) :: String.t()
   defp create_custom_data_entry(
          %{name: name, entries: entries},
-         %{fields: fields, joins: joins} = _source
+         %{fields: fields, joins: joins, table_name: current_source_table_name} =
+           _source
        ) do
-    table_and_columns =
+    entry_data =
       entries
       |> Enum.map(fn
-        %{name: name, transforms: transforms, field_name: field_name}
-        when not is_nil(field_name) ->
-          field = fields |> Enum.find(&(&1.name == field_name))
+        %{
+          name: name,
+          transforms: transforms,
+          field_name: field_name,
+          binding: binding,
+          column: column
+        } ->
+          filter_fn =
+            if is_nil(field_name) do
+              fn field ->
+                field.binding == binding and field.column == column
+              end
+            else
+              fn field -> field.name == field_name end
+            end
+
+          field = fields |> Enum.find(&filter_fn.(&1))
 
           case get_table_and_column(field, joins) do
             {table_name, column_name} ->
@@ -534,47 +549,48 @@ defmodule Fase.SearchView do
                 name: name,
                 table_name: table_name,
                 column_name: column_name,
-                transforms: transforms
+                transforms: transforms,
+                ecto_type: field.ecto_type
               }
 
             _ ->
               nil
           end
 
-        %{name: name, transforms: transforms, binding: binding, column: column} ->
-          %{
-            name: name,
-            table_name: binding,
-            column_name: column,
-            transforms: transforms
-          }
-
         _ ->
           nil
       end)
       |> Enum.filter(&(!!&1))
       |> Enum.map(fn entry ->
-        Map.put(
-          entry,
-          :table_and_column,
+        value =
           run_transforms(
             entry.transforms,
             table_and_column_string(entry.table_name, entry.column_name)
           )
+          |> maybe_aggregate(
+            current_source_table_name,
+            entry.table_name,
+            entry.ecto_type
+          )
+
+        Map.put(
+          entry,
+          :table_and_column,
+          value
         )
       end)
 
     key_values =
-      table_and_columns
+      entry_data
       |> Enum.map_join(
         ",\n#{line_indent(2)}",
         &"'#{&1.name}', #{&1.table_and_column}"
       )
 
     """
-    '#{name}', json_agg(DISTINCT jsonb_build_object(
+    '#{name}', jsonb_build_object(
     #{line_indent(2)}#{key_values}
-    #{line_indent(1)}))
+    #{line_indent(1)})
     """
     |> String.trim()
   end

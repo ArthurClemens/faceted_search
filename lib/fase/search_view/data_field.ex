@@ -23,7 +23,12 @@ defmodule Fase.SearchView.DataField do
   @spec new(atom(), Keyword.t() | nil) :: t()
   def new(name, options \\ []) do
     {operation_options, entry_options} =
-      Keyword.split(options, [:transforms, :ecto_type])
+      if Keyword.has_key?(options, :transforms) or
+           Keyword.has_key?(options, :ecto_type) do
+        Keyword.split(options, [:transforms, :ecto_type])
+      else
+        {[], options}
+      end
 
     struct(__MODULE__, %{
       name: name,

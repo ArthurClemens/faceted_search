@@ -291,10 +291,11 @@ defmodule Fase.Test.Factory do
   def publish_date_offset_by_title(title),
     do: (-1 * article_publish_date_offset(title)) |> offset_now()
 
+  def now, do: DateTime.now!("Etc/UTC")
+
   def offset_now(offset \\ 0, unit \\ :day),
     do:
-      "Etc/UTC"
-      |> DateTime.now!()
+      now()
       |> offset_datetime(offset, unit)
 
   def offset_datetime(datetime, offset \\ 0, unit \\ :day),

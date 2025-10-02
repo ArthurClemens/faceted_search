@@ -1,6 +1,5 @@
 defmodule Fase.Test.Adapters.Ecto.FaseTest do
-  use Fase.Test.Integration.Case,
-    async: Application.compile_env(:fase, :async_integration_tests, true)
+  use Fase.Test.Integration.Case
 
   import Ecto.Query
   import Fase.Test.Factory
@@ -209,14 +208,15 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           "id" => "uuid",
           "author" => "Hélène Dubois",
           "draft" => 1,
-          "indicators" => [
-            %{"type" => "history", "word_count" => "3473"},
-            %{
-              "type" => "language_analysis",
-              "word_count" => "3473"
-            },
-            %{"type" => "politics", "word_count" => "3473"}
-          ],
+          "indicators" => %{
+            "type" => [
+              "history",
+              "language_analysis",
+              "politics"
+            ],
+            "word_count" => "3473",
+            "draft" => true
+          },
           "tag_titles" => [
             "History",
             "Language analysis: Critical reading",
@@ -1441,7 +1441,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = [
         %{
           "author" => "Hélène Dubois",
-          "indicators" => [%{"word_count" => "2871"}],
+          "indicators" => %{"word_count" => "2871"},
           "publish_date" => "publish_date",
           "title" =>
             "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
@@ -1449,7 +1449,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           "author" => "Mateo Alvarez",
-          "indicators" => [%{"word_count" => "3627"}],
+          "indicators" => %{"word_count" => "3627"},
           "publish_date" => "publish_date",
           "title" =>
             "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
@@ -1478,7 +1478,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = [
         %{
           "author" => "Hélène Dubois",
-          "indicators" => [%{"word_count" => "3473"}],
+          "indicators" => %{"word_count" => "3473"},
           "publish_date" => "publish_date",
           "title" =>
             "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
@@ -1486,7 +1486,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           "author" => "Hélène Dubois",
-          "indicators" => [%{"word_count" => "2871"}],
+          "indicators" => %{"word_count" => "2871"},
           "publish_date" => "publish_date",
           "title" =>
             "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
@@ -1631,8 +1631,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     setup do
       init_resources(article_count: 10)
 
-      now = ~U[2025-09-05 23:13:46.493983Z]
-      last_month = now |> DateTime.add(-30, :day)
+      last_month = now() |> DateTime.add(-30, :day)
 
       Fase.create_search_view(ScopedFacetSchema, "articles",
         scope: %{word_count: 4000, publish_date: last_month}

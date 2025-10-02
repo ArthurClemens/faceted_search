@@ -52,7 +52,11 @@ defmodule Fase.Facets do
       ) do
     search_params = clean_search_params(raw_search_params)
 
-    is_cache_facets = Keyword.get(facet_search_options, :cache_facets)
+    has_cache_key =
+      is_list(search_params.filters) and search_params.filters != []
+
+    is_cache_facets =
+      Keyword.get(facet_search_options, :cache_facets) and has_cache_key
 
     get_facet_results(
       ecto_schema,
@@ -142,6 +146,17 @@ defmodule Fase.Facets do
   def clear_cache(ecto_schema) do
     {view_name, _module} = ecto_schema
     Cache.clear(Cache, view_name)
+  end
+
+  # cached
+
+  @spec cached?(Ecto.Queryable.t(), map()) :: boolean()
+  def cached?(ecto_schema, raw_search_params) do
+    {view_name, _module} = ecto_schema
+    search_params = clean_search_params(raw_search_params)
+    cache_key = search_params.filters
+
+    Cache.cache_key?(Cache, view_name, cache_key)
   end
 
   # warm_cache
