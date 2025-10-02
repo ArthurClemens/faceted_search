@@ -22,6 +22,10 @@ defmodule Fase.Cache do
     GenServer.call(instance, {:get, view_name, cache_key})
   end
 
+  def cache_key?(instance \\ __MODULE__, view_name, cache_key) do
+    GenServer.call(instance, {:cache_key?, view_name, cache_key})
+  end
+
   def insert(instance \\ __MODULE__, view_name, cache_key, data) do
     GenServer.cast(instance, {:insert, view_name, cache_key, data})
   end
@@ -53,6 +57,11 @@ defmodule Fase.Cache do
       end)
 
     {:reply, result, table}
+  end
+
+  def handle_call({:cache_key?, view_name, data_key}, _from, table) do
+    value = :ets.member(table, cache_key(view_name, data_key))
+    {:reply, value, table}
   end
 
   def handle_cast({:insert, view_name, data_key, data}, table) do

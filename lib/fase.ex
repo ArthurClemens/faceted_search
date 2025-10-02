@@ -172,6 +172,10 @@ defmodule Fase do
       @spec clear_facets_cache(Ecto.Queryable.t()) :: no_return()
       def clear_facets_cache(ecto_schema),
         do: Facets.clear_cache(ecto_schema)
+
+      @spec facets_cached?(Ecto.Queryable.t(), map()) :: boolean()
+      def facets_cached?(ecto_schema, search_params),
+        do: Facets.cached?(ecto_schema, search_params)
     end
   end
 
@@ -571,10 +575,10 @@ defmodule Fase do
   Performs a Flop search with search parameters and returns a list of matching facets.
 
   Options:
-  - `cache_facets` See [Caching facet results](README.md#caching-facet-results)
-  - `query_opts` Supports `prefix`
+  - `cache_facets` (boolean) Creates a cache for the used search parameters; see [Caching facet results](README.md#caching-facet-results)
+  - `query_opts` (keyword list) Supports `prefix`
   - `repo` Custom database repo
-  - `scope` Scope that is passed to the [option_label/4](Fase.html#c:option_label/4) callback
+  - `scope` (term or map) Scope that is passed to the [option_label/4](Fase.html#c:option_label/4) callback
 
   ## Examples
 
@@ -610,7 +614,7 @@ defmodule Fase do
 
   From the search parameters, only `filter` entries will be read.
 
-  To activate caching, see [Caching facet results](README.md#caching-facet-results)
+  To activate caching, see [Caching facet results](README.md#caching-facet-results).
 
   ## Examples
 
@@ -646,5 +650,20 @@ defmodule Fase do
   def clear_facets_cache(ecto_schema) do
     {_view_name, module} = ecto_schema
     module.clear_facets_cache(ecto_schema)
+  end
+
+  @doc """
+  Returns whether a facets cache exists for the used search parameters.
+
+  ## Examples
+
+      ecto_schema = Fase.ecto_schema(MyApp.FacetSchema, view_id)
+      Fase.facets_cached?(ecto_schema, search_params)
+
+  """
+  @spec facets_cached?(Ecto.Queryable.t(), map()) :: boolean()
+  def facets_cached?(ecto_schema, search_params) do
+    {_view_name, module} = ecto_schema
+    module.facets_cached?(ecto_schema, search_params)
   end
 end
