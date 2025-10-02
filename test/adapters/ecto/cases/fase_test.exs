@@ -214,7 +214,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               "language_analysis",
               "politics"
             ],
-            "word_count" => "3473"
+            "word_count" => "3473",
+            "draft" => true
           },
           "tag_titles" => [
             "History",

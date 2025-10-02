@@ -83,6 +83,7 @@ defmodule Fase.Test.SchemaTest do
                [{:transforms, ["cast(? as integer)"]}, {:ecto_type, :integer}]},
               {:indicators,
                [
+                 :draft,
                  word_count: [
                    {:transforms, ["cast(? as text)"]},
                    {:ecto_type, :string}

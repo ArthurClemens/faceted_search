@@ -72,6 +72,7 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
             ecto_type: :integer
           ],
           indicators: [
+            :draft,
             word_count: [
               transforms: ["cast(? as text)"],
               ecto_type: :string

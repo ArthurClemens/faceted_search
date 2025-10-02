@@ -166,6 +166,14 @@ defmodule Fase.Test.SearchViewTest do
                 ecto_type: nil,
                 entries: [
                   %Fase.SearchView.CustomDataFieldEntry{
+                    name: :draft,
+                    binding: nil,
+                    column: nil,
+                    transforms: nil,
+                    ecto_type: nil,
+                    field_name: :draft
+                  },
+                  %Fase.SearchView.CustomDataFieldEntry{
                     binding: nil,
                     column: nil,
                     ecto_type: :string,
