@@ -330,7 +330,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.facet_fields.genre\n        Key \"xxx\" is not supported.\n        Supported keys are: \"label\", \"number_range_bounds\", \"date_range_bounds\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.facet_fields.genre\n        Key \"xxx\" is not supported.\n        Supported keys are: \"label\", \"number_range_bounds\", \"date_range_bounds\", \"transforms\", \"ecto_type\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),

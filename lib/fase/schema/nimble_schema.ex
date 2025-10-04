@@ -240,7 +240,9 @@ defmodule Fase.Schema.NimbleSchema do
                 supported_keys = [
                   :label,
                   :number_range_bounds,
-                  :date_range_bounds
+                  :date_range_bounds,
+                  :transforms,
+                  :ecto_type
                 ]
 
                 if key in supported_keys do

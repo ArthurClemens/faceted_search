@@ -27,6 +27,12 @@ defmodule Fase.Test.MyApp.UUIDFacetSchema do
         text_fields: [
           :author
         ],
+        facet_fields: [
+          author: [
+            transforms: ["cast(? as text)"],
+            ecto_type: :string
+          ]
+        ],
         sort_fields: [
           author: [
             transforms: ["cast(? as text)"],

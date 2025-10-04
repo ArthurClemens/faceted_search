@@ -308,6 +308,13 @@ defmodule Fase.Test.SchemaTest do
               {:publish_date, [transforms: ["to_char(?, 'YYYY-MM-DD')"]]},
               {:draft, [transforms: ["cast(NOT ? AS integer)"]]}
             ],
+            facet_fields: [
+              publish_date: [
+                transforms: ["to_char(?, 'YYYYMMDD')", "cast(? as integer)"],
+                ecto_type: :integer
+              ],
+              author: [transforms: ["unaccent(?)"]]
+            ],
             sort_fields: [
               :author,
               {:publish_date,
@@ -338,6 +345,9 @@ defmodule Fase.Test.SchemaTest do
              ],
              data_fields: [:author],
              text_fields: [:author],
+             facet_fields: [
+               author: [transforms: ["cast(? as text)"], ecto_type: :string]
+             ],
              sort_fields: [
                {:author, [transforms: ["cast(? as text)"], ecto_type: :string]}
              ]

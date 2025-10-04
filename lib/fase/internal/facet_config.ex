@@ -67,9 +67,11 @@ defmodule Fase.Internal.FacetConfig do
           else: facet_field.name
 
       ecto_type =
-        if facet_field.hierarchy,
-          do: :string,
-          else: ecto_types_by_field[facet_field.name]
+        cond do
+          not is_nil(facet_field.hierarchy) -> :string
+          not is_nil(facet_field.ecto_type) -> facet_field.ecto_type
+          true -> ecto_types_by_field[facet_field.name]
+        end
 
       Map.put(acc, facet_field.name, %FacetConfig{
         name: to_string(facet_field.name),

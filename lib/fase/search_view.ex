@@ -300,7 +300,6 @@ defmodule Fase.SearchView do
         &create_facet_column/2,
         &create_sort_columns/2
       ]
-      |> Enum.filter(&(not is_nil(&1) and &1 != ""))
       |> Enum.map(&apply(&1, [source, search_view_description]))
       |> Enum.filter(&(not is_nil(&1) and &1 != ""))
       |> Enum.map_join(",\n", &String.trim/1)
@@ -676,14 +675,14 @@ defmodule Fase.SearchView do
 
   defp facet_field_entries(
          facet_fields,
-         %{fields: fields, joins: joins} = _source
+         %{fields: fields, joins: joins} =
+           _source
        ) do
     facet_fields
     |> Enum.reduce([], fn %{
                             name: name,
-                            label_field: label_field,
-                            range_bounds: range_bounds
-                          },
+                            label_field: label_field
+                          } = facet_field,
                           acc ->
       field = Enum.find(fields, &(&1.name == name))
 
@@ -691,7 +690,7 @@ defmodule Fase.SearchView do
         label_field = Enum.find(fields, &(&1.name == label_field))
 
         [
-          %{field: field, label_field: label_field, range_bounds: range_bounds}
+          Map.merge(facet_field, %{field: field, label_field: label_field})
           | acc
         ]
       else
@@ -701,7 +700,8 @@ defmodule Fase.SearchView do
     |> Enum.map(fn %{
                      field: field,
                      label_field: label_field,
-                     range_bounds: range_bounds
+                     range_bounds: range_bounds,
+                     transforms: transforms
                    } ->
       %{name: name} = field
 
@@ -712,7 +712,9 @@ defmodule Fase.SearchView do
           table_and_column = table_and_column_string(table_name, column_name)
           create_width_bucket(table_and_column, range_bounds)
         else
-          table_and_column_string(table_name, column_name)
+          table_and_column = table_and_column_string(table_name, column_name)
+
+          run_transforms(transforms, table_and_column)
         end
 
       label =

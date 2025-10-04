@@ -18,7 +18,9 @@ defmodule Fase.SearchView.FacetField do
             range_buckets: nil,
             hierarchy: nil,
             parent: nil,
-            path: nil
+            path: nil,
+            transforms: nil,
+            ecto_type: nil
 
   @type t() :: %__MODULE__{
           # required
@@ -30,7 +32,9 @@ defmodule Fase.SearchView.FacetField do
           range_buckets: list(range_bucket()) | nil,
           hierarchy: boolean() | nil,
           parent: atom() | nil,
-          path: list(atom()) | nil
+          path: list(atom()) | nil,
+          transforms: list(String.t()) | nil,
+          ecto_type: atom() | nil
         }
 
   def new(field_options) do
@@ -70,7 +74,9 @@ defmodule Fase.SearchView.FacetField do
         hierarchy: Keyword.get(field_opts, :hierarchy),
         parent: Keyword.get(field_opts, :parent),
         path: Keyword.get(field_opts, :path),
-        hide_when_selected: !!Keyword.get(field_opts, :hide_when_selected)
+        hide_when_selected: !!Keyword.get(field_opts, :hide_when_selected),
+        transforms: Keyword.get(field_opts, :transforms),
+        ecto_type: Keyword.get(field_opts, :ecto_type)
       }
     )
   end

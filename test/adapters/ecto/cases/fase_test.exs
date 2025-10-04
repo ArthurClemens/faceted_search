@@ -14,16 +14,10 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
   alias Fase.Test.Repo
 
   setup_all do
+    cleanup_search_views()
+
     on_exit(fn ->
-      [
-        ExtendedFacetSchema,
-        MultipleSourcesFacetSchema,
-        PrefixFacetSchema,
-        ScopedFacetSchema,
-        TimestampsFacetSchema,
-        TransformsFacetSchema
-      ]
-      |> Enum.each(&Fase.drop_search_view(&1, "articles"))
+      cleanup_search_views()
     end)
   end
 
@@ -1550,6 +1544,36 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       count = Enum.count(results)
       assert count > 0 and count < 5
     end
+
+    test "facets (transformed: integer)" do
+      search_params = %{}
+
+      {:ok, _, facets} =
+        facet_search("articles", TransformsFacetSchema, search_params)
+
+      values =
+        Enum.find(facets, &(&1.field == :publish_date))
+        |> get_in([Access.key(:options), Access.all(), Access.key(:value)])
+
+      assert values |> Enum.all?(&is_integer(&1))
+    end
+
+    test "facets (transformed: unaccented)" do
+      search_params = %{}
+
+      {:ok, _, facets} =
+        facet_search("articles", TransformsFacetSchema, search_params)
+
+      values =
+        Enum.find(facets, &(&1.field == :author))
+        |> get_in([Access.key(:options), Access.all(), Access.key(:value)])
+
+      assert values |> Enum.sort() == [
+               "Aisha Rahman",
+               "Helene Dubois",
+               "Mateo Alvarez"
+             ]
+    end
   end
 
   describe "scope (word_count)" do
@@ -2410,8 +2434,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         }
       ]
 
-      {:ok, {results, _meta}} =
-        filtered_search("articles", UUIDFacetSchema, search_params)
+      {:ok, {results, _meta}, _facets} =
+        facet_search("articles", UUIDFacetSchema, search_params)
 
       assert results
              |> Enum.map(
@@ -2534,5 +2558,18 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         |> Map.replace("inserted_at", "timestamp")
         |> Map.replace("updated_at", "timestamp"))
     )
+  end
+
+  defp cleanup_search_views do
+    [
+      ExtendedFacetSchema,
+      MultipleSourcesFacetSchema,
+      PrefixFacetSchema,
+      ScopedFacetSchema,
+      TimestampsFacetSchema,
+      TransformsFacetSchema,
+      UUIDFacetSchema
+    ]
+    |> Enum.each(&Fase.drop_search_view(&1, "articles"))
   end
 end

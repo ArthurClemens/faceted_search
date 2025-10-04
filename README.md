@@ -1268,6 +1268,7 @@ The `transform` option is available for:
 
 - `data_fields`
 - `text_fields`
+- `facet_fields`
 - `sort_fields`
 
 **Examples**
