@@ -10,6 +10,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
   alias Fase.Test.MyApp.ScopedFacetSchema
   alias Fase.Test.MyApp.TimestampsFacetSchema
   alias Fase.Test.MyApp.TransformsFacetSchema
+  alias Fase.Test.MyApp.UUIDFacetSchema
   alias Fase.Test.Repo
 
   setup_all do
@@ -2371,6 +2372,75 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       ]
 
       assert results == expected
+    end
+  end
+
+  describe "uuids" do
+    setup do
+      articles = init_resources(article_count: 3, insert_delay: 1_000)
+
+      Fase.create_search_view(UUIDFacetSchema, "articles",
+        scope: %{source: "authors"}
+      )
+
+      %{articles: articles}
+    end
+
+    test "results without filters" do
+      search_params = %{}
+
+      expected = [
+        %{
+          data: %{"author" => true},
+          id: true,
+          text: true,
+          sort_author: true
+        },
+        %{
+          data: %{"author" => true},
+          id: true,
+          text: true,
+          sort_author: true
+        },
+        %{
+          data: %{"author" => true},
+          id: true,
+          text: true,
+          sort_author: true
+        }
+      ]
+
+      {:ok, {results, _meta}} =
+        filtered_search("articles", UUIDFacetSchema, search_params)
+
+      assert results
+             |> Enum.map(
+               &%{
+                 data: %{
+                   "author" =>
+                     match?(
+                       {:ok, _},
+                       Ecto.UUID.dump(&1.data["author"])
+                     )
+                 },
+                 id:
+                   match?(
+                     {:ok, _},
+                     Ecto.UUID.cast(&1.id)
+                   ),
+                 text:
+                   match?(
+                     {:ok, _},
+                     Ecto.UUID.dump(&1.text)
+                   ),
+                 sort_author:
+                   match?(
+                     {:ok, _},
+                     Ecto.UUID.dump(&1.text)
+                   )
+               }
+             ) ==
+               expected
     end
   end
 

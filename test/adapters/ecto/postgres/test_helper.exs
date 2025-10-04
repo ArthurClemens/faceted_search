@@ -45,6 +45,10 @@ Ecto.Migrator.up(
   log: true
 )
 
+# Stop and restart the repo to prevent error "cached plan must not change result type"
+Fase.Test.Repo.stop()
+{:ok, _pid} = Fase.Test.Repo.start_link()
+
 Ecto.Adapters.SQL.Sandbox.mode(Fase.Test.Repo, :auto)
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)

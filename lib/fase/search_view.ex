@@ -297,7 +297,7 @@ defmodule Fase.SearchView do
         &create_id_columns/2,
         &create_data_column/2,
         &create_text_column/2,
-        &create_tsv_column/2,
+        &create_facet_column/2,
         &create_sort_columns/2
       ]
       |> Enum.filter(&(not is_nil(&1) and &1 != ""))
@@ -472,7 +472,7 @@ defmodule Fase.SearchView do
 
   @spec create_name_ref_data_column_entries(Source.t()) :: list(String.t())
   defp create_name_ref_data_column_entries(
-         %{fields: fields, data_fields: data_fields, joins: joins} = _source
+         %{fields: fields, data_fields: data_fields} = source
        ) do
     data_field_name_lookup =
       Enum.reduce(data_fields, %{}, fn data_field, acc ->
@@ -482,13 +482,16 @@ defmodule Fase.SearchView do
     fields
     |> Enum.filter(&data_field_name_lookup[&1.name])
     |> Enum.map(
-      &create_data_column_entry(&1, data_field_name_lookup[&1.name], joins)
+      &create_data_column_entry(&1, data_field_name_lookup[&1.name], source)
     )
   end
 
-  @spec create_data_column_entry(Field.t(), DataField.t(), list(Join.t())) ::
+  @spec create_data_column_entry(Field.t(), DataField.t(), Source.t()) ::
           String.t()
-  defp create_data_column_entry(field, data_field, joins) do
+  defp create_data_column_entry(field, data_field, %{
+         joins: joins,
+         table_name: current_source_table_name
+       }) do
     %{name: name, ecto_type: ecto_type} = field
 
     {table_name, column_name} = get_table_and_column(field, joins)
@@ -501,12 +504,13 @@ defmodule Fase.SearchView do
     value =
       (data_field.transforms || [])
       |> run_transforms(table_and_column)
+      |> maybe_aggregate(
+        current_source_table_name,
+        table_name,
+        ecto_type
+      )
 
-    case ecto_type do
-      {:array, _} -> "'#{name}', array_agg(DISTINCT #{value})"
-      :string -> "'#{name}', string_agg(DISTINCT #{value}, ', ')"
-      _ -> "'#{name}', #{value}"
-    end
+    "'#{name}', #{value}"
   end
 
   @spec create_custom_data_entries(Source.t()) :: list(String.t())
@@ -630,17 +634,13 @@ defmodule Fase.SearchView do
 
         custom_transforms = text_field.transforms || []
 
-        value =
-          Enum.concat(custom_transforms, default_transforms)
-          |> run_transforms(table_and_column)
-
-        case field.ecto_type do
-          :string ->
-            "  COALESCE(string_agg(DISTINCT #{value}, ', '), '')"
-
-          _ ->
-            "  COALESCE(#{value}, '')"
-        end
+        Enum.concat(custom_transforms, default_transforms)
+        |> run_transforms(table_and_column)
+        |> maybe_aggregate(
+          current_source_table_name,
+          table_name,
+          field.ecto_type
+        )
       end)
 
     """
@@ -654,8 +654,8 @@ defmodule Fase.SearchView do
 
   # TSV column
 
-  @spec create_tsv_column(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_tsv_column(%{facet_fields: facet_fields} = source, _)
+  @spec create_facet_column(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_facet_column(%{facet_fields: facet_fields} = source, _)
        when is_list(facet_fields) and facet_fields != [] do
     facet_field_entries =
       facet_fields
@@ -669,10 +669,10 @@ defmodule Fase.SearchView do
 
     Enum.concat(facet_field_entries, hierarchy_entries)
     |> Enum.join(", ")
-    |> tsv_column_wrap()
+    |> facet_column_wrap()
   end
 
-  defp create_tsv_column(_, _), do: "NULL::tsvector AS tsv"
+  defp create_facet_column(_, _), do: "NULL::tsvector AS tsv"
 
   defp facet_field_entries(
          facet_fields,
@@ -725,7 +725,7 @@ defmodule Fase.SearchView do
           "''"
         end
 
-      separator = Constants.tsv_separator()
+      separator = Constants.facet_separator()
 
       "'#{name}' || '#{separator}' || #{value} || '#{separator}' || #{label}"
     end)
@@ -737,7 +737,7 @@ defmodule Fase.SearchView do
       %{name: name, value: value, label: label} =
         create_hierarchy_entry(facet_field, source)
 
-      separator = Constants.tsv_separator()
+      separator = Constants.facet_separator()
 
       "'#{name}' || '#{separator}' || #{value} || '#{separator}' || #{label}"
     end)
@@ -806,7 +806,7 @@ defmodule Fase.SearchView do
     %{name: name, value: value, label: label}
   end
 
-  defp tsv_column_wrap(key_values) do
+  defp facet_column_wrap(key_values) do
     """
     array_to_tsvector(
       array_agg(array_remove(ARRAY[#{key_values}], NULL)) FILTER (WHERE array_remove(ARRAY[#{key_values}], NULL) <> '{}')
@@ -883,17 +883,16 @@ defmodule Fase.SearchView do
 
     {table_name, column_name} = get_table_and_column(field, joins)
     table_and_column = table_and_column_string(table_name, column_name)
-    value = run_transforms(transforms, table_and_column)
 
-    ref =
-      maybe_aggregate(
-        value,
+    value =
+      run_transforms(transforms, table_and_column)
+      |> maybe_aggregate(
         current_source_table_name,
         table_name,
         ecto_type
       )
 
-    "#{ref} AS #{sort_column_name}"
+    "#{value} AS #{sort_column_name}"
   end
 
   defp create_sort_statement(
