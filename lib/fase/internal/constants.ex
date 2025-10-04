@@ -5,7 +5,7 @@ defmodule Fase.Internal.Constants do
   def sort_field_prefix, do: "sort_"
 
   def hierarchy_separator, do: ">"
-  def tsv_separator, do: "=:="
+  def facet_separator, do: "=:="
 
   def option_label_callback, do: :option_label
   def scope_callback, do: :scope_by

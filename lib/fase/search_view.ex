@@ -297,7 +297,7 @@ defmodule Fase.SearchView do
         &create_id_columns/2,
         &create_data_column/2,
         &create_text_column/2,
-        &create_tsv_column/2,
+        &create_facet_column/2,
         &create_sort_columns/2
       ]
       |> Enum.filter(&(not is_nil(&1) and &1 != ""))
@@ -654,8 +654,8 @@ defmodule Fase.SearchView do
 
   # TSV column
 
-  @spec create_tsv_column(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_tsv_column(%{facet_fields: facet_fields} = source, _)
+  @spec create_facet_column(Source.t(), SearchViewDescription.t()) :: String.t()
+  defp create_facet_column(%{facet_fields: facet_fields} = source, _)
        when is_list(facet_fields) and facet_fields != [] do
     facet_field_entries =
       facet_fields
@@ -669,10 +669,10 @@ defmodule Fase.SearchView do
 
     Enum.concat(facet_field_entries, hierarchy_entries)
     |> Enum.join(", ")
-    |> tsv_column_wrap()
+    |> facet_column_wrap()
   end
 
-  defp create_tsv_column(_, _), do: "NULL::tsvector AS tsv"
+  defp create_facet_column(_, _), do: "NULL::tsvector AS tsv"
 
   defp facet_field_entries(
          facet_fields,
@@ -725,7 +725,7 @@ defmodule Fase.SearchView do
           "''"
         end
 
-      separator = Constants.tsv_separator()
+      separator = Constants.facet_separator()
 
       "'#{name}' || '#{separator}' || #{value} || '#{separator}' || #{label}"
     end)
@@ -737,7 +737,7 @@ defmodule Fase.SearchView do
       %{name: name, value: value, label: label} =
         create_hierarchy_entry(facet_field, source)
 
-      separator = Constants.tsv_separator()
+      separator = Constants.facet_separator()
 
       "'#{name}' || '#{separator}' || #{value} || '#{separator}' || #{label}"
     end)
@@ -806,7 +806,7 @@ defmodule Fase.SearchView do
     %{name: name, value: value, label: label}
   end
 
-  defp tsv_column_wrap(key_values) do
+  defp facet_column_wrap(key_values) do
     """
     array_to_tsvector(
       array_agg(array_remove(ARRAY[#{key_values}], NULL)) FILTER (WHERE array_remove(ARRAY[#{key_values}], NULL) <> '{}')

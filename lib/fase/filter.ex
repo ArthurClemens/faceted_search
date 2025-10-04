@@ -150,7 +150,8 @@ defmodule Fase.Filter do
 
   defp get_facet_conditions(name, :==, expr, facet_values)
        when is_list(facet_values) do
-    values = Enum.map(facet_values, &"#{name}#{Constants.tsv_separator()}#{&1}")
+    values =
+      Enum.map(facet_values, &"#{name}#{Constants.facet_separator()}#{&1}")
 
     dynamic(
       [r],

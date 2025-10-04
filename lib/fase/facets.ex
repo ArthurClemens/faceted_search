@@ -329,7 +329,7 @@ defmodule Fase.Facets do
           acc |> String.replace("$#{index + 1}", ~s(#{param}))
       end)
 
-    separator = Constants.tsv_separator()
+    separator = Constants.facet_separator()
 
     """
     SELECT
