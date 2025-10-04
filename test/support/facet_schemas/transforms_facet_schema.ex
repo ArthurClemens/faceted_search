@@ -62,7 +62,10 @@ defmodule Fase.Test.MyApp.TransformsFacetSchema do
         text_fields: [
           :summary,
           title: [
-            transforms: ["initcap(?)", "concat(?, ' ', length(?))"]
+            transforms: [
+              "initcap(? collate \"fr_FR\")",
+              "concat(?, ' ', length(?))"
+            ]
           ],
           author: [
             transforms: ["unaccent(?)"]

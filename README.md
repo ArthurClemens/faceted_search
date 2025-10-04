@@ -1263,6 +1263,7 @@ search_params = %{
 ```
 
 The `transform` option is available for:
+
 - `data_fields`
 - `text_fields`
 - `sort_fields`
@@ -1284,7 +1285,7 @@ transforms: ["unaccent(?)"]
 Change text to title case:
 
 ```elixir
-transforms: ["initcap(?)"]
+transforms: ["initcap(? collate \"fr_FR\")"]
 ```
 
 ### Search transforms
@@ -1292,6 +1293,7 @@ transforms: ["initcap(?)"]
 During a search, database values and search values can be transformed using the `search_transform/3` callback function.
 
 For example, if the applied filters would normally produce the following database expression:
+
 ```sql
 WHERE text ILIKE '%geology%'
 ```

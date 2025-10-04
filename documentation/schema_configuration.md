@@ -461,7 +461,7 @@ sources: [
     ...
     text_fields: [
       title: [
-        transforms: ["initcap(?)", "concat(?, ' ', length(?))"]
+        transforms: ["initcap(? collate \"fr_FR\")", "concat(?, ' ', length(?))"]
       ],
       author: [
         transforms: ["unaccent(?)"]
@@ -666,7 +666,7 @@ Either:
     - A keyword list with key `ecto_type`
       - Only if the transforms result in a different type than defined in `fields`
       - The Ecto type such as `:string` or `{:array, :string}`.
-      - Type: `any()` 
+      - Type: `any()`
 
 ### Examples
 
