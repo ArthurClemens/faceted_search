@@ -472,7 +472,7 @@ defmodule Fase.SearchView do
 
   @spec create_name_ref_data_column_entries(Source.t()) :: list(String.t())
   defp create_name_ref_data_column_entries(
-         %{fields: fields, data_fields: data_fields, joins: joins} = _source
+         %{fields: fields, data_fields: data_fields} = source
        ) do
     data_field_name_lookup =
       Enum.reduce(data_fields, %{}, fn data_field, acc ->
@@ -482,13 +482,16 @@ defmodule Fase.SearchView do
     fields
     |> Enum.filter(&data_field_name_lookup[&1.name])
     |> Enum.map(
-      &create_data_column_entry(&1, data_field_name_lookup[&1.name], joins)
+      &create_data_column_entry(&1, data_field_name_lookup[&1.name], source)
     )
   end
 
-  @spec create_data_column_entry(Field.t(), DataField.t(), list(Join.t())) ::
+  @spec create_data_column_entry(Field.t(), DataField.t(), Source.t()) ::
           String.t()
-  defp create_data_column_entry(field, data_field, joins) do
+  defp create_data_column_entry(field, data_field, %{
+         joins: joins,
+         table_name: current_source_table_name
+       }) do
     %{name: name, ecto_type: ecto_type} = field
 
     {table_name, column_name} = get_table_and_column(field, joins)
@@ -501,12 +504,13 @@ defmodule Fase.SearchView do
     value =
       (data_field.transforms || [])
       |> run_transforms(table_and_column)
+      |> maybe_aggregate(
+        current_source_table_name,
+        table_name,
+        ecto_type
+      )
 
-    case ecto_type do
-      {:array, _} -> "'#{name}', array_agg(DISTINCT #{value})"
-      :string -> "'#{name}', string_agg(DISTINCT #{value}, ', ')"
-      _ -> "'#{name}', #{value}"
-    end
+    "'#{name}', #{value}"
   end
 
   @spec create_custom_data_entries(Source.t()) :: list(String.t())
@@ -630,17 +634,13 @@ defmodule Fase.SearchView do
 
         custom_transforms = text_field.transforms || []
 
-        value =
-          Enum.concat(custom_transforms, default_transforms)
-          |> run_transforms(table_and_column)
-
-        case field.ecto_type do
-          :string ->
-            "  COALESCE(string_agg(DISTINCT #{value}, ', '), '')"
-
-          _ ->
-            "  COALESCE(#{value}, '')"
-        end
+        Enum.concat(custom_transforms, default_transforms)
+        |> run_transforms(table_and_column)
+        |> maybe_aggregate(
+          current_source_table_name,
+          table_name,
+          field.ecto_type
+        )
       end)
 
     """
@@ -883,17 +883,16 @@ defmodule Fase.SearchView do
 
     {table_name, column_name} = get_table_and_column(field, joins)
     table_and_column = table_and_column_string(table_name, column_name)
-    value = run_transforms(transforms, table_and_column)
 
-    ref =
-      maybe_aggregate(
-        value,
+    value =
+      run_transforms(transforms, table_and_column)
+      |> maybe_aggregate(
         current_source_table_name,
         table_name,
         ecto_type
       )
 
-    "#{ref} AS #{sort_column_name}"
+    "#{value} AS #{sort_column_name}"
   end
 
   defp create_sort_statement(
