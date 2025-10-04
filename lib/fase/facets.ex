@@ -56,7 +56,7 @@ defmodule Fase.Facets do
       is_list(search_params.filters) and search_params.filters != []
 
     is_cache_facets =
-      Keyword.get(facet_search_options, :cache_facets) and has_cache_key
+      Keyword.get(facet_search_options, :cache_facets) && has_cache_key
 
     get_facet_results(
       ecto_schema,
