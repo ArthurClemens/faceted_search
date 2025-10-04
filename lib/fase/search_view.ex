@@ -743,15 +743,12 @@ defmodule Fase.SearchView do
     end)
   end
 
-  @spec create_hierarchy_entry(FacetField.t(), Source.t(), Keyword.t()) :: map()
+  @spec create_hierarchy_entry(FacetField.t(), Source.t()) :: map()
   defp create_hierarchy_entry(
          %{name: name, path: path, label_field: label_field},
-         %{table_name: current_source_table_name, fields: fields, joins: joins} =
-           _source,
-         opts \\ []
+         %{fields: fields, joins: joins} =
+           _source
        ) do
-    is_aggregate_values = Keyword.get(opts, :aggregate_values, false)
-
     %{label_field: label_field, values: values} =
       path
       |> Enum.map(fn name ->
@@ -767,19 +764,9 @@ defmodule Fase.SearchView do
           end
 
         {table_name, column_name} = get_table_and_column(field, joins)
-        table_and_column = table_and_column_string(table_name, column_name)
 
         value =
-          if is_aggregate_values do
-            maybe_aggregate(
-              table_and_column,
-              current_source_table_name,
-              table_name,
-              :string
-            )
-          else
-            table_and_column
-          end
+          table_and_column_string(table_name, column_name)
 
         acc
         |> Map.update(:values, [], fn existing -> [value | existing] end)
