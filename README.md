@@ -2,24 +2,6 @@
 
 Fase is a library that adds **faceted search** into your application, using Postgres with [Flop ⤴](https://hexdocs.pm/flop) as the underlying search library.
 
-> **WARNING**
-> This library is in its early stages: tests are not yet in place, and breaking changes are expected.
-
-## Installation
-
-Add `fase` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:fase,
-      git: "https://github.com/ArthurClemens/fase.git",
-      branch: "development"
-    }
-  ]
-end
-```
-
 ## Background
 
 Faceted search allows users to gradually refine search results by selecting filters based on structured fields
@@ -43,7 +25,7 @@ This brings the following benefits:
 - Integrates seamlessly with an existing Flop setup, using the same concepts and functions.
 - Combines faceted search with regular Flop-based filters and text search.
 - Allows scoping by table, user, or any other scope you define.
-- Flexible label text definitions.
+- Customizable facet option labels.
 
 ## Library concepts
 
@@ -52,6 +34,21 @@ This brings the following benefits:
 - The search view can be [scoped](#scoping-data) to only include a subset of the source data, for example, content from a single user.
 - Searching and filtering is done using [Flop search ⤴](https://hexdocs.pm/flop) on the search view.
 - [Faceted search](#faceted-search ↓) is performed with the same Flop search parameters. Facet results include available facets and options, along with result counts, and can be used to create UI controls.
+
+## Installation
+
+Add `fase` to your list of dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:fase,
+      git: "https://github.com/ArthurClemens/fase.git",
+      branch: "development"
+    }
+  ]
+end
+```
 
 ## The search view
 
@@ -67,11 +64,11 @@ Data from one or more database tables and columns is aggregated into a "search v
 
 The search view contains these base columns:
 
-- `id` The column that contains the data source record ID - useful for navigation or performing additional database lookups.
-- `source` A `string` column that contains the data source table name.
-- `data` A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
-- `text` A `text` column that contains a "bag of words" per row, used for text searches.
-- `facet` A `tsvector` column used for storing facet data.
+- `id` - The column that contains the data source record ID - useful for navigation or performing additional database lookups.
+- `source` - A `string` column that contains the data source table name.
+- `data` - A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
+- `text` - A `text` column that contains a "bag of words" per row, used for text searches.
+- `facet` - A `tsvector` column used for storing facet data.
 
 Additional sort columns are added when option `sort_fields` is used - see [Sorting ↓](#sorting).
 
