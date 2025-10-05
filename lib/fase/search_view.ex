@@ -915,7 +915,7 @@ defmodule Fase.SearchView do
         "array_agg(DISTINCT #{value})"
 
       ecto_type == :string and needs_aggregate ->
-        "COALESCE(string_agg(DISTINCT #{value}, ', '), '')"
+        "string_agg(DISTINCT #{value}, ', ')"
 
       ecto_type == :boolean and needs_aggregate ->
         "every(#{value})"
