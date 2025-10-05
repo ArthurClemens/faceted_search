@@ -1,6 +1,6 @@
 defmodule Fase.Facet do
   @moduledoc """
-  A structured, filterable field exposed in the search interface, used to group and refine search results by distinct values.
+  A structured, filterable field in the search interface, used to group and refine search results by distinct values.
   """
 
   @enforce_keys [:field, :options]

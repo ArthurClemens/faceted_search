@@ -4,6 +4,7 @@ defmodule Fase.Option do
   """
 
   @enforce_keys [:value, :label, :count, :selected]
+
   defstruct value: nil, label: nil, count: nil, selected: nil
 
   @type t() :: %__MODULE__{

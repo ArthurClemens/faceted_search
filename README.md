@@ -39,17 +39,19 @@ While faceted search was popularized by e-commerce platforms, many other types o
 This brings the following benefits:
 
 - Keeps all your data private, stored in your own database — no need to set up an external server or pay for a faceted search provider.
+- Because search data is cached in a materialized view, searches can be significantly faster.
 - Integrates seamlessly with an existing Flop setup, using the same concepts and functions.
 - Combines faceted search with regular Flop-based filters and text search.
-- Allows scoping per table, user, or any other scope you define.
-- Because search data is cached in a database view, searching may be substantially faster.
+- Allows scoping by table, user, or any other scope you define.
+- Flexible label text definitions.
 
 ## Library concepts
 
 - Searching, filtering and faceting is performed on a "search view", a [materialized view ⤴](https://en.wikipedia.org/wiki/Materialized_view) that has searchable data cached in a database table.
 - The search view is created from a [schema configuration](documentation/schema_configuration.md) that defines which database tables the data is fetched from.
+- The search view can be [scoped](#scoping-data) to only include a subset of the source data, for example, content from a single user.
 - Searching and filtering is done using [Flop search ⤴](https://hexdocs.pm/flop) on the search view.
-- [Faceted search](#faceted-search ↓) is performed with the same Flop search parameters. Facet results includes available facets and options, along with result counts, and can be used to create UI controls.
+- [Faceted search](#faceted-search ↓) is performed with the same Flop search parameters. Facet results include available facets and options, along with result counts, and can be used to create UI controls.
 
 ## The search view
 
@@ -1113,7 +1115,7 @@ In this chapter:
 - [Combining scopes](#combining-scopes)
 - [Scoping with multiple sources](#scoping-with-multiple-sources)
 
-Scoping is the method of filtering search view data upfront. Possible use cases:
+Scoping is the method of filtering search view data upfront, when the search view is generated. Possible use cases:
 
 - When working with large datasets, where data can be split up in separate logical parts, for example items filtered by category, source or date.
 - For performance reasons it could be better to split up source data to create multiple "parametrized" search views.
@@ -1125,7 +1127,7 @@ Scoping is the method of filtering search view data upfront. Possible use cases:
 A scope is created in three steps:
 
 1. By providing the schema option `scope_keys` with a list of scope identifiers.
-2. By writing callback function `scope_by/2`, defined in the same schema module where `use Fase` is called. The first parameter is the scope identifier.
+2. By writing a [`scope_by/2` callback function](Fase.html#c:scope_by/2), defined in the same schema module where `use Fase` is called. The first parameter is the scope identifier.
 3. By calling `Fase.create_search_view/3` with option `scope`, containing any value that `scope_by/2` should handle.
 
 ### Example: scoping to the current user

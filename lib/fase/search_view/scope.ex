@@ -1,6 +1,6 @@
 defmodule Fase.SearchView.Scope do
   @moduledoc """
-  Definition for the `scope_by` callback.
+  Definition for the [`scope_by/2` callback function](Fase.html#c:scope_by/2).
   """
 
   @enforce_keys [
