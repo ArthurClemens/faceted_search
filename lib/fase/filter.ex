@@ -2,7 +2,7 @@ defmodule Fase.Filter do
   @moduledoc false
 
   # Filters for custom fields
-  # Adds support for searching the source, data, text and tsv columns in the document view table.
+  # Adds support for searching the source, data, text and facet columns in the document view table.
 
   import Ecto.Query, warn: false
 
@@ -206,7 +206,7 @@ defmodule Fase.Filter do
       [r],
       fragment(
         "?",
-        field(r, :tsv)
+        field(r, :facet)
       )
     )
   end

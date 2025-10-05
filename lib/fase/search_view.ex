@@ -200,7 +200,7 @@ defmodule Fase.SearchView do
          "source",
          "data",
          "text",
-         "tsv"
+         "facet"
        ] ++
          get_sort_column_names(search_view_description))
       |> Enum.map(fn name ->
@@ -231,7 +231,7 @@ defmodule Fase.SearchView do
          %{name: "source"},
          %{name: "data", using: "gin(data)"},
          %{name: "text", using: "gin(text gin_trgm_ops)"},
-         %{name: "tsv", using: "gin(tsv)"}
+         %{name: "facet", using: "gin(facet)"}
        ] ++
          (get_sort_column_names(search_view_description)
           |> Enum.map(&%{name: &1})))
@@ -672,7 +672,7 @@ defmodule Fase.SearchView do
     |> facet_column_wrap()
   end
 
-  defp create_facet_column(_, _), do: "NULL::tsvector AS tsv"
+  defp create_facet_column(_, _), do: "NULL::tsvector AS facet"
 
   defp facet_field_entries(
          facet_fields,
@@ -797,7 +797,7 @@ defmodule Fase.SearchView do
     """
     array_to_tsvector(
       array_agg(array_remove(ARRAY[#{key_values}], NULL)) FILTER (WHERE array_remove(ARRAY[#{key_values}], NULL) <> '{}')
-    ) AS tsv
+    ) AS facet
     """
   end
 

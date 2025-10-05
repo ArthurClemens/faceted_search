@@ -69,7 +69,7 @@ The search view contains these base columns:
 - `source` A `string` column that contains the data source table name.
 - `data` A `jsonb` column that contains structured data for filtering. When handling search results, specific data can be extracted for rendering - for example a title and item details. Is it also possible to add custom data derived from other tables.
 - `text` A `text` column that contains a "bag of words" per row, used for text searches.
-- `tsv` A `tsvector` column used for storing facet data.
+- `facet` A `tsvector` column used for storing facet data.
 
 Additional sort columns are added when option `sort_fields` is used - see [Sorting ↓](#sorting).
 
@@ -858,14 +858,14 @@ In this chapter:
 
 When the search view grows to a substantial number of rows, additional performance tweaking will be needed. At what point exactly should be established empirically - it depends on the complexity of the data, or whether or not facets or sorting are used.
 
-When using facets, retrieving facet data takes up the bulk of the query time: it involves two extra database queries on the `tsv` column where all rows are filtered and grouped. When querying more than 100,000 rows, this adds up.
+When using facets, retrieving facet data takes up the bulk of the query time: it involves two extra database queries on the `facet` column where all rows are filtered and grouped. When querying more than 100,000 rows, this adds up.
 
 ### Built-in optimizations
 
 Fase contains two optimizations:
 
 - All columns in the search view are indexed.
-- If no facet filters are applied, the second query on the `tsv` column for retrieving filtered facet results is skipped. This should make the initial search page load slightly faster when no facets are selected.
+- If no facet filters are applied, the second query on the `facet` column for retrieving filtered facet results is skipped. This should make the initial search page load slightly faster when no facets are selected.
 
 ### Measuring query time
 

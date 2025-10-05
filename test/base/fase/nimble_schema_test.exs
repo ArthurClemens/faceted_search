@@ -292,7 +292,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.facet_fields\n        Key \"xxx\" is not supported.\n        Supported keys are: \"id\", \"source\", \"data\", \"text\", \"tsv\", \"genre\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.facet_fields\n        Key \"xxx\" is not supported.\n        Supported keys are: \"id\", \"source\", \"data\", \"text\", \"facet\", \"genre\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),
@@ -368,7 +368,7 @@ defmodule Fase.Test.NimbleSchemaTest do
       ]
 
       assert_raise Fase.InvalidOptionsError,
-                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.facet_fields\n        Key \"genres\" is not supported.\n        Supported keys are: \"id\", \"source\", \"data\", \"text\", \"tsv\", \"genre_title\".",
+                   "    \n    Module: Elixir.Fase.Test.NimbleSchemaTest.FacetSchema\n    Data path: sources.articles.facet_fields\n        Key \"genres\" is not supported.\n        Supported keys are: \"id\", \"source\", \"data\", \"text\", \"facet\", \"genre_title\".",
                    fn ->
                      NimbleSchema.validate!(
                        Keyword.put(options, :module, FacetSchema),

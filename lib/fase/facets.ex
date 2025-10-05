@@ -309,7 +309,7 @@ defmodule Fase.Facets do
 
     {sql, params} = repo.to_sql(:all, query)
 
-    sql_with_tsv = String.replace(sql, ~s("id"), ~s("tsv"))
+    sql_with_tsv = String.replace(sql, ~s("id"), ~s("facet"))
 
     sql_with_variables =
       params

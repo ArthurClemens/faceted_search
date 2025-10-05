@@ -11,7 +11,7 @@ defmodule Fase.Schema.NimbleSchema do
     :source,
     :data,
     :text,
-    :tsv
+    :facet
   ]
   @fase_option_schema [
     module: [
