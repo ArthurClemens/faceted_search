@@ -460,7 +460,6 @@ The returned facet results will look like this:
 
 ```elixir
 [
-  ...
   %Fase.Facet{
     field: :publication_year,
     options: [
