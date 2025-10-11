@@ -651,6 +651,23 @@ defmodule Fase.Facets do
          facet_configs,
          facet_search_options
        ) do
+    has_facet_label_callback =
+      Kernel.function_exported?(module, Constants.facet_label_callback(), 2)
+
+    scope = Keyword.get(facet_search_options, :scope)
+
+    create_facet_label = fn field ->
+      label =
+        if has_facet_label_callback do
+          apply(module, Constants.facet_label_callback(), [
+            field,
+            scope
+          ])
+        end
+
+      label || humanize(field)
+    end
+
     facet_result_states
     |> Enum.reduce([], fn
       {_field, states}, acc when states == [] ->
@@ -660,7 +677,10 @@ defmodule Fase.Facets do
         facet_config = get_in(facet_configs, [Access.key(field)])
 
         options =
-          Enum.map(states, &create_option(module, &1, facet_search_options))
+          Enum.map(
+            states,
+            &create_option(module, &1, scope)
+          )
 
         if facet_config.hide_when_selected and Enum.any?(options, & &1.selected) do
           acc
@@ -668,6 +688,7 @@ defmodule Fase.Facets do
           [
             %Facet{
               field: field,
+              label: create_facet_label.(field),
               parent: facet_config.parent,
               options: options
             }
@@ -678,9 +699,13 @@ defmodule Fase.Facets do
     |> Enum.reverse()
   end
 
-  @spec create_option(module(), facet_result_state(), [facet_search_option()]) ::
+  @spec create_option(
+          module(),
+          facet_result_state(),
+          term()
+        ) ::
           Option.t()
-  defp create_option(module, facet_result_state, facet_search_options) do
+  defp create_option(module, facet_result_state, scope) do
     %{
       count: count,
       database_label: database_label,
@@ -692,8 +717,6 @@ defmodule Fase.Facets do
 
     has_option_label_callback =
       Kernel.function_exported?(module, Constants.option_label_callback(), 4)
-
-    scope = Keyword.get(facet_search_options, :scope)
 
     option_label =
       if has_option_label_callback do
@@ -791,4 +814,21 @@ defmodule Fase.Facets do
     do: %{filters: filters}
 
   def clean_search_params(_), do: %{filters: []}
+
+  # Copied from Phoenix.Naming
+  # Converts a field name into its humanize version.
+  @spec humanize(atom | String.t()) :: String.t()
+  def humanize(atom) when is_atom(atom),
+    do: humanize(Atom.to_string(atom))
+
+  def humanize(bin) when is_binary(bin) do
+    bin =
+      if String.ends_with?(bin, "_id") do
+        binary_part(bin, 0, byte_size(bin) - 3)
+      else
+        bin
+      end
+
+    bin |> String.replace("_", " ") |> String.capitalize()
+  end
 end

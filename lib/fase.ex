@@ -364,6 +364,36 @@ defmodule Fase do
               dynamic_expr()
 
   @doc """
+  Returns a custom facet label.
+
+  Parameters:
+  - `facet_name` Name of the facet
+  - `scope` The scope variable if passed to `Fase.search/3` options
+
+  Return `nil` to use a "humanized" translation of the field name.
+
+  Place the callback in the module that defines the schema.
+
+  ## Examples
+
+  The example callback assumes that `Fase.search` is called with
+  `scope: %{locale: current_locale}` in its options.
+
+      @impl Fase
+
+      def facet_label(:user_roles, %{locale: locale}) do
+        Gettext.with_locale(MyApp.Gettext, locale, fn ->
+          gettext("User role")
+        end)
+      end
+
+      def facet_label(_, _), do: nil
+
+  """
+
+  @callback facet_label(facet_name(), scope() | nil) :: String.t() | nil
+
+  @doc """
   Returns a custom option label.
 
   Parameters:
@@ -378,7 +408,7 @@ defmodule Fase do
 
   ## Examples
 
-  The second callback instance assumes that `Fase.search` is called with
+  The second callback function assumes that `Fase.search` is called with
   `scope: %{locale: current_locale}` in its options.
 
       @impl Fase
@@ -416,6 +446,7 @@ defmodule Fase do
               String.t() | nil
 
   @optional_callbacks scope_by: 2,
+                      facet_label: 2,
                       option_label: 4,
                       search_transform: 3,
                       search_condition: 2

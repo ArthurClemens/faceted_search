@@ -7,6 +7,7 @@ defmodule Fase.Internal.Constants do
   def hierarchy_separator, do: ">"
   def facet_separator, do: "=:="
 
+  def facet_label_callback, do: :facet_label
   def option_label_callback, do: :option_label
   def scope_callback, do: :scope_by
   def search_condition_callback, do: :search_condition

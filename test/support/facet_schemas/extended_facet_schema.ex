@@ -136,6 +136,28 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
 
   def schema_options, do: @options
 
+  @impl Fase
+  def facet_label(:word_count, scope) do
+    locale = scope[:locale]
+
+    case locale do
+      "fr" -> "NOMBRE DE MOTS"
+      _ -> "WORD COUNT"
+    end
+  end
+
+  def facet_label(:publish_date, scope) do
+    locale = scope[:locale]
+
+    case locale do
+      "fr" -> "DATE DE PUBLICATION"
+      _ -> "PUBLISH DATE"
+    end
+  end
+
+  def facet_label(_, _), do: nil
+
+  @impl Fase
   def option_label(:word_count, value, _, scope) do
     {bounds, _bucket} = value
     locale = scope[:locale]

@@ -462,6 +462,7 @@ The returned facet results will look like this:
 [
   %Fase.Facet{
     field: :publication_year,
+    label: "Publication year",
     options: [
       %Fase.Option{value: 1964, label: "1964", count: 2, selected: false},
       %Fase.Option{value: 1966, label: "1966", count: 2, selected: false},
@@ -486,6 +487,7 @@ UI controls are outside of the scope of this library; this section describes the
 [
   %Fase.Facet{
     field: :publication_year,
+    label: "Publication year",
     options: [
       %Fase.Option{value: 1964, label: "1964", count: 2, selected: false},
       ...
@@ -550,6 +552,7 @@ The returned facet results will look like this:
 [
   %Fase.Facet{
     field: :publication_year,
+    label: "Publication year",
     options: [
       %Fase.Option{value: 1964, label: "1964", count: 2, selected: true},
       %Fase.Option{value: 1966, label: "1966", count: 2, selected: true},
@@ -562,12 +565,13 @@ The returned facet results will look like this:
 ]
 ```
 
-## Option labels
+## Labels
 
 In this chapter:
 
 - [Labels from database tables](#labels-from-database-tables)
-- [Custom labels](#custom-labels)
+- [Custom option labels](#custom-option-labels)
+- [Custom facet labels](#custom-facet-labels)
 
 By default, the `label` field in the returned options contains the stringified value.
 To provide a better suited label for a user interface, two scenarios are supported:
@@ -589,9 +593,9 @@ facet_fields: [
 
 See [schema configuration: facet_fields](documentation/schema_configuration.md#facet_fields) for details.
 
-### Custom labels
+### Custom option labels
 
-In the schema module, callback `option_label/4` creates label texts for a given value or database label:
+In the schema module, callback [option_label/4](Fase.html#c:option_label/4) creates label texts for a given value or database label:
 
 ```elixir
 defmodule MyApp.FacetSchema do
@@ -624,8 +628,33 @@ defmodule MyApp.FacetSchema do
   ...
 ```
 
+Return `nil` to use the option value as string.
+
 - See [Callbacks: option_label/4](Fase.html#c:option_label/4) for details
 - See [Ranges ↓](#ranges) for an example with range values
+
+### Custom facet labels
+
+Similar to custom option labels, callback [facet_label/2](Fase.html#c:facet_label/2) creates label texts for facets.
+
+```elixir
+defmodule MyApp.FacetSchema do
+
+  @impl Fase
+  def facet_label(:user_roles, %{locale: locale}) do
+    Gettext.with_locale(MyApp.Gettext, locale, fn ->
+      gettext("User role")
+    end)
+  end
+
+  def facet_label(_, _), do: nil
+
+  ...
+```
+
+Return `nil` to use a "humanized" translation of the field name.
+
+- See [Callbacks: facet_label/4](Fase.html#c:facet_label/2) for details
 
 ## Ranges
 
@@ -692,7 +721,7 @@ For a range facet, the option value in the facet results contains the bucket num
 
 ### Range labels
 
-Use the callback function `option_label/4` described at [custom labels](#custom-labels) to create readable option labels for ranges.
+Use the callback function `option_label/4` described at [Custom option labels](#custom-option-labels) to create readable option labels for ranges.
 
 The value passed to the callback contains a tuple containing:
 
@@ -827,9 +856,9 @@ To remove parent facet `periods` from the facet results, set its option `hide_wh
 
 ### Hierarchy labels
 
-See [Option labels](#option-labels)
+See [Labels](#labels)
 
-To create a custom text (which cannot be read from the database), use the callback function `option_label/4` described at [custom labels](#custom-labels) to create readable option labels for hierarchies.
+To create a custom text (which cannot be read from the database), use the callback function `option_label/4` described at [Custom option labels](#custom-option-labels) to create readable option labels for hierarchies.
 
 The received value will contains the path values separated by ">", for example: "modern_art>pop_art".
 

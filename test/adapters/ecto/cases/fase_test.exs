@@ -459,6 +459,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = %{
         author: %{
           count: 5,
+          field: :author,
           first_2_options: [
             %Fase.Option{
               count: 2,
@@ -472,10 +473,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Author"
         },
         category_author: %{
           count: 5,
+          field: :category_author,
           first_2_options: [
             %Fase.Option{
               count: 2,
@@ -489,10 +492,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Category author"
         },
         category_tags: %{
           count: 20,
+          field: :category_tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -506,10 +511,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "books"
             }
-          ]
+          ],
+          label: "Category tags"
         },
         publish_date: %{
           count: 4,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 4,
@@ -523,10 +530,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 2
             }
-          ]
+          ],
+          label: "DATE DE PUBLICATION"
         },
         tags: %{
           count: 20,
+          field: :tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -540,10 +549,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "books"
             }
-          ]
+          ],
+          label: "Tags"
         },
         word_count: %{
           count: 3,
+          field: :word_count,
           first_2_options: [
             %Fase.Option{
               count: 5,
@@ -557,7 +568,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 2
             }
-          ]
+          ],
+          label: "NOMBRE DE MOTS"
         }
       }
 
@@ -582,91 +594,64 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = %{
         author: %{
           count: 5,
+          field: :author,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
+              count: 2,
               label: "Aisha Rahman",
-              count: 2,
-              selected: true
+              selected: true,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Hélène Dubois",
+              count: 2,
               label: "Hélène Dubois",
-              count: 2,
-              selected: false
-            }
-          ]
-        },
-        tags: %{
-          count: 11,
-          first_2_options: [
-            %Fase.Option{
-              value: "archives",
-              label: "Archives",
-              count: 1,
-              selected: false
-            },
-            %Fase.Option{
-              value: "books",
-              label: "Books",
-              count: 1,
-              selected: false
-            }
-          ]
-        },
-        word_count: %{
-          count: 2,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "2000-4000",
               selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 2,
-              label: "6000-8000",
-              selected: false,
-              value: 3
+              value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Author"
         },
         category_author: %{
           count: 5,
+          field: :category_author,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
               count: 2,
-              selected: false
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Hélène Dubois",
-              label: "Hélène Dubois",
               count: 2,
-              selected: false
+              label: "Hélène Dubois",
+              selected: false,
+              value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Category author"
         },
         category_tags: %{
           count: 20,
+          field: :category_tags,
           first_2_options: [
             %Fase.Option{
-              value: "archives",
-              label: "archives",
               count: 1,
-              selected: false
+              label: "archives",
+              selected: false,
+              value: "archives"
             },
             %Fase.Option{
-              value: "books",
-              label: "books",
               count: 1,
-              selected: false
+              label: "books",
+              selected: false,
+              value: "books"
             }
-          ]
+          ],
+          label: "Category tags"
         },
         publish_date: %{
           count: 2,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 3,
@@ -680,7 +665,46 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 3
             }
-          ]
+          ],
+          label: "PUBLISH DATE"
+        },
+        tags: %{
+          count: 11,
+          field: :tags,
+          first_2_options: [
+            %Fase.Option{
+              count: 1,
+              label: "Archives",
+              selected: false,
+              value: "archives"
+            },
+            %Fase.Option{
+              count: 1,
+              label: "Books",
+              selected: false,
+              value: "books"
+            }
+          ],
+          label: "Tags"
+        },
+        word_count: %{
+          count: 2,
+          field: :word_count,
+          first_2_options: [
+            %Fase.Option{
+              count: 2,
+              label: "2000-4000",
+              selected: false,
+              value: 1
+            },
+            %Fase.Option{
+              count: 2,
+              label: "6000-8000",
+              selected: false,
+              value: 3
+            }
+          ],
+          label: "WORD COUNT"
         }
       }
 
@@ -710,85 +734,64 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = %{
         author: %{
           count: 5,
+          field: :author,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
+              count: 1,
               label: "Aisha Rahman",
-              count: 1,
-              selected: true
+              selected: true,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Hélène Dubois",
-              label: "Hélène Dubois",
               count: 2,
-              selected: false
-            }
-          ]
-        },
-        tags: %{
-          count: 20,
-          first_2_options: [
-            %Fase.Option{
-              value: "archives",
-              label: "Archives",
-              count: 1,
-              selected: false
-            },
-            %Fase.Option{
-              value: "books",
-              label: "Books",
-              count: 1,
-              selected: false
-            }
-          ]
-        },
-        word_count: %{
-          count: 1,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "2000-4000",
+              label: "Hélène Dubois",
               selected: false,
-              value: 1
+              value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Author"
         },
         category_author: %{
           count: 5,
+          field: :category_author,
           first_2_options: [
             %Fase.Option{
-              value: "Aisha Rahman",
-              label: "Aisha Rahman",
               count: 1,
-              selected: false
+              label: "Aisha Rahman",
+              selected: false,
+              value: "Aisha Rahman"
             },
             %Fase.Option{
-              value: "Hélène Dubois",
-              label: "Hélène Dubois",
               count: 2,
-              selected: false
+              label: "Hélène Dubois",
+              selected: false,
+              value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Category author"
         },
         category_tags: %{
           count: 20,
+          field: :category_tags,
           first_2_options: [
             %Fase.Option{
-              value: "archives",
-              label: "archives",
               count: 1,
-              selected: false
+              label: "archives",
+              selected: false,
+              value: "archives"
             },
             %Fase.Option{
-              value: "books",
-              label: "books",
               count: 1,
-              selected: false
+              label: "books",
+              selected: false,
+              value: "books"
             }
-          ]
+          ],
+          label: "Category tags"
         },
         publish_date: %{
           count: 1,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -796,7 +799,40 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 1
             }
-          ]
+          ],
+          label: "PUBLISH DATE"
+        },
+        tags: %{
+          count: 20,
+          field: :tags,
+          first_2_options: [
+            %Fase.Option{
+              count: 1,
+              label: "Archives",
+              selected: false,
+              value: "archives"
+            },
+            %Fase.Option{
+              count: 1,
+              label: "Books",
+              selected: false,
+              value: "books"
+            }
+          ],
+          label: "Tags"
+        },
+        word_count: %{
+          count: 1,
+          field: :word_count,
+          first_2_options: [
+            %Fase.Option{
+              count: 1,
+              label: "2000-4000",
+              selected: false,
+              value: 1
+            }
+          ],
+          label: "WORD COUNT"
         }
       }
 
@@ -821,6 +857,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = %{
         author: %{
           count: 5,
+          field: :author,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -834,10 +871,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Author"
         },
         category_author: %{
           count: 5,
+          field: :category_author,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -851,10 +890,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Category author"
         },
         category_tags: %{
           count: 20,
+          field: :category_tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -868,10 +909,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "books"
             }
-          ]
+          ],
+          label: "Category tags"
         },
         publish_date: %{
           count: 3,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 2,
@@ -885,10 +928,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 3
             }
-          ]
+          ],
+          label: "PUBLISH DATE"
         },
         tags: %{
           count: 14,
+          field: :tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -902,10 +947,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "culture"
             }
-          ]
+          ],
+          label: "Tags"
         },
         word_count: %{
           count: 3,
+          field: :word_count,
           first_2_options: [
             %Fase.Option{
               count: 5,
@@ -919,7 +966,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: true,
               value: 2
             }
-          ]
+          ],
+          label: "WORD COUNT"
         }
       }
 
@@ -968,6 +1016,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = %{
         author: %{
           count: 3,
+          field: :author,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -981,10 +1030,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Mateo Alvarez"
             }
-          ]
+          ],
+          label: "Author"
         },
         category_author: %{
           count: 5,
+          field: :category_author,
           first_2_options: [
             %Fase.Option{
               count: 2,
@@ -998,10 +1049,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Category author"
         },
         category_tags: %{
           count: 20,
+          field: :category_tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1015,10 +1068,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "books"
             }
-          ]
+          ],
+          label: "Category tags"
         },
         publish_date: %{
           count: 4,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 4,
@@ -1032,10 +1087,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 2
             }
-          ]
+          ],
+          label: "PUBLISH DATE"
         },
         tags: %{
           count: 8,
+          field: :tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1049,10 +1106,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "history"
             }
-          ]
+          ],
+          label: "Tags"
         },
         word_count: %{
           count: 2,
+          field: :word_count,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1066,7 +1125,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 2
             }
-          ]
+          ],
+          label: "WORD COUNT"
         }
       }
 
@@ -1121,6 +1181,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = %{
         author: %{
           count: 2,
+          field: :author,
           first_2_options: [
             %Fase.Option{
               count: 2,
@@ -1134,10 +1195,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Author"
         },
         category_author: %{
           count: 5,
+          field: :category_author,
           first_2_options: [
             %Fase.Option{
               count: 2,
@@ -1151,10 +1214,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: true,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Category author"
         },
         category_author_tags: %{
           count: 12,
+          field: :category_author_tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1168,10 +1233,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Aisha Rahman>emotion"
             }
-          ]
+          ],
+          label: "Category author tags"
         },
         category_tags: %{
           count: 20,
+          field: :category_tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1185,10 +1252,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "books"
             }
-          ]
+          ],
+          label: "Category tags"
         },
         publish_date: %{
           count: 2,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 3,
@@ -1202,10 +1271,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 5
             }
-          ]
+          ],
+          label: "PUBLISH DATE"
         },
         tags: %{
           count: 11,
+          field: :tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1219,10 +1290,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "emotion"
             }
-          ]
+          ],
+          label: "Tags"
         },
         word_count: %{
           count: 2,
+          field: :word_count,
           first_2_options: [
             %Fase.Option{
               count: 3,
@@ -1236,7 +1309,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 3
             }
-          ]
+          ],
+          label: "WORD COUNT"
         }
       }
 
@@ -1261,6 +1335,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = %{
         author: %{
           count: 1,
+          field: :author,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1268,10 +1343,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Author"
         },
         category_author: %{
           count: 5,
+          field: :category_author,
           first_2_options: [
             %Fase.Option{
               count: 2,
@@ -1285,10 +1362,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: true,
               value: "Hélène Dubois"
             }
-          ]
+          ],
+          label: "Category author"
         },
         category_author_tags: %{
           count: 6,
+          field: :category_author_tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1302,10 +1381,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "Hélène Dubois>interdisciplinary"
             }
-          ]
+          ],
+          label: "Category author tags"
         },
         category_tags: %{
           count: 20,
+          field: :category_tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1319,10 +1400,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "books"
             }
-          ]
+          ],
+          label: "Category tags"
         },
         publish_date: %{
           count: 1,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1330,10 +1413,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 1
             }
-          ]
+          ],
+          label: "PUBLISH DATE"
         },
         tags: %{
           count: 3,
+          field: :tags,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1347,10 +1432,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: "language_analysis"
             }
-          ]
+          ],
+          label: "Tags"
         },
         word_count: %{
           count: 1,
+          field: :word_count,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -1358,7 +1445,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 1
             }
-          ]
+          ],
+          label: "WORD COUNT"
         }
       }
 
@@ -2096,6 +2184,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected_facets = %{
         author: %{
           count: 3,
+          field: :author,
           first_2_options: [
             %Fase.Option{
               count: 1,
@@ -2106,13 +2195,15 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
             %Fase.Option{
               count: 1,
               label: "Mateo Alvarez",
-              value: "Mateo Alvarez",
-              selected: false
+              selected: false,
+              value: "Mateo Alvarez"
             }
-          ]
+          ],
+          label: "Author"
         },
         publish_date: %{
           count: 4,
+          field: :publish_date,
           first_2_options: [
             %Fase.Option{
               count: 4,
@@ -2126,7 +2217,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
               selected: false,
               value: 2
             }
-          ]
+          ],
+          label: "PUBLISH DATE"
         }
       }
 
@@ -2524,6 +2616,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       result = hd(results)
 
       Map.put(acc, group, %{
+        field: result.field,
+        label: result.label,
         count: Enum.count(result.options),
         first_2_options: Enum.take(result.options, 2)
       })
