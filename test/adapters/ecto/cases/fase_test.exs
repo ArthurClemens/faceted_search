@@ -11,7 +11,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
   alias Fase.Test.MyApp.TimestampsFacetSchema
   alias Fase.Test.MyApp.TransformsFacetSchema
   alias Fase.Test.MyApp.UUIDFacetSchema
-  alias Fase.Test.Repo
+  alias MyApp.Repo
 
   setup_all do
     cleanup_search_views()

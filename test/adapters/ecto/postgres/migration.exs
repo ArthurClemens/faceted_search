@@ -1,4 +1,4 @@
-defmodule Fase.Test.Repo.Postgres.Migration do
+defmodule MyApp.Repo.Postgres.Migration do
   use Ecto.Migration
 
   alias Ecto.Adapters.SQL
@@ -8,7 +8,7 @@ defmodule Fase.Test.Repo.Postgres.Migration do
   def change do
     Enum.each(@schema_prefixes, fn schema_prefix ->
       sql = ~s(CREATE SCHEMA "#{schema_prefix}")
-      SQL.query(Fase.Test.Repo, sql, [])
+      SQL.query(MyApp.Repo, sql, [])
     end)
 
     # unaccent extension

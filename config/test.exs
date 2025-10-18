@@ -1,7 +1,7 @@
 import Config
 
 config :flop,
-  ecto_repos: [Fase.Test.Repo],
-  repo: Fase.Test.Repo
+  ecto_repos: [MyApp.Repo],
+  repo: MyApp.Repo
 
 config :logger, level: :warning

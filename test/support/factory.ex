@@ -1,7 +1,7 @@
 defmodule Fase.Test.Factory do
   @moduledoc false
 
-  use ExMachina.Ecto, repo: Fase.Test.Repo
+  use ExMachina.Ecto, repo: MyApp.Repo
 
   alias Fase.Test.MyApp.Article
   alias Fase.Test.MyApp.ArticleCategory
@@ -12,7 +12,7 @@ defmodule Fase.Test.Factory do
   alias Fase.Test.MyApp.Role
   alias Fase.Test.MyApp.Tag
   alias Fase.Test.MyApp.TagText
-  alias Fase.Test.Repo
+  alias MyApp.Repo
 
   @tags [
     "archives",
