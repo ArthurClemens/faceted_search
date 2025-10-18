@@ -5,5 +5,3 @@ config :flop,
   repo: Fase.Test.Repo
 
 config :logger, level: :warning
-
-config :fase, mode: :test

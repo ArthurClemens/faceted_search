@@ -189,11 +189,6 @@ defmodule Fase.SearchView do
 
     create_pg_trgm_sql = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
-    concurrent_index_cmd =
-      if Application.get_env(:fase, :mode) == :test,
-        do: "",
-        else: "CONCURRENTLY"
-
     drop_indexes_sql = [
       ([
          "id",
@@ -205,7 +200,7 @@ defmodule Fase.SearchView do
          get_sort_column_names(search_view_description))
       |> Enum.map(fn name ->
         """
-        DROP INDEX #{concurrent_index_cmd} IF EXISTS #{view_name_with_prefix}_#{name}_idx
+        DROP INDEX IF EXISTS #{view_name_with_prefix}_#{name}_idx
         """
       end)
     ]
@@ -248,7 +243,7 @@ defmodule Fase.SearchView do
           end
 
         """
-        #{command} INDEX #{concurrent_index_cmd} #{view_name}_#{name}_idx
+        #{command} INDEX #{view_name}_#{name}_idx
         #{on}
         """
       end)
