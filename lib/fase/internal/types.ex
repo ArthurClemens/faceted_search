@@ -20,14 +20,14 @@ defmodule Fase.Internal.Types do
                 {:scope, term()}
                 | {:repo, module()}
                 | {:prefix, String.t()}
-                | {:timeout, integer()}
+                | {:timeout, integer() | :infinity}
                 | {:pool_timeout, integer()}
       end
 
       if :refresh_search_view_options in unquote(includes) do
         @type refresh_search_view_option ::
                 {:concurrently, boolean()}
-                | {:timeout, integer()}
+                | {:timeout, integer() | :infinity}
       end
 
       if :config_options in unquote(includes) do
