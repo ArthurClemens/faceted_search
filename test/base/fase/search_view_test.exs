@@ -569,7 +569,7 @@ defmodule Fase.Test.SearchViewTest do
                 table_name: :source
               },
               %Fase.SearchView.Field{
-                binding: nil,
+                binding: :authors,
                 column: :full_name,
                 ecto_type: :string,
                 name: :author,
@@ -719,11 +719,11 @@ defmodule Fase.Test.SearchViewTest do
                 table_name: :articles
               },
               %Fase.SearchView.Field{
-                name: :publish_date,
                 binding: nil,
-                prefix: nil,
                 column: :publish_date,
                 ecto_type: :utc_datetime,
+                name: :publish_date,
+                prefix: nil,
                 table_name: :articles
               },
               %Fase.SearchView.Field{
