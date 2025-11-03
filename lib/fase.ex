@@ -26,6 +26,8 @@ defmodule Fase do
 
   """
   defmacro __using__(opts) do
+    # ignore Credo.Check.Refactor.LongQuoteBlocks
+    # credo:disable-for-next-line
     quote bind_quoted: [opts: opts] do
       options =
         NimbleSchema.validate!(
