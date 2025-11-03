@@ -44,7 +44,11 @@ defmodule Fase do
 
       sortable_option = Enum.map(sortable_fields, & &1.name)
 
-      default_order = Keyword.get(options, :default_order, %{})
+      default_order =
+        Keyword.get(options, :default_order, %{
+          order_by: [],
+          order_directions: []
+        })
 
       use Ecto.Schema
 
@@ -104,7 +108,7 @@ defmodule Fase do
         do: SearchView.create_search_view_description(options())
 
       @spec create_search_view(String.t(), [create_search_view_option()]) ::
-              :ok | {:error, term()}
+              {:ok, String.t()} | {:error, term()}
       def create_search_view(view_id, opts \\ []),
         do: SearchView.create_search_view(options(), view_id, opts)
 
@@ -116,13 +120,13 @@ defmodule Fase do
       @spec create_search_view_if_not_exists(String.t(), [
               create_search_view_option()
             ]) ::
-              :ok | {:error, term()}
+              {:ok, String.t()} | {:error, term()}
       def create_search_view_if_not_exists(view_id, opts \\ []),
         do:
           SearchView.create_search_view_if_not_exists(options(), view_id, opts)
 
       @spec refresh_search_view(String.t(), [refresh_search_view_option()]) ::
-              :ok | {:error, term()}
+              {:ok, String.t()} | {:error, term()}
       def refresh_search_view(view_id, opts \\ []) do
         SearchView.refresh_search_view(view_id, opts)
         |> tap(fn
@@ -132,7 +136,7 @@ defmodule Fase do
       end
 
       @spec drop_search_view(String.t(), [create_search_view_option()]) ::
-              :ok | {:error, term()}
+              {:ok, String.t()} | {:error, term()}
       def drop_search_view(view_id, opts \\ []),
         do:
           SearchView.drop_search_view(view_id, opts)
@@ -525,16 +529,16 @@ defmodule Fase do
   ## Examples
 
       iex> Fase.create_search_view(MyApp.FacetSchema, "books")
-      :ok
+      {:ok, "books"}
 
       iex> Fase.create_search_view(MyApp.FacetSchema, "books",
       ...>   scope: %{current_user: current_user}
       ...> )
-      :ok
+      {:ok, "books"}
 
   """
   @spec create_search_view(module(), String.t(), [create_search_view_option()]) ::
-          :ok | {:error, term()}
+          {:ok, String.t()} | {:error, term()}
   def create_search_view(module, view_id, opts \\ []),
     do: module.create_search_view(view_id, opts)
 
@@ -560,7 +564,7 @@ defmodule Fase do
   @spec create_search_view_if_not_exists(module(), String.t(), [
           create_search_view_option()
         ]) ::
-          :ok | {:error, term()}
+          {:ok, String.t()} | {:error, term()}
   def create_search_view_if_not_exists(module, view_id, opts \\ []),
     do: module.create_search_view_if_not_exists(view_id, opts)
 
@@ -578,7 +582,7 @@ defmodule Fase do
 
   """
   @spec refresh_search_view(module(), String.t(), [refresh_search_view_option()]) ::
-          :ok | {:error, term()}
+          {:ok, String.t()} | {:error, term()}
   def refresh_search_view(module, view_id, opts \\ []),
     do: module.refresh_search_view(view_id, opts)
 
@@ -596,7 +600,7 @@ defmodule Fase do
 
   """
   @spec drop_search_view(module(), String.t(), [create_search_view_option()]) ::
-          :ok | {:error, term()}
+          {:ok, String.t()} | {:error, term()}
   def drop_search_view(module, view_id, opts \\ []),
     do: module.drop_search_view(view_id, opts)
 
