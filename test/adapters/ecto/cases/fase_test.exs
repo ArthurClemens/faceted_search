@@ -203,15 +203,15 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           "id" => "uuid",
           "author" => "Hélène Dubois",
           "draft" => 1,
-          "indicators" => %{
-            "type" => [
-              "history",
-              "language_analysis",
-              "politics"
-            ],
-            "word_count" => "3473",
-            "draft" => true
-          },
+          "indicators" => [
+            %{"draft" => true, "type" => "history", "word_count" => "3473"},
+            %{
+              "draft" => true,
+              "type" => "language_analysis",
+              "word_count" => "3473"
+            },
+            %{"draft" => true, "type" => "politics", "word_count" => "3473"}
+          ],
           "tag_titles" => [
             "History",
             "Language analysis: Critical reading",
@@ -1524,7 +1524,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = [
         %{
           "author" => "Hélène Dubois",
-          "indicators" => %{"word_count" => "2871"},
+          "indicators" => [%{"word_count" => "2871"}],
           "publish_date" => "publish_date",
           "title" =>
             "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
@@ -1532,7 +1532,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           "author" => "Mateo Alvarez",
-          "indicators" => %{"word_count" => "3627"},
+          "indicators" => [%{"word_count" => "3627"}],
           "publish_date" => "publish_date",
           "title" =>
             "The Grammar of Resistance: Syntax and Subversion in 20th-Century Protest Literature",
@@ -1561,7 +1561,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = [
         %{
           "author" => "Hélène Dubois",
-          "indicators" => %{"word_count" => "3473"},
+          "indicators" => [%{"word_count" => "3473"}],
           "publish_date" => "publish_date",
           "title" =>
             "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
@@ -1569,7 +1569,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         },
         %{
           "author" => "Hélène Dubois",
-          "indicators" => %{"word_count" => "2871"},
+          "indicators" => [%{"word_count" => "2871"}],
           "publish_date" => "publish_date",
           "title" =>
             "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories",
