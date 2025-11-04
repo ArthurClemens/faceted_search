@@ -905,11 +905,14 @@ defmodule Fase.SearchView do
       ecto_type == :string and needs_aggregate ->
         "string_agg(DISTINCT #{value}, ', ')"
 
+      ecto_type == :uuid and needs_aggregate ->
+        "CAST(string_agg(DISTINCT CAST(#{value} AS text), ', ') AS uuid)"
+
       ecto_type == :boolean and needs_aggregate ->
         "every(#{value})"
 
-      needs_aggregate ->
-        "any_value(#{value})"
+      ecto_type in [:float, :integer, :decimal] and needs_aggregate ->
+        "avg(DISTINCT #{value})"
 
       true ->
         value
