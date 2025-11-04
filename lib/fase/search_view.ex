@@ -914,6 +914,13 @@ defmodule Fase.SearchView do
       ecto_type in [:float, :integer, :decimal] and needs_aggregate ->
         "avg(DISTINCT #{value})"
 
+      ecto_type == :map and needs_aggregate ->
+        "jsonb_agg(#{value})"
+
+      # Fallback (Postgres 16 and higher)
+      needs_aggregate ->
+        "any_value(#{value})"
+
       true ->
         value
     end
