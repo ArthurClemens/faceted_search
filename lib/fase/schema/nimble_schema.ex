@@ -22,6 +22,9 @@ defmodule Fase.Schema.NimbleSchema do
     id: [
       type: :keyword_list,
       keys: [
+        unique_index: [
+          type: :boolean
+        ],
         transforms: [
           type: {:list, :string},
           required: true
@@ -57,6 +60,9 @@ defmodule Fase.Schema.NimbleSchema do
                   ]
                 ]
               ]
+            ],
+            group_by: [
+              type: :string
             ],
             fields: [
               type: :keyword_list,

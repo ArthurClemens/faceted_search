@@ -122,7 +122,7 @@ defmodule Fase.Test.SearchViewTest do
 
     test "extended schema" do
       expected = %Fase.SearchView.SearchViewDescription{
-        id: nil,
+        id: %{transforms: ["cast(? as text)"], unique_index: false},
         sources: [
           %Fase.SearchView.Source{
             data_fields: [
@@ -413,6 +413,7 @@ defmodule Fase.Test.SearchViewTest do
                 table: :tag_texts
               }
             ],
+            group_by: "articles.id, authors.id",
             prefix: nil,
             scope: nil,
             sort_fields: [

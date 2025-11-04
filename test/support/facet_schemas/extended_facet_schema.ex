@@ -7,6 +7,10 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
   """
 
   @options [
+    id: [
+      transforms: ["cast(? as text)"],
+      unique_index: false
+    ],
     sources: [
       articles: [
         joins: [
@@ -26,6 +30,7 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
             on: "tag_texts.tag_id = tags.id"
           ]
         ],
+        group_by: "articles.id, authors.id",
         fields: [
           id: [
             ecto_type: :uuid

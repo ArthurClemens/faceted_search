@@ -42,6 +42,10 @@ defmodule Fase.Test.SchemaTest do
     test "extended schema" do
       expected = [
         module: Fase.Test.MyApp.ExtendedFacetSchema,
+        id: [
+          transforms: ["cast(? as text)"],
+          unique_index: false
+        ],
         sources: [
           articles: [
             joins: [
@@ -51,6 +55,7 @@ defmodule Fase.Test.SchemaTest do
               tags: [on: "tags.id = article_tags.tag_id"],
               tag_texts: [on: "tag_texts.tag_id = tags.id"]
             ],
+            group_by: "articles.id, authors.id",
             fields: [
               id: [ecto_type: :uuid],
               title: [ecto_type: :string],

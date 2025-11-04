@@ -42,6 +42,21 @@ use Fase,
   ]
 ```
 
+## id
+
+Top level settings for the `id` column.
+
+- Type: `list(Keyword.t())`
+- Path: `id` (schema root)
+- Optional
+
+### Value options
+
+- `unique_index` - Set to `true` to create a unique index on the id column; by default `false`. Should not be true if `group_by` is used.
+- `transforms`
+  - Type to cast or transform the value
+  - Type: `list(String.t())`
+
 ## sources
 
 Settings per resource. The source key refers to the name of a resource table in your repo.
@@ -126,6 +141,32 @@ sources: [
         on: "genres.id = bkg.genre_id"
       ]
     ]
+  ]
+]
+```
+
+## group_by
+
+Optional setting for the "GROUP BY" statement.
+
+- Type: `String.t()`
+- Path: `sources > [source table] > group_by`
+
+### Example
+
+```
+sources: [
+  articles: [
+    joins: [
+      author_articles: [
+        on: "author_articles.article_id = articles.id"
+      ],
+      authors: [
+        on: "authors.id = author_articles.author_id"
+      ],
+    ],
+    group_by: "articles.id, authors.id",
+    ...
   ]
 ]
 ```

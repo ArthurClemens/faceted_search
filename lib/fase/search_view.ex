@@ -220,9 +220,15 @@ defmodule Fase.SearchView do
       """
       |> String.trim()
 
+    unique_id_index =
+      get_in(search_view_description, [
+        Access.key(:id),
+        Access.key(:unique_index)
+      ]) || false
+
     create_indexes_sql = [
       ([
-         %{name: "id", unique: true},
+         %{name: "id", unique: unique_id_index},
          %{name: "source"},
          %{name: "data", using: "gin(data)"},
          %{name: "text", using: "gin(text gin_trgm_ops)"},
@@ -301,6 +307,7 @@ defmodule Fase.SearchView do
 
     joins = create_joins(source)
     where_filters = create_where_filters(source, config)
+    group_by = source.group_by || "#{table_name}.id"
 
     [
       "SELECT",
@@ -309,7 +316,7 @@ defmodule Fase.SearchView do
       joins,
       "INNER JOIN source ON #{table_name}.id = source.id",
       where_filters,
-      "GROUP BY #{table_name}.id"
+      "GROUP BY #{group_by}"
     ]
     |> Enum.filter(&(!!&1))
     |> Enum.map_join("\n", &String.trim/1)
