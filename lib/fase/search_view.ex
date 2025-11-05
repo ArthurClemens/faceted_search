@@ -434,11 +434,21 @@ defmodule Fase.SearchView do
   # ID columns
 
   @spec create_id_columns(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_id_columns(source, _) do
+  defp create_id_columns(source, search_view_description) do
     %{table_name: table_name} = source
 
+    transforms =
+      get_in(search_view_description, [
+        Access.key(:id),
+        :transforms
+      ]) || "cast(#{table_name}.id as text)"
+
+    id_value =
+      (transforms || [])
+      |> run_transforms("#{table_name}.id")
+
     [
-      "CAST(#{table_name}.id AS text) AS id",
+      "#{id_value} AS id",
       "'#{table_name}' AS source"
     ]
     |> Enum.join(",\n")
