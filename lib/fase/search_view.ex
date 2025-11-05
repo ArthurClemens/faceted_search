@@ -220,9 +220,15 @@ defmodule Fase.SearchView do
       """
       |> String.trim()
 
+    unique_id_index =
+      get_in(search_view_description, [
+        Access.key(:id),
+        Access.key(:unique_index)
+      ]) || false
+
     create_indexes_sql = [
       ([
-         %{name: "id", unique: true},
+         %{name: "id", unique: unique_id_index},
          %{name: "source"},
          %{name: "data", using: "gin(data)"},
          %{name: "text", using: "gin(text gin_trgm_ops)"},
@@ -301,6 +307,7 @@ defmodule Fase.SearchView do
 
     joins = create_joins(source)
     where_filters = create_where_filters(source, config)
+    group_by = source.group_by || "#{table_name}.id"
 
     [
       "SELECT",
@@ -309,7 +316,7 @@ defmodule Fase.SearchView do
       joins,
       "INNER JOIN source ON #{table_name}.id = source.id",
       where_filters,
-      "GROUP BY #{table_name}.id"
+      "GROUP BY #{group_by}"
     ]
     |> Enum.filter(&(!!&1))
     |> Enum.map_join("\n", &String.trim/1)
@@ -427,11 +434,21 @@ defmodule Fase.SearchView do
   # ID columns
 
   @spec create_id_columns(Source.t(), SearchViewDescription.t()) :: String.t()
-  defp create_id_columns(source, _) do
+  defp create_id_columns(source, search_view_description) do
     %{table_name: table_name} = source
 
+    transforms =
+      get_in(search_view_description, [
+        Access.key(:id),
+        :transforms
+      ]) || "cast(#{table_name}.id as text)"
+
+    id_value =
+      (transforms || [])
+      |> run_transforms("#{table_name}.id")
+
     [
-      "CAST(#{table_name}.id AS text) AS id",
+      "#{id_value} AS id",
       "'#{table_name}' AS source"
     ]
     |> Enum.join(",\n")

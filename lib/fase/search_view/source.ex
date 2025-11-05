@@ -17,6 +17,7 @@ defmodule Fase.SearchView.Source do
 
   defstruct table_name: nil,
             scope: nil,
+            group_by: nil,
             prefix: nil,
             fields: nil,
             joins: nil,
@@ -30,6 +31,7 @@ defmodule Fase.SearchView.Source do
           table_name: atom(),
           # optional
           prefix: String.t() | nil,
+          group_by: String.t() | nil,
           scope: list(Scope.t()) | nil,
           joins: list(Join.t()) | nil,
           fields: list(Field.t()) | nil,
@@ -49,11 +51,13 @@ defmodule Fase.SearchView.Source do
   @spec new({atom(), Keyword.t()}, atom()) :: t()
   def new({table_name, options}, module) do
     prefix = Keyword.get(options, :prefix, nil)
+    group_by = Keyword.get(options, :group_by, nil)
 
     %__MODULE__{
       table_name: table_name,
       prefix: Keyword.get(options, :prefix),
       scope: Keyword.get(options, :scope_keys) |> collect_scope_entries(module),
+      group_by: if(is_binary(group_by), do: String.trim(group_by), else: nil),
       joins: Keyword.get(options, :joins) |> collect_joins(),
       fields:
         Keyword.get(options, :fields) |> collect_fields(table_name, prefix),
