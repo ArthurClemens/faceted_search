@@ -441,11 +441,9 @@ defmodule Fase.SearchView do
       get_in(search_view_description, [
         Access.key(:id),
         :transforms
-      ]) || "cast(#{table_name}.id as text)"
+      ]) || ["cast(#{table_name}.id as text)"]
 
-    id_value =
-      (transforms || [])
-      |> run_transforms("#{table_name}.id")
+    id_value = run_transforms(transforms, "#{table_name}.id")
 
     [
       "#{id_value} AS id",
