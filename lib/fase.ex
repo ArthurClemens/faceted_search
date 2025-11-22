@@ -35,14 +35,22 @@ defmodule Fase do
           __MODULE__
         )
 
-      custom_fields_option =
+      custom_field_options =
         FlopSchema.create_flop_custom_fields_option(options)
 
+      # custom_field_options is now the single source of truth regarding Ecto types
+      # collect to pass them over to create_search_view
+      ecto_types =
+        Enum.reduce(custom_field_options, %{}, fn {name, options}, acc ->
+          ecto_type = Keyword.get(options, :ecto_type)
+          Map.put(acc, name, ecto_type)
+        end)
+
       filterable_fields_option =
-        FlopSchema.create_filterable_fields_option(custom_fields_option)
+        FlopSchema.create_filterable_fields_option(custom_field_options)
 
       sortable_fields =
-        FlopSchema.create_sortable_fields(options, custom_fields_option)
+        FlopSchema.create_sortable_fields(options, custom_field_options)
 
       sortable_option = Enum.map(sortable_fields, & &1.name)
 
@@ -70,7 +78,7 @@ defmodule Fase do
         Flop.Schema,
         filterable: filterable_fields_option,
         adapter_opts: [
-          custom_fields: custom_fields_option
+          custom_fields: custom_field_options
         ],
         sortable: sortable_option,
         default_order: default_order
@@ -101,18 +109,21 @@ defmodule Fase do
       @spec options() :: schema_options()
       def options, do: unquote(Macro.escape(options))
 
+      defp ecto_types, do: unquote(Macro.escape(ecto_types))
+
       @spec ecto_schema(String.t()) :: Ecto.Queryable.t()
       def ecto_schema(view_id),
         do: {SearchView.search_view_name(view_id), __MODULE__}
 
       @spec search_view_description() :: SearchViewDescription.t()
       def search_view_description,
-        do: SearchView.create_search_view_description(options())
+        do: SearchView.create_search_view_description(options(), ecto_types())
 
       @spec create_search_view(String.t(), [create_search_view_option()]) ::
               {:ok, String.t()} | {:error, term()}
       def create_search_view(view_id, opts \\ []),
-        do: SearchView.create_search_view(options(), view_id, opts)
+        do:
+          SearchView.create_search_view(options(), ecto_types(), view_id, opts)
 
       @spec search_view_exists?(String.t(), [create_search_view_option()]) ::
               boolean()
@@ -125,7 +136,12 @@ defmodule Fase do
               {:ok, String.t()} | {:error, term()}
       def create_search_view_if_not_exists(view_id, opts \\ []),
         do:
-          SearchView.create_search_view_if_not_exists(options(), view_id, opts)
+          SearchView.create_search_view_if_not_exists(
+            options(),
+            ecto_types(),
+            view_id,
+            opts
+          )
 
       @spec refresh_search_view(String.t(), [refresh_search_view_option()]) ::
               {:ok, String.t()} | {:error, term()}

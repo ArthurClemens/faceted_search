@@ -1,6 +1,8 @@
 defmodule Fase.Internal.FacetConfig do
   @moduledoc false
 
+  # Facet configuration, partially derived from `SearchViewDescription` and extended with facet-specific values.
+
   use Fase.Internal.Types,
     include: [:range_types]
 

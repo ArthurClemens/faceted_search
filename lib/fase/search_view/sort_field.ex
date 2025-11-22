@@ -17,7 +17,7 @@ defmodule Fase.SearchView.SortField do
           ecto_type: atom() | nil
         }
 
-  def new(field_options) do
+  def new(field_options, field_ecto_types) do
     {name, options} =
       case field_options do
         {name, options} when is_list(options) -> {name, options}
@@ -29,7 +29,7 @@ defmodule Fase.SearchView.SortField do
       %{
         name: name,
         transforms: Keyword.get(options, :transforms),
-        ecto_type: Keyword.get(options, :ecto_type)
+        ecto_type: field_ecto_types[name]
       }
     )
   end

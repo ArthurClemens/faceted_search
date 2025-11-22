@@ -20,8 +20,8 @@ defmodule Fase.SearchView.SearchViewDescription do
           id: map() | nil
         }
 
-  @spec new(schema_options()) :: t()
-  def new(options) do
+  @spec new(schema_options(), map()) :: t()
+  def new(options, ecto_types) do
     module = Keyword.get(options, :module)
 
     id_config =
@@ -36,7 +36,7 @@ defmodule Fase.SearchView.SearchViewDescription do
       sources:
         options
         |> Keyword.get(:sources)
-        |> Enum.map(&Source.new(&1, module))
+        |> Enum.map(&Source.new(&1, module, ecto_types))
     })
   end
 end

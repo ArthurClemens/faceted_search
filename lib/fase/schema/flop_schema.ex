@@ -72,6 +72,7 @@ defmodule Fase.Schema.FlopSchema do
       create_facet_search_field_options(
         facet_fields,
         fields,
+        data_fields,
         module
       )
     )
@@ -120,7 +121,12 @@ defmodule Fase.Schema.FlopSchema do
 
   # Skip warning: Atoms are generated at compile time.
   # sobelow_skip ["DOS.BinToAtom"]
-  defp create_facet_search_field_options(facet_fields, fields, module) do
+  defp create_facet_search_field_options(
+         facet_fields,
+         fields,
+         data_fields,
+         module
+       ) do
     facet_fields
     |> Enum.reduce([], fn {column_name, column_options}, acc ->
       field_options = Keyword.get(fields, column_name, [])
@@ -144,7 +150,10 @@ defmodule Fase.Schema.FlopSchema do
           range_facet_column_name = :"#{column_name}"
           {range_facet_column_name, :integer}
         else
-          ecto_type = Keyword.get(field_options, :ecto_type, :integer)
+          ecto_type =
+            get_ecto_type_from_data_fields(data_fields, column_name) ||
+              Keyword.get(field_options, :ecto_type, :integer)
+
           {column_name, ecto_type}
         end
 

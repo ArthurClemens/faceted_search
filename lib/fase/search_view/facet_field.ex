@@ -37,7 +37,7 @@ defmodule Fase.SearchView.FacetField do
           ecto_type: atom() | nil
         }
 
-  def new(field_options) do
+  def new(field_options, field_ecto_types) do
     {name, field_opts} =
       case field_options do
         {name, opts} -> {name, opts}
@@ -76,7 +76,7 @@ defmodule Fase.SearchView.FacetField do
         path: Keyword.get(field_opts, :path),
         hide_when_selected: !!Keyword.get(field_opts, :hide_when_selected),
         transforms: Keyword.get(field_opts, :transforms),
-        ecto_type: Keyword.get(field_opts, :ecto_type)
+        ecto_type: field_ecto_types[name]
       }
     )
   end
