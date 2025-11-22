@@ -78,13 +78,8 @@ defmodule Fase.Test.MyApp.TransformsFacetSchema do
           ]
         ],
         facet_fields: [
-          publish_date: [
-            transforms: ["to_char(?, 'YYYYMMDD')", "cast(? as integer)"],
-            ecto_type: :integer
-          ],
-          author: [
-            transforms: ["unaccent(?)"]
-          ]
+          :publish_date,
+          :author
         ],
         sort_fields: [
           :author,

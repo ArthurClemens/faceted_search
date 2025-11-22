@@ -22,16 +22,16 @@ defmodule Fase.Test.MyApp.UUIDFacetSchema do
           ]
         ],
         data_fields: [
-          :author
+          author: [
+            transforms: ["cast(? as text)"],
+            ecto_type: :string
+          ]
         ],
         text_fields: [
           :author
         ],
         facet_fields: [
-          author: [
-            transforms: ["cast(? as text)"],
-            ecto_type: :string
-          ]
+          :author
         ],
         sort_fields: [
           author: [

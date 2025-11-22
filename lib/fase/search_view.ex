@@ -27,24 +27,25 @@ defmodule Fase.SearchView do
   @spec search_view_name(String.t()) :: String.t()
   def search_view_name(view_id), do: Config.new(view_id).view_name_with_prefix
 
-  @spec create_search_view_description(schema_options()) ::
+  @spec create_search_view_description(schema_options(), map()) ::
           SearchViewDescription.t()
-  def create_search_view_description(options),
-    do: SearchViewDescription.new(options)
+  def create_search_view_description(options, ecto_types),
+    do: SearchViewDescription.new(options, ecto_types)
 
   @doc """
   Creates a Postgres view that collects data for searching.
   If the seach view already exists, it will be dropped first.
   """
-  @spec create_search_view(schema_options(), String.t(), [
+  @spec create_search_view(schema_options(), map(), String.t(), [
           create_search_view_option()
         ]) ::
           {:ok, String.t()} | {:error, term()}
-  def create_search_view(options, view_id, opts \\ []) do
+  def create_search_view(options, ecto_types, view_id, opts \\ []) do
     %{view_name_with_prefix: view_name_with_prefix} =
       config = Config.new(view_id, opts)
 
-    search_view_description = create_search_view_description(options)
+    search_view_description =
+      create_search_view_description(options, ecto_types)
 
     if search_view_exists?(view_id, opts) do
       delete_search_view(view_id, opts)
@@ -64,15 +65,15 @@ defmodule Fase.SearchView do
   @doc """
   Creates the Postgres view if it does not exist.
   """
-  @spec create_search_view_if_not_exists(schema_options(), String.t(), [
+  @spec create_search_view_if_not_exists(schema_options(), map(), String.t(), [
           create_search_view_option()
         ]) ::
           {:ok, String.t()} | {:error, term()}
-  def create_search_view_if_not_exists(options, view_id, opts \\ []) do
+  def create_search_view_if_not_exists(options, ecto_types, view_id, opts \\ []) do
     if search_view_exists?(view_id, opts) do
       {:ok, view_id}
     else
-      create_search_view(options, view_id, opts)
+      create_search_view(options, ecto_types, view_id, opts)
     end
   end
 
@@ -676,7 +677,7 @@ defmodule Fase.SearchView do
 
   defp facet_field_entries(
          facet_fields,
-         %{fields: fields, joins: joins} =
+         %{fields: fields, joins: joins, data_fields: data_fields} =
            _source
        ) do
     facet_fields
@@ -690,8 +691,17 @@ defmodule Fase.SearchView do
       if field do
         label_field = Enum.find(fields, &(&1.name == label_field))
 
+        # Read the transform from the data field
+        transforms =
+          Enum.find(data_fields, &(&1.name == field.name))
+          |> get_in([Access.key(:transforms)])
+
         [
-          Map.merge(facet_field, %{field: field, label_field: label_field})
+          Map.merge(facet_field, %{
+            field: field,
+            label_field: label_field,
+            transforms: transforms
+          })
           | acc
         ]
       else

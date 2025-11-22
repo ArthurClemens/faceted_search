@@ -1632,36 +1632,6 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       count = Enum.count(results)
       assert count > 0 and count < 5
     end
-
-    test "facets (transformed: integer)" do
-      search_params = %{}
-
-      {:ok, _, facets} =
-        facet_search("articles", TransformsFacetSchema, search_params)
-
-      values =
-        Enum.find(facets, &(&1.field == :publish_date))
-        |> get_in([Access.key(:options), Access.all(), Access.key(:value)])
-
-      assert values |> Enum.all?(&is_integer(&1))
-    end
-
-    test "facets (transformed: unaccented)" do
-      search_params = %{}
-
-      {:ok, _, facets} =
-        facet_search("articles", TransformsFacetSchema, search_params)
-
-      values =
-        Enum.find(facets, &(&1.field == :author))
-        |> get_in([Access.key(:options), Access.all(), Access.key(:value)])
-
-      assert values |> Enum.sort() == [
-               "Aisha Rahman",
-               "Helene Dubois",
-               "Mateo Alvarez"
-             ]
-    end
   end
 
   describe "scope (word_count)" do

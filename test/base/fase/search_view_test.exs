@@ -40,9 +40,21 @@ defmodule Fase.Test.SearchViewTest do
         sources: [
           %Fase.SearchView.Source{
             data_fields: [
-              %Fase.SearchView.DataField{entries: nil, name: :title},
-              %Fase.SearchView.DataField{entries: nil, name: :publish_date},
-              %Fase.SearchView.DataField{entries: nil, name: :author}
+              %Fase.SearchView.DataField{
+                ecto_type: :string,
+                entries: nil,
+                name: :title
+              },
+              %Fase.SearchView.DataField{
+                ecto_type: :utc_datetime,
+                entries: nil,
+                name: :publish_date
+              },
+              %Fase.SearchView.DataField{
+                ecto_type: :string,
+                entries: nil,
+                name: :author
+              }
             ],
             facet_fields: nil,
             fields: [
@@ -104,8 +116,16 @@ defmodule Fase.Test.SearchViewTest do
             prefix: nil,
             scope: nil,
             sort_fields: [
-              %Fase.SearchView.SortField{transforms: nil, name: :publish_date},
-              %Fase.SearchView.SortField{transforms: nil, name: :author}
+              %Fase.SearchView.SortField{
+                ecto_type: :utc_datetime,
+                transforms: nil,
+                name: :publish_date
+              },
+              %Fase.SearchView.SortField{
+                ecto_type: :string,
+                transforms: nil,
+                name: :author
+              }
             ],
             table_name: :articles,
             text_fields: [
@@ -127,31 +147,31 @@ defmodule Fase.Test.SearchViewTest do
           %Fase.SearchView.Source{
             data_fields: [
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :uuid,
                 entries: nil,
                 name: :id,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :string,
                 entries: nil,
                 name: :title,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :string,
                 entries: nil,
                 name: :author,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: {:array, :string},
                 entries: nil,
                 name: :tags,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: {:array, :string},
                 entries: nil,
                 name: :tag_titles,
                 transforms: nil
@@ -166,12 +186,12 @@ defmodule Fase.Test.SearchViewTest do
                 ecto_type: nil,
                 entries: [
                   %Fase.SearchView.CustomDataFieldEntry{
-                    name: :draft,
                     binding: nil,
                     column: nil,
-                    transforms: nil,
                     ecto_type: nil,
-                    field_name: :draft
+                    field_name: :draft,
+                    name: :draft,
+                    transforms: nil
                   },
                   %Fase.SearchView.CustomDataFieldEntry{
                     binding: nil,
@@ -196,6 +216,7 @@ defmodule Fase.Test.SearchViewTest do
             ],
             facet_fields: [
               %Fase.SearchView.FacetField{
+                ecto_type: :string,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -203,9 +224,11 @@ defmodule Fase.Test.SearchViewTest do
                 parent: nil,
                 path: nil,
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                transforms: nil
               },
               %Fase.SearchView.FacetField{
+                ecto_type: {:array, :string},
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: :tag_titles,
@@ -213,9 +236,11 @@ defmodule Fase.Test.SearchViewTest do
                 parent: nil,
                 path: nil,
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                transforms: nil
               },
               %Fase.SearchView.FacetField{
+                ecto_type: :integer,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -229,9 +254,11 @@ defmodule Fase.Test.SearchViewTest do
                   {[4000, 6000], 2},
                   {[6000, 8000], 3},
                   {[8000, :upper], 4}
-                ]
+                ],
+                transforms: nil
               },
               %Fase.SearchView.FacetField{
+                ecto_type: :utc_datetime,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -256,9 +283,11 @@ defmodule Fase.Test.SearchViewTest do
                   {["now() - interval '1 week'", "now() - interval '1 day'"],
                    4},
                   {["now() - interval '1 day'", :upper], 5}
-                ]
+                ],
+                transforms: nil
               },
               %Fase.SearchView.FacetField{
+                ecto_type: nil,
                 hide_when_selected: false,
                 hierarchy: true,
                 label_field: nil,
@@ -266,9 +295,11 @@ defmodule Fase.Test.SearchViewTest do
                 parent: :category_tags,
                 path: [:tags, :author],
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                transforms: nil
               },
               %Fase.SearchView.FacetField{
+                ecto_type: nil,
                 hide_when_selected: false,
                 hierarchy: true,
                 label_field: nil,
@@ -276,9 +307,11 @@ defmodule Fase.Test.SearchViewTest do
                 parent: nil,
                 path: [:tags],
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                transforms: nil
               },
               %Fase.SearchView.FacetField{
+                ecto_type: nil,
                 hide_when_selected: false,
                 hierarchy: true,
                 label_field: nil,
@@ -286,9 +319,11 @@ defmodule Fase.Test.SearchViewTest do
                 parent: :category_author,
                 path: [:author, :tags],
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                transforms: nil
               },
               %Fase.SearchView.FacetField{
+                ecto_type: nil,
                 hide_when_selected: false,
                 hierarchy: true,
                 label_field: nil,
@@ -296,7 +331,8 @@ defmodule Fase.Test.SearchViewTest do
                 parent: nil,
                 path: [:author],
                 range_bounds: nil,
-                range_buckets: nil
+                range_buckets: nil,
+                transforms: nil
               }
             ],
             fields: [
@@ -381,6 +417,7 @@ defmodule Fase.Test.SearchViewTest do
                 table_name: :articles
               }
             ],
+            group_by: "articles.id, authors.id",
             joins: [
               %Fase.SearchView.Join{
                 as: nil,
@@ -413,17 +450,16 @@ defmodule Fase.Test.SearchViewTest do
                 table: :tag_texts
               }
             ],
-            group_by: "articles.id, authors.id",
             prefix: nil,
             scope: nil,
             sort_fields: [
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :string,
                 name: :author,
                 transforms: nil
               },
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :utc_datetime,
                 name: :publish_date,
                 transforms: nil
               }
@@ -447,9 +483,21 @@ defmodule Fase.Test.SearchViewTest do
         sources: [
           %Fase.SearchView.Source{
             data_fields: [
-              %Fase.SearchView.DataField{entries: nil, name: :title},
-              %Fase.SearchView.DataField{entries: nil, name: :word_count},
-              %Fase.SearchView.DataField{entries: nil, name: :publish_date}
+              %Fase.SearchView.DataField{
+                ecto_type: :string,
+                entries: nil,
+                name: :title
+              },
+              %Fase.SearchView.DataField{
+                ecto_type: :integer,
+                entries: nil,
+                name: :word_count
+              },
+              %Fase.SearchView.DataField{
+                ecto_type: :utc_datetime,
+                entries: nil,
+                name: :publish_date
+              }
             ],
             facet_fields: nil,
             fields: [
@@ -516,19 +564,19 @@ defmodule Fase.Test.SearchViewTest do
           %Fase.SearchView.Source{
             data_fields: [
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :string,
                 entries: nil,
                 name: :author,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :date,
                 entries: nil,
                 name: :birthdate,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :string,
                 entries: nil,
                 name: :source,
                 transforms: nil
@@ -536,7 +584,7 @@ defmodule Fase.Test.SearchViewTest do
             ],
             facet_fields: [
               %Fase.SearchView.FacetField{
-                ecto_type: nil,
+                ecto_type: :string,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -548,7 +596,7 @@ defmodule Fase.Test.SearchViewTest do
                 transforms: nil
               },
               %Fase.SearchView.FacetField{
-                ecto_type: nil,
+                ecto_type: :string,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -586,6 +634,7 @@ defmodule Fase.Test.SearchViewTest do
                 table_name: :authors
               }
             ],
+            group_by: nil,
             joins: nil,
             prefix: nil,
             scope: [
@@ -596,17 +645,17 @@ defmodule Fase.Test.SearchViewTest do
             ],
             sort_fields: [
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :string,
                 name: :author,
                 transforms: nil
               },
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :date,
                 name: :birthdate,
                 transforms: nil
               },
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :string,
                 name: :source,
                 transforms: nil
               }
@@ -621,19 +670,19 @@ defmodule Fase.Test.SearchViewTest do
           %Fase.SearchView.Source{
             data_fields: [
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :string,
                 entries: nil,
                 name: :author,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :utc_datetime,
                 entries: nil,
                 name: :publish_date,
                 transforms: nil
               },
               %Fase.SearchView.DataField{
-                ecto_type: nil,
+                ecto_type: :string,
                 entries: nil,
                 name: :title,
                 transforms: nil
@@ -641,7 +690,7 @@ defmodule Fase.Test.SearchViewTest do
             ],
             facet_fields: [
               %Fase.SearchView.FacetField{
-                ecto_type: nil,
+                ecto_type: :string,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -653,7 +702,7 @@ defmodule Fase.Test.SearchViewTest do
                 transforms: nil
               },
               %Fase.SearchView.FacetField{
-                ecto_type: nil,
+                ecto_type: :string,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -665,7 +714,7 @@ defmodule Fase.Test.SearchViewTest do
                 transforms: nil
               },
               %Fase.SearchView.FacetField{
-                ecto_type: nil,
+                ecto_type: :utc_datetime,
                 hide_when_selected: false,
                 hierarchy: nil,
                 label_field: nil,
@@ -736,6 +785,7 @@ defmodule Fase.Test.SearchViewTest do
                 table_name: :articles
               }
             ],
+            group_by: nil,
             joins: [
               %Fase.SearchView.Join{
                 as: nil,
@@ -759,17 +809,17 @@ defmodule Fase.Test.SearchViewTest do
             ],
             sort_fields: [
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :utc_datetime,
                 name: :publish_date,
                 transforms: nil
               },
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :string,
                 name: :author,
                 transforms: nil
               },
               %Fase.SearchView.SortField{
-                ecto_type: nil,
+                ecto_type: :string,
                 name: :source,
                 transforms: nil
               }
@@ -835,8 +885,16 @@ defmodule Fase.Test.SearchViewTest do
               }
             ],
             data_fields: [
-              %Fase.SearchView.DataField{name: :article_title, entries: nil},
-              %Fase.SearchView.DataField{name: :category_name, entries: nil}
+              %Fase.SearchView.DataField{
+                ecto_type: :string,
+                name: :article_title,
+                entries: nil
+              },
+              %Fase.SearchView.DataField{
+                ecto_type: :string,
+                name: :category_name,
+                entries: nil
+              }
             ],
             text_fields: [
               %Fase.SearchView.TextField{name: :article_title, transforms: nil},
@@ -844,8 +902,16 @@ defmodule Fase.Test.SearchViewTest do
             ],
             facet_fields: nil,
             sort_fields: [
-              %Fase.SearchView.SortField{name: :article_title, transforms: nil},
-              %Fase.SearchView.SortField{name: :category_name, transforms: nil}
+              %Fase.SearchView.SortField{
+                ecto_type: :string,
+                name: :article_title,
+                transforms: nil
+              },
+              %Fase.SearchView.SortField{
+                ecto_type: :string,
+                name: :category_name,
+                transforms: nil
+              }
             ]
           }
         ]
@@ -899,15 +965,35 @@ defmodule Fase.Test.SearchViewTest do
             ],
             joins: nil,
             data_fields: [
-              %Fase.SearchView.DataField{name: :title, entries: nil},
-              %Fase.SearchView.DataField{name: :inserted_at, entries: nil},
-              %Fase.SearchView.DataField{name: :updated_at, entries: nil}
+              %Fase.SearchView.DataField{
+                ecto_type: :string,
+                name: :title,
+                entries: nil
+              },
+              %Fase.SearchView.DataField{
+                ecto_type: :utc_datetime,
+                name: :inserted_at,
+                entries: nil
+              },
+              %Fase.SearchView.DataField{
+                ecto_type: :utc_datetime,
+                name: :updated_at,
+                entries: nil
+              }
             ],
             text_fields: nil,
             facet_fields: nil,
             sort_fields: [
-              %Fase.SearchView.SortField{name: :inserted_at, transforms: nil},
-              %Fase.SearchView.SortField{name: :updated_at, transforms: nil}
+              %Fase.SearchView.SortField{
+                ecto_type: :utc_datetime,
+                name: :inserted_at,
+                transforms: nil
+              },
+              %Fase.SearchView.SortField{
+                ecto_type: :utc_datetime,
+                name: :updated_at,
+                transforms: nil
+              }
             ]
           }
         ]

@@ -313,7 +313,7 @@ sort_fields: [
 ]
 ```
 
-See also: [Casting and data transforms](#casting-and-data-transforms)
+See also: [Data and search transforms](#data-and-search-transforms)
 
 ### Sorting with Ecto
 
@@ -1293,8 +1293,12 @@ The `transform` option is available for:
 
 - `data_fields`
 - `text_fields`
-- `facet_fields`
 - `sort_fields`
+
+> #### transform and facet_fields {: .info}
+>
+> `transform` is not supported for `facet_fields` - this is to maintain consistent types when applying filters.
+> Ecto types are read from the `data_fields` settings.
 
 **Examples**
 

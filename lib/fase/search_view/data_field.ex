@@ -20,8 +20,8 @@ defmodule Fase.SearchView.DataField do
           ecto_type: atom() | nil
         }
 
-  @spec new(atom(), Keyword.t() | nil) :: t()
-  def new(name, options \\ []) do
+  @spec new(atom(), map(), Keyword.t() | nil) :: t()
+  def new(name, field_ecto_types, options \\ []) do
     {operation_options, entry_options} =
       if Keyword.has_key?(options, :transforms) or
            Keyword.has_key?(options, :ecto_type) do
@@ -33,7 +33,7 @@ defmodule Fase.SearchView.DataField do
     struct(__MODULE__, %{
       name: name,
       transforms: Keyword.get(operation_options, :transforms),
-      ecto_type: Keyword.get(operation_options, :ecto_type),
+      ecto_type: field_ecto_types[name],
       entries: collect_entries(entry_options)
     })
   end
