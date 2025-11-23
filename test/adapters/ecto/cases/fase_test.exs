@@ -588,6 +588,24 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
+      test_search_facets_single_facet(search_params)
+    end
+
+    test "search facets (single facet) (form input)" do
+      search_params = %{
+        "filters" => [
+          %{
+            "value" => ["Aisha Rahman", "Jean-Marie Leclerc"],
+            "op" => "==",
+            "field" => "facet_author"
+          }
+        ]
+      }
+
+      test_search_facets_single_facet(search_params)
+    end
+
+    defp test_search_facets_single_facet(search_params) do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
@@ -728,6 +746,29 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
+      test_search_facets_multiple_facets(search_params)
+    end
+
+    test "search facets (multiple facets) (form input)" do
+      search_params = %{
+        "filters" => [
+          %{
+            "value" => ["Aisha Rahman"],
+            "op" => "==",
+            "field" => "facet_author"
+          },
+          %{
+            "value" => ["history"],
+            "op" => "==",
+            "field" => "facet_tags"
+          }
+        ]
+      }
+
+      test_search_facets_multiple_facets(search_params)
+    end
+
+    defp test_search_facets_multiple_facets(search_params) do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
@@ -851,6 +892,24 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
+      test_search_facets_number_range_bounds(search_params)
+    end
+
+    test "search facets: number_range_bounds (form input)" do
+      search_params = %{
+        "filters" => [
+          %{
+            "value" => ["1", "2"],
+            "op" => "==",
+            "field" => "facet_word_count"
+          }
+        ]
+      }
+
+      test_search_facets_number_range_bounds(search_params)
+    end
+
+    defp test_search_facets_number_range_bounds(search_params) do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
@@ -1010,6 +1069,24 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
+      test_search_facets_date_range_bounds(search_params)
+    end
+
+    test "search facets: date_range_bounds (form input)" do
+      search_params = %{
+        "filters" => [
+          %{
+            "value" => ["3", "4"],
+            "op" => "==",
+            "field" => "facet_publish_date"
+          }
+        ]
+      }
+
+      test_search_facets_date_range_bounds(search_params)
+    end
+
+    defp test_search_facets_date_range_bounds(search_params) do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
@@ -1175,6 +1252,24 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
+      test_search_facets_hierarchies_level_1(search_params)
+    end
+
+    test "search facets: hierarchies (level 1) (form input)" do
+      search_params = %{
+        "filters" => [
+          %{
+            "value" => ["Aisha Rahman", "Hélène Dubois"],
+            "op" => "==",
+            "field" => "facet_category_author"
+          }
+        ]
+      }
+
+      test_search_facets_hierarchies_level_1(search_params)
+    end
+
+    defp test_search_facets_hierarchies_level_1(search_params) do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
@@ -1329,6 +1424,24 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
+      test_search_facets_hierarchies_level_2(search_params)
+    end
+
+    test "search facets: hierarchies (level 2) (form input)" do
+      search_params = %{
+        "filters" => [
+          %{
+            "value" => ["Hélène Dubois>history"],
+            "op" => "==",
+            "field" => "facet_category_author_tags"
+          }
+        ]
+      }
+
+      test_search_facets_hierarchies_level_2(search_params)
+    end
+
+    defp test_search_facets_hierarchies_level_2(search_params) do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
@@ -2557,10 +2670,12 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     page_size = Keyword.get(opts, :page_size, 10)
     query_opts = Keyword.get(opts, :query_opts, [])
     scope = Keyword.get(opts, :scope, [])
+    is_string_map = Map.keys(search_params) |> Enum.any?(&is_binary/1)
 
     ecto_schema = Fase.ecto_schema(schema, view_id)
     query = from(ecto_schema)
-    search_params = Map.put(search_params, :page_size, page_size)
+    page_size_key = if is_string_map, do: "page_size", else: :page_size
+    search_params = Map.put(search_params, page_size_key, page_size)
 
     with {:ok, search_results} <-
            Flop.validate_and_run(query, search_params,

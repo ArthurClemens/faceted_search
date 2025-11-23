@@ -50,70 +50,39 @@ defmodule Fase.Facets do
         raw_search_params \\ %{},
         facet_search_options \\ []
       ) do
-    search_params = clean_search_params(raw_search_params)
+    {view_name, module} = ecto_schema
+    search_params = clean_search_params(raw_search_params, module)
 
-    has_cache_key =
-      is_list(search_params.filters) and search_params.filters != []
+    {cache_key, is_read_from_cache} =
+      cache_read_state(search_params, facet_search_options)
 
-    is_cache_facets =
-      Keyword.get(facet_search_options, :cache_facets) && has_cache_key
+    if is_read_from_cache do
+      case Cache.get(Cache, view_name, cache_key) do
+        {:ok, facet_results} ->
+          {:ok, facet_results}
 
-    get_facet_results(
-      ecto_schema,
-      search_params,
-      facet_search_options,
-      is_cache_facets,
-      Process.whereis(Cache)
-    )
-  end
-
-  defp get_facet_results(
-         _ecto_schema,
-         _search_params,
-         _facet_search_options,
-         is_cache_facets,
-         cache_pid
-       )
-       when is_cache_facets and not is_pid(cache_pid) do
-    Logger.error(
-      "Fase.Cache process is not running. Make sure to add it to a supervisor."
-    )
-
-    {:error, :no_cache_process}
-  end
-
-  defp get_facet_results(
-         ecto_schema,
-         search_params,
-         facet_search_options,
-         is_cache_facets,
-         _cache_pid
-       )
-       when is_cache_facets do
-    {view_name, _module} = ecto_schema
-    cache_key = search_params.filters
-
-    case Cache.get(Cache, view_name, cache_key) do
-      {:ok, facet_results} ->
-        {:ok, facet_results}
-
-      {:error, :no_cache} ->
-        create_and_cache_facet_results(
-          ecto_schema,
-          search_params,
-          facet_search_options
-        )
+        {:error, :no_cache} ->
+          create_and_cache_facet_results(
+            ecto_schema,
+            search_params,
+            facet_search_options
+          )
+      end
+    else
+      create_facet_results(ecto_schema, search_params, facet_search_options)
     end
   end
 
-  defp get_facet_results(
-         ecto_schema,
-         search_params,
-         facet_search_options,
-         _is_cache_facets,
-         _cache_pid
-       ) do
-    create_facet_results(ecto_schema, search_params, facet_search_options)
+  defp cache_read_state(search_params, facet_search_options) do
+    cache_key = search_params.filters
+    has_cache_key = cache_key != []
+
+    is_cache_facets =
+      Keyword.get(facet_search_options, :cache_facets, false)
+
+    cache_pid = Process.whereis(Cache)
+
+    {cache_key, is_cache_facets and has_cache_key and is_pid(cache_pid)}
   end
 
   @spec create_and_cache_facet_results(Ecto.Queryable.t(), map(), [
@@ -152,8 +121,8 @@ defmodule Fase.Facets do
 
   @spec cached?(Ecto.Queryable.t(), map()) :: boolean()
   def cached?(ecto_schema, raw_search_params) do
-    {view_name, _module} = ecto_schema
-    search_params = clean_search_params(raw_search_params)
+    {view_name, module} = ecto_schema
+    search_params = clean_search_params(raw_search_params, module)
     cache_key = search_params.filters
 
     Cache.cache_key?(Cache, view_name, cache_key)
@@ -164,11 +133,11 @@ defmodule Fase.Facets do
   @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
           no_return()
   def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []) do
-    {view_name, _module} = ecto_schema
+    {view_name, module} = ecto_schema
 
     search_params_list
     |> Enum.each(fn raw_search_params ->
-      search_params = clean_search_params(raw_search_params)
+      search_params = clean_search_params(raw_search_params, module)
       cache_key = search_params.filters
 
       data =
@@ -239,9 +208,6 @@ defmodule Fase.Facets do
       Enum.filter(filters, &(to_string(&1.field) not in facet_fields))
     end)
   end
-
-  defp create_search_params_without_facets(search_params, _facet_configs),
-    do: search_params
 
   @spec maybe_get_facet_results(
           Ecto.Repo.t(),
@@ -382,7 +348,7 @@ defmodule Fase.Facets do
     prefix = Constants.facet_search_field_prefix()
 
     search_params_value_lookup =
-      (search_params.filters || [])
+      search_params.filters
       |> Enum.reduce(%{}, fn %{field: field, value: values}, acc ->
         Map.put(
           acc,
@@ -794,7 +760,7 @@ defmodule Fase.Facets do
   defp maybe_get_range_bucket_value(_, _), do: nil
 
   defp cast_value(raw_value, %{range_buckets: range_buckets} = _facet_config)
-       when is_list(range_buckets) do
+       when is_binary(raw_value) and is_list(range_buckets) do
     # Get bucket number
     String.to_integer(raw_value)
   end
@@ -809,11 +775,56 @@ defmodule Fase.Facets do
   defp cast_value(raw_value, _), do: raw_value
 
   # clean_search_params
+  # Search params may be a string map (from form inputs) or atom map (from code).
+  # Filter values may be strings, these are cast using the ecto_types defined in facet configs.
 
-  def clean_search_params(%{filters: filters} = _search_params),
-    do: %{filters: filters}
+  defp clean_search_params(raw_search_params, module) do
+    case raw_search_params
+         |> Flop.Validation.changeset([])
+         |> Ecto.Changeset.apply_action(:replace) do
+      {:ok, flop} ->
+        search_view_description = Fase.search_view_description(module)
+        facet_configs = FacetConfig.facet_configs(search_view_description)
 
-  def clean_search_params(_), do: %{filters: []}
+        facet_configs_string_map =
+          Enum.reduce(facet_configs, %{}, fn {key, value}, acc ->
+            Map.put(acc, to_string(key), value)
+          end)
+
+        filters =
+          Enum.map(
+            flop.filters,
+            &normalize_filter(&1, facet_configs_string_map)
+          )
+
+        %{filters: filters}
+
+      _ ->
+        %{filters: []}
+    end
+  end
+
+  # Convert a Flop.Filter struct to a map.
+  # Cast facet values using the ecto_types defined in facet configs.
+  defp normalize_filter(filter, facet_configs_string_map) do
+    filter_map = Map.from_struct(filter)
+
+    field_name_string = filter_map.field |> to_string()
+    prefix = Constants.facet_search_field_prefix()
+
+    if String.starts_with?(field_name_string, prefix) do
+      field_name_without_facet_prefix =
+        String.replace_prefix(field_name_string, prefix, "")
+
+      facet_config =
+        facet_configs_string_map[field_name_without_facet_prefix]
+
+      cast_value = Enum.map(filter_map.value, &cast_value(&1, facet_config))
+      Map.replace(filter_map, :value, cast_value)
+    else
+      filter_map
+    end
+  end
 
   # Copied from Phoenix.Naming
   # Converts a field name into its humanize version.

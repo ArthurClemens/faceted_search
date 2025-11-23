@@ -37,6 +37,7 @@ defmodule Fase.Internal.Types do
       if :facet_search_options in unquote(includes) do
         @type facet_search_option ::
                 {:repo, module()}
+                | {:for, module()}
                 | {:query_opts,
                    Keyword.t() | {:cache_facets, boolean()} | {:scope, term()}}
       end
