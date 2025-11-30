@@ -68,7 +68,7 @@ defmodule Fase.Test.Factory do
         "Examines the use of geographic and boundary metaphors in 16th-18th century political writings to reveal shifting concepts of sovereignty and statehood.",
       tags: ["politics", "history", "language_analysis"],
       author: "Hélène Dubois",
-      word_count: 3473,
+      word_count: 1900,
       categories: ["paper"]
     },
     %{
@@ -196,6 +196,8 @@ defmodule Fase.Test.Factory do
     "review",
     "editorial"
   ]
+
+  def articles, do: @articles
 
   def init_resources(opts) do
     ExMachina.Sequence.reset()

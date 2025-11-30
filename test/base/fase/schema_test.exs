@@ -102,7 +102,7 @@ defmodule Fase.Test.SchemaTest do
             facet_fields: [
               :author,
               {:tags, [label: :tag_titles]},
-              {:word_count, [number_range_bounds: [2000, 4000, 6000, 8000]]},
+              {:word_count, [number_range_bounds: [3000, 5000, 7000]]},
               {:publish_date,
                [
                  date_range_bounds: [

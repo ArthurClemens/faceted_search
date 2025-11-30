@@ -49,7 +49,7 @@ defmodule Fase.SearchView.Source do
   }
 
   @spec new({atom(), Keyword.t()}, atom(), map()) :: t()
-  def new({table_name, options}, module, field_ecto_types) do
+  def new({table_name, options}, module, ecto_types) do
     prefix = Keyword.get(options, :prefix, nil)
     group_by = Keyword.get(options, :group_by, nil)
 
@@ -63,14 +63,14 @@ defmodule Fase.SearchView.Source do
         Keyword.get(options, :fields) |> collect_fields(table_name, prefix),
       data_fields:
         Keyword.get(options, :data_fields)
-        |> collect_data_fields(field_ecto_types),
+        |> collect_data_fields(ecto_types),
       text_fields: Keyword.get(options, :text_fields) |> collect_text_fields(),
       facet_fields:
         Keyword.get(options, :facet_fields)
-        |> collect_facet_fields(field_ecto_types),
+        |> collect_facet_fields(ecto_types),
       sort_fields:
         Keyword.get(options, :sort_fields)
-        |> collect_sort_fields(field_ecto_types)
+        |> collect_sort_fields(ecto_types)
     }
   end
 
@@ -92,14 +92,14 @@ defmodule Fase.SearchView.Source do
 
   defp collect_fields(_, _, _), do: nil
 
-  defp collect_data_fields(fields, field_ecto_types)
+  defp collect_data_fields(fields, ecto_types)
        when is_list(fields) and fields != [] do
     Enum.map(fields, fn
       {name, field_options} ->
-        DataField.new(name, field_ecto_types, field_options)
+        DataField.new(name, ecto_types, field_options)
 
       name ->
-        DataField.new(name, field_ecto_types)
+        DataField.new(name, ecto_types)
     end)
   end
 
@@ -119,16 +119,16 @@ defmodule Fase.SearchView.Source do
 
   defp collect_scope_entries(_scope_keys, _module), do: nil
 
-  defp collect_sort_fields(sort_fields, field_ecto_types)
+  defp collect_sort_fields(sort_fields, ecto_types)
        when is_list(sort_fields) and sort_fields != [] do
     Enum.map(sort_fields, fn field_options ->
-      SortField.new(field_options, field_ecto_types)
+      SortField.new(field_options, ecto_types)
     end)
   end
 
   defp collect_sort_fields(_, _), do: nil
 
-  defp collect_facet_fields(facet_fields, field_ecto_types)
+  defp collect_facet_fields(facet_fields, ecto_types)
        when is_list(facet_fields) and facet_fields != [] do
     {hierarchy_options, regular_options} =
       facet_fields
@@ -139,18 +139,18 @@ defmodule Fase.SearchView.Source do
 
     regular_fields =
       Enum.map(regular_options, fn field_options ->
-        FacetField.new(field_options, field_ecto_types)
+        FacetField.new(field_options, ecto_types)
       end)
 
     hierarchy_fields =
-      create_hierarchy_fields(hierarchy_options, field_ecto_types)
+      create_hierarchy_fields(hierarchy_options, ecto_types)
 
     Enum.concat(regular_fields, hierarchy_fields)
   end
 
   defp collect_facet_fields(_, _), do: nil
 
-  defp create_hierarchy_fields(hierarchy_options, field_ecto_types) do
+  defp create_hierarchy_fields(hierarchy_options, ecto_types) do
     Enum.reduce(hierarchy_options, [], fn {:hierarchies, hierarchies}, acc ->
       path_lookup =
         Enum.reduce(hierarchies, %{}, fn {name, opts}, acc ->
@@ -163,7 +163,7 @@ defmodule Fase.SearchView.Source do
           |> Keyword.put(:hierarchy, true)
           |> maybe_set_hierarchy_parent(path_lookup)
 
-        [FacetField.new({name, opts}, field_ecto_types) | acc_1]
+        [FacetField.new({name, opts}, ecto_types) | acc_1]
       end)
     end)
   end
