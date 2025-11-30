@@ -45,7 +45,9 @@ defmodule Fase.Facets do
           | {:error, Flop.Meta.t()}
           | {:error, Exception.t()}
 
-  # search
+  # ----------------
+  # Search functions
+  # ----------------
 
   def search(
         ecto_schema,
@@ -75,80 +77,6 @@ defmodule Fase.Facets do
     end
   end
 
-  defp cache_read_state(search_params, facet_search_options) do
-    cache_key = search_params.filters
-    has_cache_key = cache_key != []
-
-    is_cache_facets =
-      Keyword.get(facet_search_options, :cache_facets, false)
-
-    cache_pid = Process.whereis(Cache)
-
-    {cache_key, is_cache_facets and has_cache_key and is_pid(cache_pid)}
-  end
-
-  @spec create_and_cache_facet_results(Ecto.Queryable.t(), map(), [
-          facet_search_option()
-        ]) ::
-          {:ok, list(result_row())}
-          | {:error, Flop.Meta.t()}
-          | {:error, Exception.t()}
-  defp create_and_cache_facet_results(
-         ecto_schema,
-         search_params,
-         facet_search_options
-       ) do
-    {view_name, _module} = ecto_schema
-    cache_key = search_params.filters
-
-    case create_facet_results(ecto_schema, search_params, facet_search_options) do
-      {:ok, facet_results} ->
-        Cache.insert(Cache, view_name, cache_key, facet_results)
-        {:ok, facet_results}
-
-      error ->
-        error
-    end
-  end
-
-  # clear_cache
-
-  @spec clear_cache(Ecto.Queryable.t()) :: no_return()
-  def clear_cache(ecto_schema) do
-    {view_name, _module} = ecto_schema
-    Cache.clear(Cache, view_name)
-  end
-
-  # cached
-
-  @spec cached?(Ecto.Queryable.t(), map()) :: boolean()
-  def cached?(ecto_schema, raw_search_params) do
-    {view_name, module} = ecto_schema
-    search_params = normalize_search_params(raw_search_params, module)
-    cache_key = search_params.filters
-
-    Cache.cache_key?(Cache, view_name, cache_key)
-  end
-
-  # warm_cache
-
-  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
-          no_return()
-  def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []) do
-    {view_name, module} = ecto_schema
-
-    search_params_list
-    |> Enum.each(fn raw_search_params ->
-      search_params = normalize_search_params(raw_search_params, module)
-      cache_key = search_params.filters
-
-      data =
-        create_facet_results(ecto_schema, search_params, facet_search_options)
-
-      Cache.insert(Cache, view_name, cache_key, data)
-    end)
-  end
-
   @spec create_facet_results(Ecto.Queryable.t(), map(), [facet_search_option()]) ::
           {:ok, list(result_row())}
           | {:error, Flop.Meta.t()}
@@ -167,129 +95,123 @@ defmodule Fase.Facets do
 
     opts = Keyword.put(facet_search_options, :for, module)
 
-    search_params_without_facets =
-      create_search_params_without_facets(search_params, facet_configs)
+    case query_combined_facets(
+           repo,
+           ecto_schema,
+           search_params,
+           facet_configs,
+           opts
+         ) do
+      {:ok, rows} ->
+        {:ok,
+         consolidate_facet_results(
+           module,
+           rows,
+           search_params,
+           facet_configs,
+           facet_search_options
+         )}
 
-    baseline_results =
-      query_baseline_facets(repo, ecto_schema, search_params, opts) || %{}
-
-    dbg(baseline_results)
-
-    with {:ok, all_facet_rows} <-
-           query_facets(
-             repo,
-             ecto_schema,
-             search_params_without_facets,
-             opts
-           ),
-         {:ok, filtered_facet_rows} <-
-           maybe_query_facets(repo, ecto_schema, search_params, opts) do
-      facet_results =
-        consolidate_facet_results(
-          module,
-          baseline_results,
-          all_facet_rows,
-          filtered_facet_rows,
-          search_params,
-          facet_configs,
-          facet_search_options
-        )
-
-      {:ok, facet_results}
-    else
-      error -> error
+      {:error, errors} ->
+        {:error, List.first(errors)}
     end
   end
 
-  @spec create_search_params_without_facets(map(), facet_configs()) :: map()
-  defp create_search_params_without_facets(
-         %{filters: filters} = search_params,
-         facet_configs
-       )
-       when is_list(filters) do
-    prefix = Constants.facet_search_field_prefix()
-
-    facet_fields =
-      facet_configs |> Map.keys() |> Enum.map(&"#{prefix}#{&1}")
-
-    update_in(search_params, [:filters], fn filters ->
-      Enum.filter(filters, &(to_string(&1.field) not in facet_fields))
-    end)
-  end
-
-  @spec maybe_query_facets(
-          Ecto.Repo.t(),
-          Ecto.Queryable.t(),
-          map(),
-          Keyword.t()
-        ) ::
-          {:ok, list(result_row())}
-          | {:error, Flop.Meta.t()}
-          | {:error, Exception.t()}
-  defp maybe_query_facets(
-         repo,
-         ecto_schema,
-         %{filters: filters} = search_params,
-         opts
-       ) do
-    facet_filters =
-      Enum.filter(filters, fn %{field: field} ->
-        String.starts_with?(
-          field |> to_string(),
-          Constants.facet_search_field_prefix()
-        )
-      end)
-
-    if facet_filters == [] do
-      {:ok, []}
-    else
-      query_facets(repo, ecto_schema, search_params, opts)
-    end
-  end
-
-  # query_baseline_facets
-  # Gets baseline results for each facet, where all filters are applied except for that facet.
+  # query_combined_facets
+  # Gets results for each facet, where all filters are applied except for that facet.
   # Performs a facet query for each field in search param filters, where the filter for
   # that field is omitted.
 
-  defp query_baseline_facets(
+  @spec query_combined_facets(
+          Ecto.Repo.t(),
+          Ecto.Queryable.t(),
+          map(),
+          facet_configs(),
+          Keyword.t()
+        ) ::
+          {:ok, list(result_row())}
+          | {:error, list(Flop.Meta.t() | Exception.t())}
+  defp query_combined_facets(
          repo,
          ecto_schema,
          %{filters: filters} = search_params,
+         facet_configs,
          opts
        )
        when filters != [] do
     prefix = Constants.facet_search_field_prefix()
 
-    filters
-    |> Enum.reduce(%{}, fn %{field: field}, acc ->
-      current_filters = filters |> Enum.filter(&(&1.field != field))
+    results =
+      facet_configs
+      |> Enum.reduce(%{}, fn {_, facet_config}, acc ->
+        current_filters =
+          filters |> Enum.filter(&(&1.field != facet_config.filter_field))
 
-      current_search_params =
-        Map.replace(search_params, :filters, current_filters)
+        current_search_params =
+          Map.replace(search_params, :filters, current_filters)
 
-      case query_facets(
-             repo,
-             ecto_schema,
-             current_search_params,
-             opts
-           ) do
-        {:ok, facet_rows} ->
-          facet_rows_excluding_current_field =
-            facet_rows
-            |> Enum.filter(fn {name, _, _, _} ->
-              "#{prefix}#{name}" == to_string(field)
-            end)
+        case query_facets(
+               repo,
+               ecto_schema,
+               current_search_params,
+               opts
+             ) do
+          {:ok, facet_rows} ->
+            facet_rows_exclusive_current_field =
+              Enum.filter(facet_rows, fn {name, _, _, _} ->
+                "#{prefix}#{name}" == to_string(facet_config.filter_field)
+              end)
 
-          Map.put(acc, field, facet_rows_excluding_current_field)
+            Map.put(
+              acc,
+              facet_config.field,
+              {:ok, facet_rows_exclusive_current_field}
+            )
 
-        _ ->
-          acc
-      end
-    end)
+          {:error, error} ->
+            Map.put(
+              acc,
+              facet_config.field,
+              {:error, error}
+            )
+        end
+      end)
+      |> Enum.reduce(%{ok: [], error: []}, fn
+        {_field, {:ok, rows}}, acc ->
+          Map.update(acc, :ok, [rows], fn existing -> existing ++ rows end)
+
+        {field, {:error, error}}, acc ->
+          error_line = {field, error}
+
+          Map.update(acc, :error, [error_line], fn existing ->
+            [error_line | existing]
+          end)
+      end)
+
+    if results.error == [] do
+      {:ok, results.ok |> Enum.sort()}
+    else
+      {:error, results.error}
+    end
   end
 
-  defp query_baseline_facets(_, _, _, _), do: nil
+  defp query_combined_facets(
+         repo,
+         ecto_schema,
+         search_params,
+         _facet_configs,
+         opts
+       ) do
+    case Flop.validate(search_params, opts) do
+      {:ok, flop} ->
+        ecto_schema
+        |> create_facets_query(repo, flop, opts)
+        |> run_query(repo)
+
+      {:error, meta} ->
+        {:error, meta}
+    end
+  end
 
   @spec query_facets(Ecto.Repo.t(), Ecto.Queryable.t(), map(), Keyword.t()) ::
           {:ok, list(result_row())}
@@ -382,8 +304,6 @@ defmodule Fase.Facets do
 
   @spec consolidate_facet_results(
           module(),
-          map(),
-          list(result_row()),
           list(result_row()),
           map(),
           facet_configs(),
@@ -392,10 +312,7 @@ defmodule Fase.Facets do
           list(Facet.t())
   defp consolidate_facet_results(
          module,
-         baseline_results,
-         # all_facet_rows to be removed:
-         all_facet_rows,
-         filtered_facet_rows,
+         rows,
          search_params,
          facet_configs,
          facet_search_options
@@ -412,40 +329,15 @@ defmodule Fase.Facets do
         )
       end)
 
-    all_facet_result_states =
-      create_facet_result_states(
-        all_facet_rows,
-        facet_configs,
-        search_params_value_lookup
-      )
-
-    dbg(all_facet_result_states)
-
     baseline_result_states =
-      Enum.reduce(baseline_results, %{}, fn {field, result_rows}, acc ->
-        Map.put(
-          acc,
-          field,
-          create_facet_result_states(
-            result_rows,
-            facet_configs,
-            search_params_value_lookup
-          )
-        )
-      end)
-
-    dbg(baseline_result_states)
-
-    filtered_facet_result_states =
       create_facet_result_states(
-        filtered_facet_rows,
+        rows,
         facet_configs,
         search_params_value_lookup
       )
 
     combined_facet_result_states =
-      all_facet_result_states
-      |> combine_facet_result_states(filtered_facet_result_states)
+      baseline_result_states
       |> process_hierarchies(search_params_value_lookup, facet_configs)
 
     create_facets(
@@ -456,56 +348,15 @@ defmodule Fase.Facets do
     )
   end
 
-  @spec combine_facet_result_states(
-          facet_result_states(),
-          facet_result_states()
-        ) :: facet_result_states()
-  defp combine_facet_result_states(
-         all_facet_result_states,
-         filtered_facet_result_states
-       )
-       when filtered_facet_result_states == %{},
-       do: all_facet_result_states
-
-  defp combine_facet_result_states(
-         all_facet_result_states,
-         filtered_facet_result_states
-       ) do
-    # If any option in a group is selected, take all other options from all_facet_result_states
-    filtered_facet_result_states
-    |> Enum.reduce(%{}, fn {name, states}, acc ->
-      states =
-        if Enum.any?(states, &(&1.selected || &1.hierarchy)),
-          do: merge_states(states, all_facet_result_states[name]),
-          else: states
-
-      Map.put(acc, name, states)
-    end)
-  end
-
-  defp merge_states(filtered_result_states, all_result_states) do
-    # Take all entries from all_result_states, but copy the counts of filtered_result_states
-    count_by_value_lookup =
-      Enum.reduce(filtered_result_states, %{}, fn state, acc ->
-        Map.put(acc, state.value, state.count)
-      end)
-
-    all_result_states
-    |> Enum.map(fn state ->
-      count = count_by_value_lookup[state.value] || state.count
-      Map.put(state, :count, count)
-    end)
-  end
-
   defp process_hierarchies(
-         combined_facet_result_states,
+         facet_result_states,
          search_params_value_lookup,
          facet_configs
        ) do
     derived_parent_values =
       derive_parent_values(search_params_value_lookup, facet_configs)
 
-    combined_facet_result_states
+    facet_result_states
     |> auto_select_parent_values(derived_parent_values)
     |> only_keep_children_of_selected_parents(derived_parent_values)
   end
@@ -913,5 +764,83 @@ defmodule Fase.Facets do
       end
 
     bin |> String.replace("_", " ") |> String.capitalize()
+  end
+
+  # ---------------
+  # Cache functions
+  # ---------------
+
+  defp cache_read_state(search_params, facet_search_options) do
+    cache_key = search_params.filters
+    has_cache_key = cache_key != []
+
+    is_cache_facets =
+      Keyword.get(facet_search_options, :cache_facets, false)
+
+    cache_pid = Process.whereis(Cache)
+
+    {cache_key, is_cache_facets and has_cache_key and is_pid(cache_pid)}
+  end
+
+  @spec create_and_cache_facet_results(Ecto.Queryable.t(), map(), [
+          facet_search_option()
+        ]) ::
+          {:ok, list(result_row())}
+          | {:error, Flop.Meta.t()}
+          | {:error, Exception.t()}
+  defp create_and_cache_facet_results(
+         ecto_schema,
+         search_params,
+         facet_search_options
+       ) do
+    {view_name, _module} = ecto_schema
+    cache_key = search_params.filters
+
+    case create_facet_results(ecto_schema, search_params, facet_search_options) do
+      {:ok, facet_results} ->
+        Cache.insert(Cache, view_name, cache_key, facet_results)
+        {:ok, facet_results}
+
+      error ->
+        error
+    end
+  end
+
+  # clear_cache
+
+  @spec clear_cache(Ecto.Queryable.t()) :: no_return()
+  def clear_cache(ecto_schema) do
+    {view_name, _module} = ecto_schema
+    Cache.clear(Cache, view_name)
+  end
+
+  # cached
+
+  @spec cached?(Ecto.Queryable.t(), map()) :: boolean()
+  def cached?(ecto_schema, raw_search_params) do
+    {view_name, module} = ecto_schema
+    search_params = normalize_search_params(raw_search_params, module)
+    cache_key = search_params.filters
+
+    Cache.cache_key?(Cache, view_name, cache_key)
+  end
+
+  # warm_cache
+
+  @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
+          no_return()
+  def warm_cache(ecto_schema, search_params_list, facet_search_options \\ []) do
+    {view_name, module} = ecto_schema
+
+    search_params_list
+    |> Enum.each(fn raw_search_params ->
+      search_params = normalize_search_params(raw_search_params, module)
+      cache_key = search_params.filters
+
+      data =
+        create_facet_results(ecto_schema, search_params, facet_search_options)
+
+      Cache.insert(Cache, view_name, cache_key, data)
+    end)
   end
 end

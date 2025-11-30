@@ -103,7 +103,7 @@ defmodule Fase.Test.MyApp.ExtendedFacetSchema do
             label: :tag_titles
           ],
           word_count: [
-            number_range_bounds: [2000, 4000, 6000, 8000]
+            number_range_bounds: [3000, 5000, 7000]
           ],
           publish_date: [
             date_range_bounds: [

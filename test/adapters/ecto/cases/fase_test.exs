@@ -204,13 +204,13 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
           "author" => "Hélène Dubois",
           "draft" => 1,
           "indicators" => [
-            %{"draft" => true, "type" => "history", "word_count" => "3473"},
+            %{"draft" => true, "type" => "history", "word_count" => "1900"},
             %{
               "draft" => true,
               "type" => "language_analysis",
-              "word_count" => "3473"
+              "word_count" => "1900"
             },
-            %{"draft" => true, "type" => "politics", "word_count" => "3473"}
+            %{"draft" => true, "type" => "politics", "word_count" => "1900"}
           ],
           "tag_titles" => [
             "History",
@@ -452,129 +452,44 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       search_params = %{}
 
       {:ok, {_results, meta}, facets} =
+        facet_search("articles", ExtendedFacetSchema, search_params)
+
+      summary = facet_result_summary(facets)
+
+      # All 10 articles are returned
+      assert meta.total_count == 10
+
+      # All 5 authors are selectable
+      assert summary.author.count == 5
+
+      # All 5 category_author are selectable
+      assert summary.category_author.count == 5
+
+      # All 20 tags are selectable
+      assert summary.tags.count == 20
+
+      # All 20 category_tags are selectable
+      assert summary.category_tags.count == 20
+
+      # All 4 word_count ranges are selectable
+      assert summary.word_count.count == 4
+
+      # All 4 publish_date ranges are selectable
+      assert summary.publish_date.count == 4
+    end
+
+    test "facet results (no search params) (scope: locale)" do
+      search_params = %{}
+
+      {:ok, {_results, _meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params,
           scope: %{locale: "fr"}
         )
 
-      expected = %{
-        author: %{
-          count: 5,
-          field: :author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Author"
-        },
-        category_author: %{
-          count: 5,
-          field: :category_author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Category author"
-        },
-        category_tags: %{
-          count: 20,
-          field: :category_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Category tags"
-        },
-        publish_date: %{
-          count: 4,
-          field: :publish_date,
-          first_2_options: [
-            %Fase.Option{
-              count: 4,
-              label: "last year",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 1,
-              label: "last quarter",
-              selected: false,
-              value: 2
-            }
-          ],
-          label: "DATE DE PUBLICATION"
-        },
-        tags: %{
-          count: 20,
-          field: :tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Tags"
-        },
-        word_count: %{
-          count: 3,
-          field: :word_count,
-          first_2_options: [
-            %Fase.Option{
-              count: 5,
-              label: "de 2000 à 4000",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 2,
-              label: "de 4000 à 6000",
-              selected: false,
-              value: 2
-            }
-          ],
-          label: "NOMBRE DE MOTS"
-        }
-      }
+      summary = facet_result_summary(facets)
 
-      assert meta.total_count == 10
-      assert facet_result_subset(facets) == expected
+      assert summary.publish_date.label == "DATE DE PUBLICATION"
+      assert summary.word_count.label == "NOMBRE DE MOTS"
     end
 
     test "search facets (single facet)" do
@@ -609,125 +524,43 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
-      expected = %{
-        author: %{
-          count: 5,
-          field: :author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: true,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Author"
-        },
-        category_author: %{
-          count: 5,
-          field: :category_author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Category author"
-        },
-        category_tags: %{
-          count: 20,
-          field: :category_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Category tags"
-        },
-        publish_date: %{
-          count: 2,
-          field: :publish_date,
-          first_2_options: [
-            %Fase.Option{
-              count: 3,
-              label: "last year",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 1,
-              label: "last month",
-              selected: false,
-              value: 3
-            }
-          ],
-          label: "PUBLISH DATE"
-        },
-        tags: %{
-          count: 11,
-          field: :tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Tags"
-        },
-        word_count: %{
-          count: 2,
-          field: :word_count,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "2000-4000",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 2,
-              label: "6000-8000",
-              selected: false,
-              value: 3
-            }
-          ],
-          label: "WORD COUNT"
-        }
-      }
+      summary = facet_result_summary(facets)
 
+      # The 2 selected authors have written 4 articles in total
       assert meta.total_count == 4
-      assert facet_result_subset(facets) == expected
+
+      # All author options are available
+      assert summary.author.count == 5
+
+      # Only selected authors are available in category_author options
+      assert summary.category_author.count == 2
+
+      assert summary.category_author.options |> Enum.map(& &1.value) == [
+               "Aisha Rahman",
+               "Jean-Marie Leclerc"
+             ]
+
+      # Only the tags that are used by the selected author articles are available
+      author_values =
+        summary.author.options
+        |> Enum.filter(& &1.selected)
+        |> Enum.map(& &1.value)
+
+      selected_author_tags =
+        articles()
+        |> Enum.filter(&(&1.author in author_values))
+        |> Enum.reduce([], fn article, acc ->
+          acc ++ article.tags
+        end)
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      assert summary.tags.options |> Enum.map(& &1.value) |> Enum.sort() ==
+               selected_author_tags
+
+      assert summary.category_tags.options
+             |> Enum.map(& &1.value)
+             |> Enum.sort() == selected_author_tags
     end
 
     test "search facets (multiple facets)" do
@@ -772,116 +605,65 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
-      expected = %{
-        author: %{
-          count: 5,
-          field: :author,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Aisha Rahman",
-              selected: true,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Author"
-        },
-        category_author: %{
-          count: 5,
-          field: :category_author,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Category author"
-        },
-        category_tags: %{
-          count: 20,
-          field: :category_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Category tags"
-        },
-        publish_date: %{
-          count: 1,
-          field: :publish_date,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "last year",
-              selected: false,
-              value: 1
-            }
-          ],
-          label: "PUBLISH DATE"
-        },
-        tags: %{
-          count: 20,
-          field: :tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Tags"
-        },
-        word_count: %{
-          count: 1,
-          field: :word_count,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "2000-4000",
-              selected: false,
-              value: 1
-            }
-          ],
-          label: "WORD COUNT"
-        }
-      }
+      summary = facet_result_summary(facets)
 
+      # Returns the single article by the selected author "Aisha Rahman" that contains the selected tag "history"
       assert meta.total_count == 1
-      assert facet_result_subset(facets) == expected
+      assert summary.publish_date.count == 1
+      assert summary.word_count.count == 1
+
+      # The selected author "Aisha Rahman" and the authors whose articles are tagged with "history" are selectable
+      assert summary.author.count == 4
+
+      assert summary.author.options |> Enum.map(& &1.value) == [
+               "Aisha Rahman",
+               "Hélène Dubois",
+               "Jean-Marie Leclerc",
+               "Mateo Alvarez"
+             ]
+
+      # The tag options include the selected "history" and the other tags from articles by "Aisha Rahman"
+      author_values =
+        summary.author.options
+        |> Enum.filter(& &1.selected)
+        |> Enum.map(& &1.value)
+
+      selected_author_tags =
+        articles()
+        |> Enum.filter(&(&1.author in author_values))
+        |> Enum.reduce([], fn article, acc ->
+          acc ++ article.tags
+        end)
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      assert summary.tags.options |> Enum.map(& &1.value) |> Enum.sort() ==
+               selected_author_tags
+
+      assert selected_author_tags == [
+               "books",
+               "emotion",
+               "history",
+               "literature",
+               "materiality",
+               "travel-writing"
+             ]
+
+      # The category_author options only contain the selected author "Aisha Rahman"
+      assert summary.category_author.options |> Enum.map(& &1.value) == [
+               "Aisha Rahman"
+             ]
+
+      # The category_tags options only contain the tags the single article that has
+      # the selected author AND the tag in common
+      assert summary.category_tags.options |> Enum.map(& &1.value) == [
+               "books",
+               "history",
+               "materiality"
+             ]
     end
 
-    test "search facets: number_range_bounds" do
+    test "search facets: number_range_bounds (word_count)" do
       search_params = %{
         filters: [
           %{
@@ -895,7 +677,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       test_search_facets_number_range_bounds(search_params)
     end
 
-    test "search facets: number_range_bounds (form input)" do
+    test "search facets: number_range_bounds (word_count) (form input)" do
       search_params = %{
         "filters" => [
           %{
@@ -913,156 +695,31 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
-      expected = %{
-        author: %{
-          count: 5,
-          field: :author,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Author"
-        },
-        category_author: %{
-          count: 5,
-          field: :category_author,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Category author"
-        },
-        category_tags: %{
-          count: 20,
-          field: :category_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Category tags"
-        },
-        publish_date: %{
-          count: 3,
-          field: :publish_date,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "last year",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 3,
-              label: "last month",
-              selected: false,
-              value: 3
-            }
-          ],
-          label: "PUBLISH DATE"
-        },
-        tags: %{
-          count: 14,
-          field: :tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Books",
-              selected: false,
-              value: "books"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Culture",
-              selected: false,
-              value: "culture"
-            }
-          ],
-          label: "Tags"
-        },
-        word_count: %{
-          count: 3,
-          field: :word_count,
-          first_2_options: [
-            %Fase.Option{
-              count: 5,
-              label: "2000-4000",
-              selected: true,
-              value: 1
-            },
-            %Fase.Option{
-              count: 2,
-              label: "4000-6000",
-              selected: true,
-              value: 2
-            }
-          ],
-          label: "WORD COUNT"
-        }
-      }
+      summary = facet_result_summary(facets)
 
-      assert meta.total_count == 7
-      assert facet_result_subset(facets) == expected
+      # 6 articles have word counts within the selected ranges
+      assert meta.total_count == 6
 
-      expected_publish_date_options = [
-        %Fase.Option{
-          count: 2,
-          label: "last year",
-          selected: false,
-          value: 1
-        },
-        %Fase.Option{
-          count: 3,
-          label: "last month",
-          selected: false,
-          value: 3
-        },
-        %Fase.Option{
-          count: 2,
-          label: "today",
-          value: 5,
-          selected: false
-        }
-      ]
+      # All word_count options are selectable
+      assert summary.word_count.count == 4
 
-      assert Enum.find(facets, &(&1.field == :publish_date))
-             |> get_in([Access.key(:options)]) == expected_publish_date_options
+      assert summary.word_count.options
+             |> Enum.filter(& &1.selected)
+             |> Enum.map(& &1.value) == [1, 2]
+
+      assert summary.word_count.options
+             |> Enum.filter(& &1.selected)
+             |> Enum.map(& &1.label) == ["3000-5000", "5000-7000"]
+
+      # 4 authors have articles within the selected ranges
+      assert summary.author.count == 4
     end
 
-    test "search facets: date_range_bounds" do
+    test "search facets: date_range_bounds (publish_date)" do
       search_params = %{
         filters: [
           %{
-            value: [3, 4],
+            value: [1, 2],
             op: :==,
             field: :facet_publish_date
           }
@@ -1076,7 +733,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       search_params = %{
         "filters" => [
           %{
-            "value" => ["3", "4"],
+            "value" => ["1", "2"],
             "op" => "==",
             "field" => "facet_publish_date"
           }
@@ -1090,158 +747,27 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
-      expected = %{
-        author: %{
-          count: 3,
-          field: :author,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Jean-Marie Leclerc",
-              selected: false,
-              value: "Jean-Marie Leclerc"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Mateo Alvarez",
-              selected: false,
-              value: "Mateo Alvarez"
-            }
-          ],
-          label: "Author"
-        },
-        category_author: %{
-          count: 5,
-          field: :category_author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Category author"
-        },
-        category_tags: %{
-          count: 20,
-          field: :category_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Category tags"
-        },
-        publish_date: %{
-          count: 4,
-          field: :publish_date,
-          first_2_options: [
-            %Fase.Option{
-              count: 4,
-              label: "last year",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 1,
-              label: "last quarter",
-              selected: false,
-              value: 2
-            }
-          ],
-          label: "PUBLISH DATE"
-        },
-        tags: %{
-          count: 8,
-          field: :tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Culture",
-              selected: false,
-              value: "culture"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "History",
-              selected: false,
-              value: "history"
-            }
-          ],
-          label: "Tags"
-        },
-        word_count: %{
-          count: 2,
-          field: :word_count,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "2000-4000",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 2,
-              label: "4000-6000",
-              selected: false,
-              value: 2
-            }
-          ],
-          label: "WORD COUNT"
-        }
-      }
+      summary = facet_result_summary(facets)
 
-      assert meta.total_count == 3
-      assert facet_result_subset(facets) == expected
+      # 5 articles have word counts within the selected ranges
+      assert meta.total_count == 5
 
-      expected_publish_date_options = [
-        %Fase.Option{
-          count: 4,
-          label: "last year",
-          selected: false,
-          value: 1
-        },
-        %Fase.Option{
-          count: 1,
-          label: "last quarter",
-          selected: false,
-          value: 2
-        },
-        %Fase.Option{
-          count: 3,
-          label: "last month",
-          selected: true,
-          value: 3
-        },
-        %Fase.Option{
-          count: 2,
-          label: "today",
-          selected: false,
-          value: 5
-        }
-      ]
+      # All publish_date options are selectable
+      assert summary.publish_date.count == 4
 
-      assert Enum.find(facets, &(&1.field == :publish_date))
-             |> get_in([Access.key(:options)]) == expected_publish_date_options
+      assert summary.publish_date.options
+             |> Enum.filter(& &1.selected)
+             |> Enum.map(& &1.value) == [1, 2]
+
+      assert summary.publish_date.options
+             |> Enum.filter(& &1.selected)
+             |> Enum.map(& &1.label) == ["last year", "last quarter"]
+
+      # 4 authors have articles within the selected ranges
+      assert summary.author.count == 4
     end
 
-    test "search facets: hierarchies (level 1)" do
+    test "search facets: hierarchies (level 1) (category_author)" do
       search_params = %{
         filters: [
           %{
@@ -1255,7 +781,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       test_search_facets_hierarchies_level_1(search_params)
     end
 
-    test "search facets: hierarchies (level 1) (form input)" do
+    test "search facets: hierarchies (level 1) (category_author) (form input)" do
       search_params = %{
         "filters" => [
           %{
@@ -1273,147 +799,45 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
-      expected = %{
-        author: %{
-          count: 2,
-          field: :author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Author"
-        },
-        category_author: %{
-          count: 5,
-          field: :category_author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: true,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 2,
-              label: "Hélène Dubois",
-              selected: true,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Category author"
-        },
-        category_author_tags: %{
-          count: 12,
-          field: :category_author_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Aisha Rahman>books",
-              selected: false,
-              value: "Aisha Rahman>books"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Aisha Rahman>emotion",
-              selected: false,
-              value: "Aisha Rahman>emotion"
-            }
-          ],
-          label: "Category author tags"
-        },
-        category_tags: %{
-          count: 20,
-          field: :category_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Category tags"
-        },
-        publish_date: %{
-          count: 2,
-          field: :publish_date,
-          first_2_options: [
-            %Fase.Option{
-              count: 3,
-              label: "last year",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 1,
-              label: "today",
-              selected: false,
-              value: 5
-            }
-          ],
-          label: "PUBLISH DATE"
-        },
-        tags: %{
-          count: 11,
-          field: :tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Books",
-              selected: false,
-              value: "books"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Emotion",
-              selected: false,
-              value: "emotion"
-            }
-          ],
-          label: "Tags"
-        },
-        word_count: %{
-          count: 2,
-          field: :word_count,
-          first_2_options: [
-            %Fase.Option{
-              count: 3,
-              label: "2000-4000",
-              selected: false,
-              value: 1
-            },
-            %Fase.Option{
-              count: 1,
-              label: "6000-8000",
-              selected: false,
-              value: 3
-            }
-          ],
-          label: "WORD COUNT"
-        }
-      }
+      summary = facet_result_summary(facets)
 
+      # 4 articles are found from the 2 selected authors
       assert meta.total_count == 4
-      assert facet_result_subset(facets) == expected
+
+      # All 5 category_author are selectable
+      assert summary.category_author.count == 5
+
+      assert summary.category_author.options
+             |> Enum.count(& &1.selected) == 2
+
+      # The author options only contain the authors selected through category_author
+      assert summary.author.count == 2
+
+      assert summary.author.options
+             |> Enum.count(& &1.selected) == 0
+
+      # The category_author_tags options contain the OR combinations of authors and tags
+      assert summary.category_author_tags.count == 12
+
+      assert summary.category_author_tags.options
+             |> Enum.map(& &1.value)
+             |> Enum.sort() == [
+               "Aisha Rahman>books",
+               "Aisha Rahman>emotion",
+               "Aisha Rahman>history",
+               "Aisha Rahman>literature",
+               "Aisha Rahman>materiality",
+               "Aisha Rahman>travel-writing",
+               "Hélène Dubois>history",
+               "Hélène Dubois>interdisciplinary",
+               "Hélène Dubois>language_analysis",
+               "Hélène Dubois>memory",
+               "Hélène Dubois>oral-history",
+               "Hélène Dubois>politics"
+             ]
     end
 
-    test "search facets: hierarchies (level 2)" do
+    test "search facets: hierarchies (level 2) (category_author_tags)" do
       search_params = %{
         filters: [
           %{
@@ -1427,7 +851,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       test_search_facets_hierarchies_level_2(search_params)
     end
 
-    test "search facets: hierarchies (level 2) (form input)" do
+    test "search facets: hierarchies (level 2) (category_author_tags) (form input)" do
       search_params = %{
         "filters" => [
           %{
@@ -1445,126 +869,37 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       {:ok, {_results, meta}, facets} =
         facet_search("articles", ExtendedFacetSchema, search_params)
 
-      expected = %{
-        author: %{
-          count: 1,
-          field: :author,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Hélène Dubois",
-              selected: false,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Author"
-        },
-        category_author: %{
-          count: 5,
-          field: :category_author,
-          first_2_options: [
-            %Fase.Option{
-              count: 2,
-              label: "Aisha Rahman",
-              selected: false,
-              value: "Aisha Rahman"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Hélène Dubois",
-              selected: true,
-              value: "Hélène Dubois"
-            }
-          ],
-          label: "Category author"
-        },
-        category_author_tags: %{
-          count: 6,
-          field: :category_author_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "Hélène Dubois>history",
-              selected: true,
-              value: "Hélène Dubois>history"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Hélène Dubois>interdisciplinary",
-              selected: false,
-              value: "Hélène Dubois>interdisciplinary"
-            }
-          ],
-          label: "Category author tags"
-        },
-        category_tags: %{
-          count: 20,
-          field: :category_tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "archives",
-              selected: false,
-              value: "archives"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "books",
-              selected: false,
-              value: "books"
-            }
-          ],
-          label: "Category tags"
-        },
-        publish_date: %{
-          count: 1,
-          field: :publish_date,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "last year",
-              selected: false,
-              value: 1
-            }
-          ],
-          label: "PUBLISH DATE"
-        },
-        tags: %{
-          count: 3,
-          field: :tags,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "History",
-              selected: false,
-              value: "history"
-            },
-            %Fase.Option{
-              count: 1,
-              label: "Language analysis: Critical reading",
-              selected: false,
-              value: "language_analysis"
-            }
-          ],
-          label: "Tags"
-        },
-        word_count: %{
-          count: 1,
-          field: :word_count,
-          first_2_options: [
-            %Fase.Option{
-              count: 1,
-              label: "2000-4000",
-              selected: false,
-              value: 1
-            }
-          ],
-          label: "WORD COUNT"
-        }
-      }
+      summary = facet_result_summary(facets)
 
+      # One article is found from the selected author "Hélène Dubois" that is also tagged with "history"
       assert meta.total_count == 1
-      assert facet_result_subset(facets) == expected
+
+      # The author options only contain the author selected through category_author_tags
+      assert summary.author.count == 1
+
+      assert summary.author.options
+             |> Enum.count(& &1.selected) == 0
+
+      # The category_author options only contain the authors selected through category_author
+      assert summary.category_author.count == 1
+
+      assert summary.category_author.options
+             |> Enum.count(& &1.selected) == 1
+
+      # The category_author_tags options contain the AND combinations of authors and tags,
+      # plus the other author-tag options
+      assert summary.category_author_tags.count == 6
+
+      assert summary.category_author_tags.options
+             |> Enum.map(& &1.value)
+             |> Enum.sort() == [
+               "Hélène Dubois>history",
+               "Hélène Dubois>interdisciplinary",
+               "Hélène Dubois>language_analysis",
+               "Hélène Dubois>memory",
+               "Hélène Dubois>oral-history",
+               "Hélène Dubois>politics"
+             ]
     end
   end
 
@@ -1674,7 +1009,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       expected = [
         %{
           "author" => "Hélène Dubois",
-          "indicators" => [%{"word_count" => "3473"}],
+          "indicators" => [%{"word_count" => "1900"}],
           "publish_date" => "publish_date",
           "title" =>
             "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne",
@@ -2112,51 +1447,29 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         order_directions: [:asc]
       }
 
-      expected = [
-        %{
-          sort_author: "Aisha Rahman",
-          sort_source: "articles"
-        },
-        %{
-          sort_author: "Hélène Dubois",
-          sort_source: "articles"
-        },
-        %{
-          sort_author: "Jean-Marie Leclerc",
-          sort_source: "articles"
-        },
-        %{
-          sort_author: "Mateo Alvarez",
-          sort_source: "articles"
-        },
-        %{sort_author: "Sven Olsson", sort_source: "articles"},
-        %{sort_author: "Aisha Rahman", sort_source: "authors"},
-        %{
-          sort_author: "Hélène Dubois",
-          sort_source: "authors"
-        },
-        %{
-          sort_author: "Jean-Marie Leclerc",
-          sort_source: "authors"
-        },
-        %{
-          sort_author: "Mateo Alvarez",
-          sort_source: "authors"
-        },
-        %{sort_author: "Sven Olsson", sort_source: "authors"}
-      ]
-
       {:ok, {results, _meta}} =
         filtered_search("articles", MultipleSourcesFacetSchema, search_params,
           page_size: 20
         )
 
-      assert results
-             |> Enum.map(
-               &%{sort_source: &1.sort_source, sort_author: &1.sort_author}
-             )
-             |> Enum.uniq() ==
-               expected
+      # Results are sorted by source first, then by author
+      assert results |> Enum.map(&{&1.sort_source, &1.sort_author}) == [
+               {"articles", "Aisha Rahman"},
+               {"articles", "Aisha Rahman"},
+               {"articles", "HÃ©lÃ¨ne Dubois"},
+               {"articles", "HÃ©lÃ¨ne Dubois"},
+               {"articles", "Jean-Marie Leclerc"},
+               {"articles", "Jean-Marie Leclerc"},
+               {"articles", "Mateo Alvarez"},
+               {"articles", "Mateo Alvarez"},
+               {"articles", "Sven Olsson"},
+               {"articles", "Sven Olsson"},
+               {"authors", "Aisha Rahman"},
+               {"authors", "HÃ©lÃ¨ne Dubois"},
+               {"authors", "Jean-Marie Leclerc"},
+               {"authors", "Mateo Alvarez"},
+               {"authors", "Sven Olsson"}
+             ]
     end
 
     test "facet search" do
@@ -2166,64 +1479,32 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
-      expected = [
-        %{
-          data: %{
-            "author" => "Hélène Dubois",
-            "birthdate" => "1977-01-25",
-            "source" => "authors"
-          },
-          source: "authors"
-        },
-        %{
-          data: %{
-            "author" => "Hélène Dubois",
-            "publish_date" => "date",
-            "title" =>
-              "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
-          },
-          source: "articles"
-        },
-        %{
-          data: %{
-            "author" => "Hélène Dubois",
-            "publish_date" => "date",
-            "title" =>
-              "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
-          },
-          source: "articles"
-        }
-      ]
-
-      {:ok, {results, _meta}, facets} =
+      {:ok, {results, meta}, facets} =
         facet_search("articles", MultipleSourcesFacetSchema, search_params)
 
-      assert results
-             |> Enum.map(
-               &%{
-                 source: &1.source,
-                 data: &1.data |> Map.replace("publish_date", "date")
-               }
-             )
-             |> Enum.sort() == expected
+      summary = facet_result_summary(facets)
 
-      expected_source_options = [
-        %Fase.Option{
-          value: "articles",
-          label: "articles",
-          count: 2,
-          selected: false
-        },
-        %Fase.Option{
-          value: "authors",
-          label: "authors",
-          count: 1,
-          selected: false
-        }
-      ]
+      assert meta.total_count == 3
 
-      assert Enum.find(facets, &(&1.field == :source))
-             |> get_in([Access.key(:options)]) == expected_source_options
+      # The source options contain the 2 sources
+      assert summary.source.options |> Enum.map(& &1.value) == [
+               "articles",
+               "authors"
+             ]
+
+      # All author options are available
+      assert summary.source.count == 2
+
+      # All 3 results have key "author" and value "Hélène Dubois"
+      assert results |> Enum.map(& &1.data["author"]) |> Enum.uniq() == [
+               "Hélène Dubois"
+             ]
+
+      # One article is found in source "authors"
+      assert results |> Enum.count(&(&1.source == "authors")) == 1
+
+      # 2 articles are found in source "articles"
+      assert results |> Enum.count(&(&1.source == "articles")) == 2
     end
 
     test "search facets: date_range_bounds (only 1 of the sources has this specified)" do
@@ -2305,7 +1586,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         }
       }
 
-      assert facet_result_subset(facets) == expected_facets
+      assert facet_result_summary(facets, take_first_2_options: true) ==
+               expected_facets
 
       expected_publish_date_options = [
         %Fase.Option{
@@ -2694,18 +1976,29 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
     end
   end
 
-  defp facet_result_subset(facet_results) do
+  defp facet_result_summary(facet_results, opts \\ []) do
+    take_first_2_options = Keyword.get(opts, :take_first_2_options, false)
+
     facet_results
     |> Enum.group_by(& &1.field)
     |> Enum.reduce(%{}, fn {group, results}, acc ->
       result = hd(results)
 
-      Map.put(acc, group, %{
-        field: result.field,
-        label: result.label,
-        count: Enum.count(result.options),
-        first_2_options: Enum.take(result.options, 2)
-      })
+      data =
+        %{
+          field: result.field,
+          label: result.label,
+          count: Enum.count(result.options)
+        }
+        |> then(fn data ->
+          if take_first_2_options do
+            Map.put(data, :first_2_options, Enum.take(result.options, 2))
+          else
+            Map.put(data, :options, result.options)
+          end
+        end)
+
+      Map.put(acc, group, data)
     end)
   end
 

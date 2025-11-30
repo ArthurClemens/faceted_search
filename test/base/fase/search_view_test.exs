@@ -247,13 +247,12 @@ defmodule Fase.Test.SearchViewTest do
                 name: :word_count,
                 parent: nil,
                 path: nil,
-                range_bounds: [2000, 4000, 6000, 8000],
+                range_bounds: [3000, 5000, 7000],
                 range_buckets: [
-                  {[:lower, 2000], 0},
-                  {[2000, 4000], 1},
-                  {[4000, 6000], 2},
-                  {[6000, 8000], 3},
-                  {[8000, :upper], 4}
+                  {[:lower, 3000], 0},
+                  {[3000, 5000], 1},
+                  {[5000, 7000], 2},
+                  {[7000, :upper], 3}
                 ],
                 transforms: nil
               },
