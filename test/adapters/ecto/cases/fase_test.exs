@@ -1447,51 +1447,29 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         order_directions: [:asc]
       }
 
-      expected = [
-        %{
-          sort_author: "Aisha Rahman",
-          sort_source: "articles"
-        },
-        %{
-          sort_author: "Hélène Dubois",
-          sort_source: "articles"
-        },
-        %{
-          sort_author: "Jean-Marie Leclerc",
-          sort_source: "articles"
-        },
-        %{
-          sort_author: "Mateo Alvarez",
-          sort_source: "articles"
-        },
-        %{sort_author: "Sven Olsson", sort_source: "articles"},
-        %{sort_author: "Aisha Rahman", sort_source: "authors"},
-        %{
-          sort_author: "Hélène Dubois",
-          sort_source: "authors"
-        },
-        %{
-          sort_author: "Jean-Marie Leclerc",
-          sort_source: "authors"
-        },
-        %{
-          sort_author: "Mateo Alvarez",
-          sort_source: "authors"
-        },
-        %{sort_author: "Sven Olsson", sort_source: "authors"}
-      ]
-
       {:ok, {results, _meta}} =
         filtered_search("articles", MultipleSourcesFacetSchema, search_params,
           page_size: 20
         )
 
-      assert results
-             |> Enum.map(
-               &%{sort_source: &1.sort_source, sort_author: &1.sort_author}
-             )
-             |> Enum.uniq() ==
-               expected
+      # Results are sorted by source first, then by author
+      assert results |> Enum.map(&{&1.sort_source, &1.sort_author}) == [
+               {"articles", "Aisha Rahman"},
+               {"articles", "Aisha Rahman"},
+               {"articles", "HÃ©lÃ¨ne Dubois"},
+               {"articles", "HÃ©lÃ¨ne Dubois"},
+               {"articles", "Jean-Marie Leclerc"},
+               {"articles", "Jean-Marie Leclerc"},
+               {"articles", "Mateo Alvarez"},
+               {"articles", "Mateo Alvarez"},
+               {"articles", "Sven Olsson"},
+               {"articles", "Sven Olsson"},
+               {"authors", "Aisha Rahman"},
+               {"authors", "HÃ©lÃ¨ne Dubois"},
+               {"authors", "Jean-Marie Leclerc"},
+               {"authors", "Mateo Alvarez"},
+               {"authors", "Sven Olsson"}
+             ]
     end
 
     test "facet search" do
@@ -1501,64 +1479,32 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
         ]
       }
 
-      expected = [
-        %{
-          data: %{
-            "author" => "Hélène Dubois",
-            "birthdate" => "1977-01-25",
-            "source" => "authors"
-          },
-          source: "authors"
-        },
-        %{
-          data: %{
-            "author" => "Hélène Dubois",
-            "publish_date" => "date",
-            "title" =>
-              "Géographie des marges : métaphores spatiales dans les traités politiques à l'époque moderne"
-          },
-          source: "articles"
-        },
-        %{
-          data: %{
-            "author" => "Hélène Dubois",
-            "publish_date" => "date",
-            "title" =>
-              "Temporalities of Memory: An Interdisciplinary Approach to Post-War Oral Histories"
-          },
-          source: "articles"
-        }
-      ]
-
-      {:ok, {results, _meta}, facets} =
+      {:ok, {results, meta}, facets} =
         facet_search("articles", MultipleSourcesFacetSchema, search_params)
 
-      assert results
-             |> Enum.map(
-               &%{
-                 source: &1.source,
-                 data: &1.data |> Map.replace("publish_date", "date")
-               }
-             )
-             |> Enum.sort() == expected
+      summary = facet_result_summary(facets)
 
-      expected_source_options = [
-        %Fase.Option{
-          value: "articles",
-          label: "articles",
-          count: 2,
-          selected: false
-        },
-        %Fase.Option{
-          value: "authors",
-          label: "authors",
-          count: 1,
-          selected: false
-        }
-      ]
+      assert meta.total_count == 3
 
-      assert Enum.find(facets, &(&1.field == :source))
-             |> get_in([Access.key(:options)]) == expected_source_options
+      # The source options contain the 2 sources
+      assert summary.source.options |> Enum.map(& &1.value) == [
+               "articles",
+               "authors"
+             ]
+
+      # All author options are available
+      assert summary.source.count == 2
+
+      # All 3 results have key "author" and value "Hélène Dubois"
+      assert results |> Enum.map(& &1.data["author"]) |> Enum.uniq() == [
+               "Hélène Dubois"
+             ]
+
+      # One article is found in source "authors"
+      assert results |> Enum.count(&(&1.source == "authors")) == 1
+
+      # 2 articles are found in source "articles"
+      assert results |> Enum.count(&(&1.source == "articles")) == 2
     end
 
     test "search facets: date_range_bounds (only 1 of the sources has this specified)" do

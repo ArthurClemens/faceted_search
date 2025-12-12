@@ -157,7 +157,7 @@ defmodule Fase.Facets do
                opts
              ) do
           {:ok, facet_rows} ->
-            facet_rows_excluding_current_field =
+            facet_rows_exclusive_current_field =
               Enum.filter(facet_rows, fn {name, _, _, _} ->
                 "#{prefix}#{name}" == to_string(facet_config.filter_field)
               end)
@@ -165,7 +165,7 @@ defmodule Fase.Facets do
             Map.put(
               acc,
               facet_config.field,
-              {:ok, facet_rows_excluding_current_field}
+              {:ok, facet_rows_exclusive_current_field}
             )
 
           {:error, error} ->
