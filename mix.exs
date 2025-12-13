@@ -139,7 +139,7 @@ defmodule Fase.MixProject do
 
   defp get_test_paths(adapter) do
     raise """
-    unknown Ecto adapter
+    Unknown Ecto adapter
 
     Expected ECTO_ADAPTER to be one of: #{inspect(@adapters)}
 

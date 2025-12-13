@@ -13,6 +13,7 @@ defmodule Fase.Internal.FacetConfig do
   @enforce_keys [
     :name,
     :field,
+    :filter_field,
     :field_reference,
     :ecto_type,
     :hide_when_selected
@@ -21,6 +22,7 @@ defmodule Fase.Internal.FacetConfig do
   defstruct name: nil,
             field: nil,
             field_reference: nil,
+            filter_field: nil,
             ecto_type: nil,
             hide_when_selected: false,
             range_bounds: nil,
@@ -32,6 +34,7 @@ defmodule Fase.Internal.FacetConfig do
           # required
           name: String.t(),
           field: atom(),
+          filter_field: atom(),
           field_reference: atom(),
           ecto_type: Ecto.Type.t(),
           hide_when_selected: boolean(),
@@ -75,9 +78,13 @@ defmodule Fase.Internal.FacetConfig do
           true -> ecto_types_by_field[facet_field.name]
         end
 
+      filter_field =
+        "#{prefix}#{facet_field.name}" |> String.to_existing_atom()
+
       Map.put(acc, facet_field.name, %FacetConfig{
         name: to_string(facet_field.name),
         field: facet_field.name,
+        filter_field: filter_field,
         field_reference: field_reference,
         ecto_type: ecto_type,
         range_bounds: facet_field.range_bounds,
