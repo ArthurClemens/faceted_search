@@ -4,6 +4,8 @@ defmodule Fase.Internal.Types do
   defmacro __using__(opts \\ []) do
     includes = Keyword.get(opts, :include, [])
 
+    alias Fase.Internal.FacetConfig
+
     quote do
       if :schema_options in unquote(includes) do
         @type schema_options() :: [
@@ -51,6 +53,18 @@ defmodule Fase.Internal.Types do
                 {range_bucket_lower()
                  | range_bucket_middle()
                  | range_bucket_upper(), integer()}
+      end
+
+      if :search in unquote(includes) do
+        @typep result_name :: String.t()
+        @typep result_value :: String.t()
+        @typep result_label :: String.t()
+        @typep result_count :: integer()
+        @typep result_row ::
+                 {result_name(), result_value(), result_label(), result_count()}
+        @typep facet_configs :: %{
+                 atom() => FacetConfig.t()
+               }
       end
     end
   end

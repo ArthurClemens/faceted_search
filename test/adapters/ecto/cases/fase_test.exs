@@ -1456,8 +1456,8 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
       assert results |> Enum.map(&{&1.sort_source, &1.sort_author}) == [
                {"articles", "Aisha Rahman"},
                {"articles", "Aisha Rahman"},
-               {"articles", "HÃ©lÃ¨ne Dubois"},
-               {"articles", "HÃ©lÃ¨ne Dubois"},
+               {"articles", "Hélène Dubois"},
+               {"articles", "Hélène Dubois"},
                {"articles", "Jean-Marie Leclerc"},
                {"articles", "Jean-Marie Leclerc"},
                {"articles", "Mateo Alvarez"},
@@ -1465,7 +1465,7 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
                {"articles", "Sven Olsson"},
                {"articles", "Sven Olsson"},
                {"authors", "Aisha Rahman"},
-               {"authors", "HÃ©lÃ¨ne Dubois"},
+               {"authors", "Hélène Dubois"},
                {"authors", "Jean-Marie Leclerc"},
                {"authors", "Mateo Alvarez"},
                {"authors", "Sven Olsson"}
