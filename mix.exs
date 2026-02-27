@@ -2,14 +2,14 @@ defmodule Fase.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/ArthurClemens/fase"
-  @adapters ~w(postgres)
+  @adapters ~w(pg)
 
   def project do
     [
       app: :fase,
       name: "Fase",
       version: "0.1.0",
-      elixir: "~> 1.16",
+      elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       aliases: aliases(),
@@ -18,8 +18,15 @@ defmodule Fase.MixProject do
       description: description(),
       package: package(),
       dialyzer: [plt_add_apps: [:mix]],
-      test_paths: get_test_paths(System.get_env("ECTO_ADAPTER")),
-      preferred_cli_env: [
+      test_paths: test_paths(System.get_env("ECTO_ADAPTER")),
+      test_ignore_filters: ["test/adapters/ecto/postgres/migration.exs"],
+      consolidate_protocols: Mix.env() != :test
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
         "ecto.create": :test,
         "ecto.drop": :test,
         "ecto.migrate": :test,
@@ -27,8 +34,7 @@ defmodule Fase.MixProject do
         "test.all": :test,
         "test.adapters": :test,
         dialyzer: :test
-      ],
-      consolidate_protocols: Mix.env() != :test
+      ]
     ]
   end
 
@@ -47,12 +53,12 @@ defmodule Fase.MixProject do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
-      {:ecto_sql, "~> 3.12"},
-      {:ex_doc, "~> 0.38.0", only: :dev, runtime: false},
-      {:ex_machina, "~> 2.8.0", only: :test},
+      {:ecto_sql, "~> 3.13"},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
+      {:ex_machina, "~> 2.8", only: :test},
       {:flop, "~> 0.26"},
       {:nimble_options, "~> 1.1"},
-      {:postgrex, "~> 0.20"},
+      {:postgrex, "~> 0.22"},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false}
     ]
   end
@@ -94,7 +100,6 @@ defmodule Fase.MixProject do
   defp aliases do
     [
       "test.all": ["test", "test.adapters"],
-      "test.postgres": &test_adapters(["postgres"], &1),
       "test.adapters": &test_adapters/1,
       qa: [
         "typecheck",
@@ -110,40 +115,42 @@ defmodule Fase.MixProject do
     ]
   end
 
-  defp test_adapters(adapters \\ @adapters, args) do
-    for adapter <- adapters do
-      IO.puts("==> Running tests for ECTO_ADAPTER=#{adapter} mix test")
+  defp test_adapters(args) do
+    for adapter <- @adapters, do: env_run(adapter, args)
+  end
 
-      {_, res} =
-        System.cmd(
-          "mix",
-          ["test", ansi_option() | args],
-          into: IO.binstream(:stdio, :line),
-          env: [{"ECTO_ADAPTER", adapter}]
-        )
+  defp env_run(adapter, args) do
+    IO.puts("==> Running tests for ECTO_ADAPTER=#{adapter} mix test")
 
-      if res > 0 do
-        System.at_exit(fn _ -> exit({:shutdown, 1}) end)
-      end
-    end
+    mix_cmd_with_status_check(
+      ["test", ansi_option() | args],
+      env: [{"ECTO_ADAPTER", adapter}]
+    )
   end
 
   defp ansi_option do
     if IO.ANSI.enabled?(), do: "--color", else: "--no-color"
   end
 
-  defp get_test_paths(adapter) when adapter in @adapters,
-    do: ["test/adapters/ecto/#{adapter}"]
+  defp mix_cmd_with_status_check(args, opts) do
+    {_, res} =
+      System.cmd("mix", args, [into: IO.binstream(:stdio, :line)] ++ opts)
 
-  defp get_test_paths(nil), do: ["test/base"]
-
-  defp get_test_paths(adapter) do
-    raise """
-    Unknown Ecto adapter
-
-    Expected ECTO_ADAPTER to be one of: #{inspect(@adapters)}
-
-    Got: #{inspect(adapter)}
-    """
+    if res > 0 do
+      System.at_exit(fn _ -> exit({:shutdown, 1}) end)
+    end
   end
+
+  defp test_paths(adapter) when adapter in @adapters do
+    folder =
+      case adapter do
+        "pg" -> "postgres"
+        adapter -> adapter
+      end
+
+    ["test/adapters/ecto/#{folder}"]
+  end
+
+  defp test_paths(nil), do: ["test/base"]
+  defp test_paths(other), do: raise("unknown adapter #{inspect(other)}")
 end
