@@ -64,6 +64,8 @@ defmodule Fase.SearchView.FacetField do
           {nil, nil}
       end
 
+    ecto_type = Keyword.get(field_opts, :ecto_type, field_ecto_types[name])
+
     struct(
       __MODULE__,
       %{
@@ -76,7 +78,7 @@ defmodule Fase.SearchView.FacetField do
         path: Keyword.get(field_opts, :path),
         hide_when_selected: !!Keyword.get(field_opts, :hide_when_selected),
         transforms: Keyword.get(field_opts, :transforms),
-        ecto_type: field_ecto_types[name]
+        ecto_type: ecto_type
       }
     )
   end

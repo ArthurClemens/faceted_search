@@ -21,32 +21,33 @@ defmodule Fase.Facets.FacetSearch do
   @spec search_facets(Ecto.Queryable.t(), map(), facet_configs(), [
           facet_search_option()
         ]) ::
-          {:ok, list(result_row())} | {:error, Exception.t()}
+          {:ok, list(result_row())}
+          | {:error, Exception.t()}
+          | {:error, :no_repo}
   def search_facets(
         ecto_schema,
         search_params,
         facet_configs,
         facet_search_options
       ) do
-    repo =
-      Keyword.get(
-        facet_search_options,
-        :repo,
-        Config.get_repo(facet_search_options)
-      )
+    case get_repo(facet_search_options) do
+      {:ok, repo} ->
+        {_view_name, module} = ecto_schema
 
-    {_view_name, module} = ecto_schema
+        opts = Keyword.put(facet_search_options, :for, module)
 
-    opts = Keyword.put(facet_search_options, :for, module)
+        create_stratified_query(
+          repo,
+          ecto_schema,
+          search_params,
+          facet_configs,
+          opts
+        )
+        |> run_query(repo)
 
-    create_stratified_query(
-      repo,
-      ecto_schema,
-      search_params,
-      facet_configs,
-      opts
-    )
-    |> run_query(repo)
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   # Creates a single query that contains sub queries for each facet.
@@ -286,6 +287,16 @@ defmodule Fase.Facets.FacetSearch do
       Map.replace(filter_map, :value, cast_value)
     else
       filter_map
+    end
+  end
+
+  defp get_repo(facet_search_options) do
+    repo = Keyword.get(facet_search_options, :repo)
+
+    if is_nil(repo) do
+      Config.get_repo(facet_search_options)
+    else
+      {:ok, repo}
     end
   end
 end

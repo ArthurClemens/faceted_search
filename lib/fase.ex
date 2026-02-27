@@ -172,9 +172,20 @@ defmodule Fase do
               {:ok, list(Facet.t())}
               | {:error, Flop.Meta.t()}
               | {:error, Exception.t()}
-              | {:error, :no_cache_process}
+              | {:error, :no_cache}
+              | {:error, :no_repo}
       def search(ecto_schema, search_params \\ %{}, opts \\ []) do
-        Facets.search(ecto_schema, search_params, opts)
+        case Facets.search(ecto_schema, search_params, opts) do
+          {:ok, results} ->
+            {:ok, results}
+
+          {:error, %{__exception__: is_exception} = exception_struct}
+          when is_exception == true ->
+            {:error, exception_struct}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
       end
 
       @spec warm_cache(Ecto.Queryable.t(), list(map()), [facet_search_option()]) ::
@@ -653,7 +664,8 @@ defmodule Fase do
           {:ok, list(Facet.t())}
           | {:error, Flop.Meta.t()}
           | {:error, Exception.t()}
-          | {:error, :no_cache_process}
+          | {:error, :no_cache}
+          | {:error, :no_repo}
   def search(ecto_schema, search_params \\ %{}, opts \\ []) do
     {_view_name, module} = ecto_schema
     module.search(ecto_schema, search_params, opts)

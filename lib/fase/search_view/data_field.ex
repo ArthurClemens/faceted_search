@@ -30,10 +30,13 @@ defmodule Fase.SearchView.DataField do
         {[], options}
       end
 
+    ecto_type =
+      Keyword.get(operation_options, :ecto_type, field_ecto_types[name])
+
     struct(__MODULE__, %{
       name: name,
       transforms: Keyword.get(operation_options, :transforms),
-      ecto_type: field_ecto_types[name],
+      ecto_type: ecto_type,
       entries: collect_entries(entry_options)
     })
   end

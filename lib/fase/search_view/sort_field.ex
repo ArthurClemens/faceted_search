@@ -24,12 +24,14 @@ defmodule Fase.SearchView.SortField do
         name -> {name, []}
       end
 
+    ecto_type = Keyword.get(options, :ecto_type, field_ecto_types[name])
+
     struct(
       __MODULE__,
       %{
         name: name,
         transforms: Keyword.get(options, :transforms),
-        ecto_type: field_ecto_types[name]
+        ecto_type: ecto_type
       }
     )
   end

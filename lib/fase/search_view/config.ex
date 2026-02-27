@@ -38,7 +38,12 @@ defmodule Fase.SearchView.Config do
 
     current_scope = Keyword.get(options, :scope)
     prefix = Keyword.get(options, :prefix)
-    repo = get_repo(options)
+
+    repo =
+      case get_repo(options) do
+        {:ok, repo} -> repo
+        _ -> raise NoRepoError
+      end
 
     {view_name, view_name_with_prefix} = create_view_name(view_id, prefix)
 
@@ -69,11 +74,13 @@ defmodule Fase.SearchView.Config do
   def get_repo(options) do
     options = Flop.get_option(:adapter_opts, options) || options
 
-    Flop.get_option(:repo, options) ||
-      raise NoRepoError
+    case Flop.get_option(:repo, options) do
+      repo when not is_nil(repo) -> {:ok, repo}
+      _ -> {:error, :no_repo}
+    end
   end
 
-  def make_safe_id(view_id) do
+  defp make_safe_id(view_id) do
     view_id
     |> :unicode.characters_to_nfd_binary()
     |> String.replace(~r/[[:punct:][:space:]]/, @name_separator)

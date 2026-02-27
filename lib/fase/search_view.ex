@@ -171,8 +171,8 @@ defmodule Fase.SearchView do
     """
 
     case SQL.query(repo, sql, [], postgrex_options(opts)) do
-      {:ok, result} ->
-        result != []
+      {:ok, query_result} ->
+        query_result.columns != []
 
       {:error, _error} ->
         false

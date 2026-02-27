@@ -15,10 +15,6 @@ defmodule Fase.Test.Adapters.Ecto.FaseTest do
 
   setup_all do
     cleanup_search_views()
-
-    on_exit(fn ->
-      cleanup_search_views()
-    end)
   end
 
   describe "search view" do
