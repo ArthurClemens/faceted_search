@@ -277,11 +277,13 @@ defmodule Fase do
 
   """
 
-  @callback scope_by(scope_key(), scope() | nil) :: %{
-              field: field(),
-              comparison: String.t(),
-              value: term()
-            }
+  @callback scope_by(scope_key(), scope() | nil) ::
+              %{
+                field: field(),
+                comparison: String.t(),
+                value: term()
+              }
+              | String.t()
 
   @doc """
   Adds a transformation step to the search query when a filter is applied.

@@ -1177,6 +1177,16 @@ end
 
 The value at key `field` should reference a field listed in `fields`, or a column in the source table.
 
+Alternatively, return a SQL expression:
+
+```elixir
+def scope_by(:any_address, _scope) do
+  """
+  array_to_string(ARRAY[client.main_address, client.alternative_address], ',') != ''
+  """
+end
+```
+
 **3. Pass the scope to `Fase.create_search_view/3`**
 
 ```elixir
@@ -1184,6 +1194,13 @@ view_id = "books"
 
 Fase.create_search_view(MyApp.FacetSchema, view_id,
   scope: %{current_user: current_user})
+```
+
+or:
+
+```elixir
+Fase.create_search_view(MyApp.FacetSchema, view_id,
+  scope: %{any_address: true})
 ```
 
 ### Combining scopes

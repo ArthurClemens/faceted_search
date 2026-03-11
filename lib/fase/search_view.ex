@@ -407,28 +407,33 @@ defmodule Fase.SearchView do
     scope_by_result =
       apply(module, Constants.scope_callback(), [key, current_scope])
 
-    if scope_by_result do
-      %{
-        field: field_or_column_name,
-        comparison: comparison,
-        value: value
-      } = scope_by_result
+    cond do
+      is_map(scope_by_result) ->
+        %{
+          field: field_or_column_name,
+          comparison: comparison,
+          value: value
+        } = scope_by_result
 
-      field = Enum.find(fields, &(&1.name == field_or_column_name))
+        field = Enum.find(fields, &(&1.name == field_or_column_name))
 
-      table_and_column =
-        if field do
-          {table_name, column_name} = get_table_and_column(field, joins)
-          table_and_column_string(table_name, column_name)
-        else
-          table_and_column_string(table_name, field_or_column_name)
-        end
+        table_and_column =
+          if field do
+            {table_name, column_name} = get_table_and_column(field, joins)
+            table_and_column_string(table_name, column_name)
+          else
+            table_and_column_string(table_name, field_or_column_name)
+          end
 
-      """
-      #{table_and_column} #{comparison} '#{value}'
-      """
-    else
-      nil
+        """
+        #{table_and_column} #{comparison} '#{value}'
+        """
+
+      is_binary(scope_by_result) ->
+        scope_by_result
+
+      true ->
+        nil
     end
   end
 
