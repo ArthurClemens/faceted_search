@@ -40,8 +40,9 @@ defmodule Fase.Internal.Types do
         @type facet_search_option ::
                 {:repo, module()}
                 | {:for, module()}
-                | {:query_opts,
-                   Keyword.t() | {:cache_facets, boolean()} | {:scope, term()}}
+                | {:query_opts, Keyword.t()}
+                | {:cache_facets, boolean()}
+                | {:scope, term()}
       end
 
       if :range_types in unquote(includes) do

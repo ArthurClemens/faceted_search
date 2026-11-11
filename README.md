@@ -852,13 +852,13 @@ To get pop art works, filter on facet `movements` and its option value - in this
 }
 ```
 
-To remove parent facet `periods` from the facet results, set its option `hide_when_selected` to `true`
+To remove parent facet `periods` from the facet results, set its option `hide_when_selected` to `true`.
 
 ### Hierarchy labels
 
 See [Labels](#labels)
 
-To create a custom text (which cannot be read from the database), use the callback function `option_label/4` described at [Custom option labels](#custom-option-labels) to create readable option labels for hierarchies.
+To create a custom text (when the label cannot be read from the database), use the callback function `option_label/4` described at [Custom option labels](#custom-option-labels) to create readable option labels for hierarchies.
 
 The received value will contains the path values separated by ">", for example: "modern_art>pop_art".
 
